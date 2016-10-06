@@ -40,6 +40,7 @@ KEY_2 = 50
 KEY_3 = 51
 KEY_4 = 52
 KEY_A = 97
+KEY_A_CAPITAL = 65
 KEY_B = 98
 KEY_C = 99
 KEY_D = 100
@@ -52,6 +53,7 @@ KEY_M = 109
 KEY_N = 110
 KEY_O = 111
 KEY_P = 112
+KEY_P_CAPITAL = 80
 KEY_Q = 113
 KEY_R = 114
 KEY_S = 115
@@ -498,33 +500,33 @@ Declare Function filelist_get Alias "filelist_get"  (ByVal directory As ZString 
 
 Declare Function filelist_get_filename Alias "filelist_get_filename"  (ByVal filelist As ZString Ptr, ByVal filename As ZString Ptr, ByVal num As Integer) as Integer
 
-Declare Function file_creat Alias "file_creat"  (ByVal filename As String) As Integer
+Declare Function file_creat Alias "file_creat"  (ByVal filename As ZString Ptr) As Integer
 
-Declare Function file_creat_and_add_s Alias "file_creat_and_add_s"  (ByVal filename As String, ByVal zstr As String Ptr) As Integer
+Declare Function file_creat_and_add_s Alias "file_creat_and_add_s"  (ByVal filename As ZString Ptr, ByVal zstr As ZString Ptr) As Integer
 
-Declare Function file_newline Alias "file_newline"  (ByVal filename As String) As Integer
+Declare Function file_newline Alias "file_newline"  (ByVal filename As ZString Ptr) As Integer
 
-Declare Function file_add_d Alias "file_add_d"  (ByVal filename As String, ByVal array As Double Ptr, ByVal length As Integer, ByVal out_format As String) As Integer
+Declare Function file_add_d Alias "file_add_d"  (ByVal filename As ZString Ptr, ByVal array As Double Ptr, ByVal length As Integer, ByVal out_format As ZString Ptr) As Integer
 
-Declare Function file_add_i Alias "file_add_i"  (ByVal filename As String, ByVal array As Integer Ptr, ByVal length As Integer, ByVal out_format As String) As Integer
+Declare Function file_add_i Alias "file_add_i"  (ByVal filename As ZString Ptr, ByVal array As Integer Ptr, ByVal length As Integer, ByVal out_format As ZString Ptr) As Integer
 
-Declare Function file_add_s Alias "file_add_s"  (ByVal filename As String, ByVal array As String Ptr, ByVal out_format As String) As Integer
+Declare Function file_add_s Alias "file_add_s"  (ByVal filename As ZString Ptr, ByVal array As ZString Ptr, ByVal out_format As ZString Ptr) As Integer
 
-Declare Function file_add_bin_d Alias "file_add_bin_d"  (ByVal filename As String, ByVal array As Double Ptr, ByVal length As Integer) As Integer
+Declare Function file_add_bin_d Alias "file_add_bin_d"  (ByVal filename As ZString Ptr, ByVal array As Double Ptr, ByVal length As Integer) As Integer
 
-Declare Function file_size Alias "file_size"  (ByVal filename As String) As Integer
+Declare Function file_size Alias "file_size"  (ByVal filename As ZString Ptr) As Integer
 
-Declare Function file_load_all_d Alias "file_load_all_d"  (ByVal filename As String, ByVal array As Double Ptr) As Integer
+Declare Function file_load_all_d Alias "file_load_all_d"  (ByVal filename As ZString Ptr, ByVal array As Double Ptr) As Integer
 
-Declare Function buffer_clear Alias "buffer_clear"  (ByVal buf As String Ptr) As Integer
+Declare Function buffer_clear Alias "buffer_clear"  (ByVal buf As ZString Ptr) As Integer
 
-Declare Function buffer_newline Alias "buffer_newline"  (ByVal buf As String Ptr) As Integer
+Declare Function buffer_newline Alias "buffer_newline"  (ByVal buf As ZString Ptr) As Integer
 
-Declare Function buffer_add_d Alias "buffer_add_d"  (ByVal buf As String Ptr, ByVal array As Double Ptr, ByVal length As Integer, ByVal out_format As String) As Integer
+Declare Function buffer_add_d Alias "buffer_add_d"  (ByVal buf As ZString Ptr, ByVal array As Double Ptr, ByVal length As Integer, ByVal out_format As ZString Ptr) As Integer
 
-Declare Function buffer_add_i Alias "buffer_add_i"  (ByVal buf As String Ptr, ByVal array As Integer Ptr, ByVal length As Integer, ByVal out_format As String) As Integer
+Declare Function buffer_add_i Alias "buffer_add_i"  (ByVal buf As ZString Ptr, ByVal array As Integer Ptr, ByVal length As Integer, ByVal out_format As ZString Ptr) As Integer
 
-Declare Function buffer_add_s Alias "buffer_add_s"  (ByVal buf As String Ptr, ByVal array As String, ByVal out_format As String) As Integer
+Declare Function buffer_add_s Alias "buffer_add_s"  (ByVal buf As ZString Ptr, ByVal array As ZString Ptr, ByVal out_format As ZString Ptr) As Integer
 
 End Extern
 
@@ -533,8 +535,8 @@ End Extern
 
 Extern "c"
 
-Declare Function date_2unixtime Alias "date_2unixtime"  (ByVal day1 As Integer, ByVal month1 As Integer, ByVal year1 As Integer, ByVal hh As Integer, ByVal mm As Integer, ByVal ss As Integer) As Integer
-Declare Function unixtime_2date Alias "unixtime_2date"  (ByVal timestamp As Integer, ByVal day1 As Integer Ptr, ByVal month1 As Integer Ptr, ByVal year1 As Integer Ptr, ByVal hh As Integer Ptr, ByVal mm As Integer Ptr, ByVal ss As Integer Ptr) As Integer
+Declare Function date_2unixtime Alias "date_2unixtime"  (ByVal day1 As Integer, ByVal month1 As Integer, ByVal year1 As Integer, ByVal hh As Integer, ByVal mm As Integer, ByVal ss As Integer) As UInteger
+Declare Function unixtime_2date Alias "unixtime_2date"  (ByVal timestamp As UInteger, ByVal day1 As Integer Ptr, ByVal month1 As Integer Ptr, ByVal year1 As Integer Ptr, ByVal hh As Integer Ptr, ByVal mm As Integer Ptr, ByVal ss As Integer Ptr) As Integer
 Declare Function time_2decimal Alias "time_2decimal"  (ByVal hh As Integer, ByVal mm As Integer, ByVal ss As Integer) As Double
 Declare Function time_2str Alias "time_2str"  (ByVal hh As Integer, ByVal mm As Integer, ByVal ss As Integer, ByVal timestr As ZString Ptr) As Integer
 Declare Function date_2str Alias "date_2str"  (ByVal dd As Integer, ByVal mm As Integer, ByVal yy As Integer, ByVal datestr As ZString Ptr) As Integer

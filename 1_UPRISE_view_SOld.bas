@@ -47,6 +47,8 @@ Dim Shared As Integer MAX_Y = 0
 Dim Shared As Integer is_noise = 1 ' вычитать шум? (1 - нет, -1 - да)
 Dim Shared As Integer CHANNEL = 1' текущий канал
 
+Dim Shared As Double  acf_filter(0 To 100) ' АКФ ИХ фильтра
+Dim Shared As Integer tau
 
 Dim key As Integer
 
@@ -55,7 +57,7 @@ Declare Sub AutomaticClear()
 Declare Sub HelpPrint()
 Declare Sub ACFPrint()
 Declare Sub LoadFiles(ByVal Directory As String)
-Declare Function seans_struct_time_compare cdecl (elem1 as any ptr, elem2 as any ptr) as Integer
+Declare Function seans_struct_time_compare cdecl (elem1 as any ptr, elem2 as any ptr) as Long
 
 Dim As Integer d_month, d_year, d_day, d_ndays
 Dim As String s_year, s_month, s_day
@@ -87,6 +89,20 @@ If (pulseLength <> 663) And (pulseLength <> 795) Then
 	PrintErrorToLog(ErrorInputData, __FILE__, __LINE__)
 	End
 EndIf
+
+
+
+' Загрузка АКФ ИХ фильтра
+file = FreeFile()
+Open "filter.dat" For Input As #file
+If Err <> 0 Then
+	PrintErrorToLog(ErrorFilter, __FILE__, __LINE__)
+	End
+EndIf
+For tau = 0 To 18
+	Input #file, acf_filter(tau)
+Next tau
+Close #file
 
 
 Cls
@@ -219,7 +235,7 @@ Do
 	Else
 		Print " ";
 	End If
-	
+
 	If pulseLength = 663 Then
 		Print Using "  #### км"; seans1s_alt(4*H);
 	Else
@@ -505,7 +521,7 @@ Sub Vis_array_load()
 	d = -1e200
 	For i = 0 To seans_loaded-1
 		If vis_array(0, i) > d And seans_str(i).seans.m(H*4) = 0 Then
-			d = vis_array(0, i) 
+			d = vis_array(0, i)
 			MAX_Y = i
 		EndIf
 	Next i
@@ -768,12 +784,14 @@ Sub ACFPrint()
 						Next tau
 					EndIf
 
-					For i = 0 To 18
-						n(i) += seans_str(CUR).seans.dat(j, i) - R0DAC_1(i)
+					n(0) += seans_str(CUR).seans.datp(j*4) - R0DAC_1(0)
+					For i = 1 To 18
+						n(i) += seans_str(CUR).seans.dat(j, i-1) - R0DAC_1(i)
 					Next i
 				Else
-					For i = 0 To 18
-						n(i) += seans_str(CUR).seans.dat(j, i)
+					n(0) += seans_str(CUR).seans.datp(j*4) 
+					For i = 1 To 18
+						n(i) += seans_str(CUR).seans.dat(j, i-1)
 					Next i
 				EndIf
 				k += 1
@@ -783,12 +801,14 @@ Sub ACFPrint()
 		array_norm_d(@n(0), @n(0), k, 19) ' нормировать на количество хороших точек k в шумовом участке
 
 		If is_noise_ACF > 0 Then ' вычитать шум или нет?
-			For i = 0 To 18
-				r(i) = seans_str(CUR).seans.dat(H, i) - n(i)
+			r(0) = seans_str(CUR).seans.datp(H*4) - n(0)
+			For i = 1 To 18
+				r(i) = seans_str(CUR).seans.dat(H, i-1) - n(i)
 			Next i
 		Else
-			For i = 0 To 18
-				r(i) = seans_str(CUR).seans.dat(H, i)
+			r(0) = seans_str(CUR).seans.datp(H*4)
+			For i = 1 To 18
+				r(i) = seans_str(CUR).seans.dat(H, i-1)
 			Next i
 		EndIf
 
@@ -923,7 +943,7 @@ Sub ACFPrint()
 		Else
 			Print Using "  #### км  "; seans1s_alt_795(4*H);
 		EndIf
-		
+
 
 		Color 14
 		If is_R0_ACF > 0 Then
@@ -961,13 +981,15 @@ Sub ACFPrint()
 		Next i
 
 		For i = 0 To 16
-			Line (x0+i*dxdy, 400-5*dxdy*r(i))-(x0+(i+1)*dxdy, 400-5*dxdy*r(i+1)), 10
-			Line (x0+i*dxdy, 400-5*dxdy*n(i))-(x0+(i+1)*dxdy, 400-5*dxdy*n(i+1)), 9
+			Line (x0+i*dxdy, 400-5*dxdy*acf_filter(i))-(x0+(i+1)*dxdy, 400-5*dxdy*acf_filter(i+1)), 14  ' вывод АКФ ИХ фильтра
+			Line (x0+i*dxdy, 400-5*dxdy*n(i))-(x0+(i+1)*dxdy, 400-5*dxdy*n(i+1)), 9  ' вывод АКФ шума
+			Line (x0+i*dxdy, 400-5*dxdy*r(i))-(x0+(i+1)*dxdy, 400-5*dxdy*r(i+1)), 10 ' вывод АКФ НР сигнала
 		Next i
 
 		For i = 0 To 16
-			Circle (x0+i*dxdy, 400-5*dxdy*r(i)), 3, 10
+			Circle (x0+i*dxdy, 400-5*dxdy*acf_filter(i)), 3, 14
 			Circle (x0+i*dxdy, 400-5*dxdy*n(i)), 3, 9
+			Circle (x0+i*dxdy, 400-5*dxdy*r(i)), 3, 10
 		Next i
 
 		For i = 1 To 9
@@ -1151,7 +1173,7 @@ End Sub
 ''' =======================================================================
 
 
-Function seans_struct_time_compare cdecl (elem1 as any ptr, elem2 as any ptr) as Integer
+Function seans_struct_time_compare cdecl (elem1 as any ptr, elem2 as any ptr) as Long
 	Return ( CPtr(seans_struct Ptr, elem1) -> time_computer ) - ( CPtr(seans_struct Ptr, elem2) -> time_computer )
 End Function
 

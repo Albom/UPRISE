@@ -162,7 +162,7 @@ End Sub
 Sub as_file_save(ByRef Filename As String, ByRef as_file_str As as_file_struct Ptr)
 	Dim As Integer file
 	Dim As Integer tau, h
-	Dim As String Ptr buffer
+	Dim As ZString Ptr buffer
 
 	buffer = Allocate(1*1024*1024) ' выделить на буфер файла 1 ћбайт
 	If buffer = NULL Then
@@ -171,7 +171,7 @@ Sub as_file_save(ByRef Filename As String, ByRef as_file_str As as_file_struct P
 	EndIf
 
 	buffer_clear(buffer)
-
+	
 	buffer_add_s(buffer, as_file_str->filename, "%s") ' записываем им€ файла
 	buffer_newline(buffer)
 
@@ -233,7 +233,7 @@ Sub as_file_save(ByRef Filename As String, ByRef as_file_str As as_file_struct P
 	'	file_creat(filename)
 	'	file_add_s(filename, buffer, "%s")
 
-	file_creat_and_add_s(filename, buffer)
+	file_creat_and_add_s(@filename[0], buffer)
 
 	DeAllocate (buffer)
 

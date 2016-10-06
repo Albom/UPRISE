@@ -1173,9 +1173,9 @@ Sub inverse_problem_v1_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_
 										Next tau
 									Next lag
 
-									For lag = 0 To 18
-										acf_teor(lag) /= lag+1
-									Next lag
+'!									For lag = 0 To 18
+'!										acf_teor(lag) /= lag+1
+'!									Next lag
 
 									d = 0
 									For tau = 1 To 18
@@ -1416,9 +1416,9 @@ Sub inverse_problem_v2_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_
 												Next tau
 											Next lag
 
-											For lag = 0 To 18
-												acf_teor(lag) /= lag+1
-											Next lag
+'!											For lag = 0 To 18
+'!												acf_teor(lag) /= lag+1
+'!											Next lag
 
 											d = 0
 											For tau = 1 To 18

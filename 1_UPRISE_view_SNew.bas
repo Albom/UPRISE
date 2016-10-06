@@ -47,6 +47,8 @@ Dim Shared As Integer MAX_Y = 0
 Dim Shared As Integer is_noise = 1 ' вычитать шум? (1 - нет, -1 - да)
 Dim Shared As Integer CHANNEL = 1' текущий канал
 
+Dim Shared As Double  acf_filter(0 To 100) ' АКФ ИХ фильтра
+Dim Shared As Integer tau
 
 Dim key As Integer
 
@@ -55,12 +57,27 @@ Declare Sub AutomaticClear()
 Declare Sub HelpPrint()
 Declare Sub ACFPrint()
 Declare Sub LoadFiles(ByVal Directory As String)
-Declare Function seans_struct_time_compare cdecl (elem1 as any ptr, elem2 as any ptr) as Integer
+Declare Function seans_struct_time_compare cdecl (ByVal elem1 as any ptr, ByVal elem2 as any ptr) as Long
 
 Dim As Integer d_month, d_year, d_day, d_ndays
 Dim As String s_year, s_month, s_day
 
+Dim As Integer file
+
 ''' =======================================================================
+
+
+' Загрузка АКФ ИХ фильтра
+file = FreeFile()
+Open "filter.dat" For Input As #file
+If Err <> 0 Then
+	PrintErrorToLog(ErrorFilter, __FILE__, __LINE__)
+	End
+EndIf
+For tau = 0 To 18
+	Input #file, acf_filter(tau)
+Next tau
+Close #file
 
 
 SetEnviron("fbgfx=GDI")
@@ -220,7 +237,7 @@ Do
 
 	Select Case key
 
-		Case KEY_CTRL_P
+		Case KEY_CTRL_P, KEY_P_CAPITAL
 			BSave ("screen.bmp", 0)
 
 		Case KEY_RIGHT
@@ -566,8 +583,8 @@ Do
 			Next h
 			Close #file
 '/
-
-		Case KEY_A
+		
+		Case KEY_A, KEY_A_CAPITAL
 			Color 15
 			AutomaticClear()
 			Vis_array_load ' загрузить данные для отображения
@@ -1202,13 +1219,15 @@ Sub ACFPrint()
 		Next i
 
 		For i = 0 To 17
+			Line (x0+i*dxdy, 400-5*dxdy*acf_filter(i))-(x0+(i+1)*dxdy, 400-5*dxdy*acf_filter(i+1)), 14  ' вывод АКФ ИХ фильтра
+			Line (x0+i*dxdy, 400-5*dxdy*n(i))-(x0+(i+1)*dxdy, 400-5*dxdy*n(i+1)), 9			
 			Line (x0+i*dxdy, 400-5*dxdy*r(i))-(x0+(i+1)*dxdy, 400-5*dxdy*r(i+1)), 10
-			Line (x0+i*dxdy, 400-5*dxdy*n(i))-(x0+(i+1)*dxdy, 400-5*dxdy*n(i+1)), 9
 		Next i
 
 		For i = 0 To 18
-			Circle (x0+i*dxdy, 400-5*dxdy*r(i)), 3, 10
+			Circle (x0+i*dxdy, 400-5*dxdy*acf_filter(i)), 3, 14
 			Circle (x0+i*dxdy, 400-5*dxdy*n(i)), 3, 9
+			Circle (x0+i*dxdy, 400-5*dxdy*r(i)), 3, 10
 		Next i
 
 		For i = 1 To 9
@@ -1392,7 +1411,7 @@ End Sub
 ''' =======================================================================
 
 
-Function seans_struct_time_compare cdecl (elem1 as any ptr, elem2 as any ptr) as Integer
+Function seans_struct_time_compare cdecl (Byval elem1 as any ptr, Byval elem2 as any ptr) as Long
 	Return ( CPtr(seans_struct Ptr, elem1) -> time_computer ) - ( CPtr(seans_struct Ptr, elem2) -> time_computer )
 End Function
 

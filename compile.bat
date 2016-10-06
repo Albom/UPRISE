@@ -74,6 +74,7 @@ copy filter_COld.dat UPRISE
 copy config.dat UPRISE
 copy config_COld.dat UPRISE
 copy config_short.dat UPRISE
+copy config_trap.dat UPRISE
 copy report.xls UPRISE
 copy help.chm UPRISE
 

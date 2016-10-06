@@ -32,7 +32,7 @@ End Type
 '''==============================================
 
 Declare Sub LoadFiles(ByVal Directory As String)
-Declare Function seans_struct_time_compare cdecl (elem1 As Any Ptr, elem2 As Any Ptr) As Integer
+Declare Function seans_struct_time_compare cdecl (elem1 As Any Ptr, elem2 As Any Ptr) As Long
 
 '''==============================================
 
@@ -716,7 +716,7 @@ End Sub
 '''==============================================
 
 
-Function seans_struct_time_compare cdecl (elem1 as any ptr, elem2 as any ptr) as Integer
+Function seans_struct_time_compare cdecl (elem1 as any ptr, elem2 as any ptr) as Long
 	Return ( CPtr(seans_struct_in Ptr, elem1) -> time_computer ) - ( CPtr(seans_struct_in Ptr, elem2) -> time_computer )
 End Function
 

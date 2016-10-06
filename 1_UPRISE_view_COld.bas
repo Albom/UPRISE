@@ -55,7 +55,7 @@ Declare Sub AutomaticClear()
 Declare Sub HelpPrint()
 Declare Sub ACFPrint()
 Declare Sub LoadFiles(ByVal Directory As String)
-Declare Function seans_struct_time_compare cdecl (elem1 as any ptr, elem2 as any ptr) as Integer
+Declare Function seans_struct_time_compare cdecl (elem1 as any ptr, elem2 as any ptr) as Long
 
 Dim As Integer d_month, d_year, d_day, d_ndays
 Dim As String s_year, s_month, s_day
@@ -917,7 +917,7 @@ End Sub
 ''' =======================================================================
 
 
-Function seans_struct_time_compare cdecl (elem1 as any ptr, elem2 as any ptr) as Integer
+Function seans_struct_time_compare cdecl (elem1 as any ptr, elem2 as any ptr) as Long
 	Return ( CPtr(seans_struct Ptr, elem1) -> time_computer ) - ( CPtr(seans_struct Ptr, elem2) -> time_computer )
 End Function
 
