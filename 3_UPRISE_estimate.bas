@@ -23,7 +23,7 @@ Using FB 'для перехода в полноэкранный режим монитора
 Type dat_all_struct
 
 	Dim	acf(0 To 18)	As Double
-	Dim	p_corr			As Double
+	'	Dim	p_corr			As Double
 	Dim	q					As Double
 
 	Dim	d_c				As Double
@@ -39,6 +39,9 @@ Type dat_all_struct
 	Dim	ti_end			As Double
 	Dim	te_end			As Double
 	Dim	hyd_end			As Double
+
+	Dim	var(0 To 18)	As Double
+	Dim	ratio				As Double
 
 End Type
 
@@ -91,6 +94,12 @@ Dim Shared As Integer Config_hyd_not_decrease_hyd_plus_he
 Dim Shared As Integer Config_Overlap_prohibition
 
 Dim Shared As Integer Config_ti_interpolate, Config_ti_interpolate_num, Config_ti_interpolate_points, Config_ti_interpolate_dev
+
+Dim Shared As Integer Config_wave
+
+Dim Shared As Double Config_kappa
+
+Dim Shared As Integer Config_sigma
 
 '''==============================================
 
@@ -422,9 +431,19 @@ Else
 	' 35
 	Input #file, Config_ti_interpolate, Config_ti_interpolate_num, Config_ti_interpolate_points, Config_ti_interpolate_dev
 
+	'36
+	Input #file, Config_wave
+
+	'37
+	Input #file, Config_kappa
+
+	'38
+	Input #file, Config_sigma
+
 	Close #file
 
 EndIf
+
 
 DeltaTePlus   = Abs(DeltaTePlus)
 DeltaTeMinus  = Abs(DeltaTeMinus)
@@ -688,7 +707,7 @@ If Err() <> 0 Then
 	PrintErrorToLog(ErrorNotEnoughMemory, __FILE__, __LINE__)
 	End
 EndIf
-ReDim Shared As Double noise_acf(0 To seans_num_out-1, 0 To 255)
+'ReDim Shared As Double noise_acf(0 To seans_num_out-1, 0 To 255)
 
 ReDim Shared As Double heRange(0 To seans_num_out-1)
 For t = 0 To seans_num_out-1
@@ -718,6 +737,19 @@ file = FreeFile()
 Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+"T.txt" For Output As #file
 Close #file
 
+file = FreeFile()
+Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+"HEADER.txt" For Output As #file
+Close #file
+
+file = FreeFile()
+Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+"Fkr.txt" For Output As #file
+Close #file
+
+file = FreeFile()
+Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+"Pn.txt" For Output As #file
+Close #file
+
+
 ' Загружаем АКФ в ОЗУ
 Print "Загрузка данных... ";
 For t = 0 To seans_num_out-1 ' по времени
@@ -734,6 +766,12 @@ For t = 0 To seans_num_out-1 ' по времени
 		PrintErrorToLog(ErrorLoadASFile, __FILE__, __LINE__)
 		End
 	EndIf
+	/'
+	If t = 15 Then
+		as_file_save("as_test.txt", @as_file_in)
+		break
+	EndIf
+	'/
 
 	Print #1, "AS"+DirectoryOutput+"."+ext
 
@@ -749,6 +787,25 @@ For t = 0 To seans_num_out-1 ' по времени
 	Close #file
 
 
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+"HEADER.txt" For Append As #file
+	Dim As String tmp
+	If CInt( Mid(as_file_in.date_, 7, 2) ) > 90 Then
+		tmp = "19"+Mid(as_file_in.date_, 7, 2)
+	Else
+		tmp = "20"+Mid(as_file_in.date_, 7, 2)
+	EndIf
+	Print #file, Using "&-&-&     &      N= &      T= &"; Mid(as_file_in.date_, 1, 2); Mid(as_file_in.date_, 4, 2); tmp; as_file_in.time_; as_file_in.nseans; as_file_in.tnak
+	Close #file
+
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+"Pn.txt" For Append As #file
+	Print #file, Using "&"; as_file_in.rnc(0)
+	Close #file
+
+
+
 	For h = 0 To nh-1
 
 		If Config_sinus <> 0 Then
@@ -761,18 +818,23 @@ For t = 0 To seans_num_out-1 ' по времени
 			Next tau
 		EndIf
 
-		dat_all_str(h, t).p_corr = as_file_in.acf[h].pcorr' скорректированный профиль мощности
+		'dat_all_str(h, t).p_corr = as_file_in.acf[h].pcorr' скорректированный профиль мощности
 
 		dat_all_str(h, t).d_c = 1e200
 
 		dat_all_str(h, t).q = as_file_in.acf[h].q
 
+		For tau = 0 To 18
+			dat_all_str(h, t).var(tau) = as_file_in.acf[h].var(tau)
+		Next tau
+
 	Next h
 
+	/'
 	For tau = 0 To 18
 		noise_acf(t, tau) = as_file_in.rnc(tau)
 	Next tau
-
+'/
 
 	as_file_close(@as_file_in)
 
@@ -901,14 +963,14 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 	Close #file
 
 
-
+	/'
 	file = FreeFile()
 	Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "Pcorr."+Str(CInt(Hkm(h)))+".txt" For Output As #file
 	For t = 0 To seans_num_out-1 ' по времени
 		Print #file, dat_all_str(h, t).p_corr
 	Next t
 	Close #file
-
+'/
 
 
 	file = FreeFile()
@@ -956,12 +1018,12 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 
 		Dim As Double qMax = -1e200
 		For t = 0 To seans_num_out-1 ' по времени
-			if dat_all_str(h, t).q > qMax Then
+			If dat_all_str(h, t).q > qMax Then
 				qMax = dat_all_str(h, t).q
 			EndIf
 		Next t
 
-		Print Using "n = ###   h = ####   He+ = ##   Qmin = ####.##   Qmax = ####.##"; h; Hkm(h); he; qMin; qMax;
+		Print Using "n = ###   h = ####   He+ = ##   Qmin = ####.##   Qmax = ####.##   "; h; Hkm(h); he; qMin; qMax;
 		Print ,
 
 
@@ -1077,63 +1139,6 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 			EndIf
 		EndIf
 
-
-		For z = 0 To seans_num_out-1
-			If dat_all_str(h, z).d_c > 1e100 Then
-				file = FreeFile()
-				Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "RangesTi."+ Str(He) +"."+Str(CInt(Hkm(h)))+".csv" For Output As #file
-				For t = 0 To seans_num_out-1
-					If RegRange(2, t) > dat_all_str(h, t).ti_start Then
-						Print #file, RegRange(2, t); ";" ; dat_all_str(h, t).ti_c; ";";
-					Else
-						Print #file, dat_all_str(h, t).ti_start; ";";  dat_all_str(h, t).ti_c; ";";
-					EndIf
-
-					If RegRange(3, t) < dat_all_str(h, t).ti_end Then
-						Print #file, RegRange(3, t)
-					Else
-						Print #file, dat_all_str(h, t).ti_end
-					EndIf
-				Next t
-				Close #file
-
-				Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "RangesTe."+ Str(He) +"."+Str(CInt(Hkm(h)))+".csv" For Output As #file
-				For t = 0 To seans_num_out-1
-					If RegRange(0, t) > dat_all_str(h, t).te_start Then
-						Print #file, RegRange(0, t); ";" ; dat_all_str(h, t).te_c; ";";
-					Else
-						Print #file, dat_all_str(h, t).te_start; ";";  dat_all_str(h, t).te_c; ";";
-					EndIf
-
-					If RegRange(1, t) < dat_all_str(h, t).te_end Then
-						Print #file, RegRange(1, t)
-					Else
-						Print #file, dat_all_str(h, t).te_end
-					EndIf
-				Next t
-				Close #file
-
-
-				Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "RangesHyd."+ Str(He) +"."+Str(CInt(Hkm(h)))+".csv" For Output As #file
-				For t = 0 To seans_num_out-1
-					If RegRange(4, t) > dat_all_str(h, t).hyd_start Then
-						Print #file, RegRange(4, t); ";" ; dat_all_str(h, t).hyd_c; ";";
-					Else
-						Print #file, dat_all_str(h, t).hyd_start; ";";  dat_all_str(h, t).hyd_c; ";";
-					EndIf
-
-					If RegRange(5, t) < dat_all_str(h, t).hyd_end Then
-						Print #file, RegRange(5, t)
-					Else
-						Print #file, dat_all_str(h, t).hyd_end
-					EndIf
-				Next t
-				Close #file
-
-			EndIf
-		Next z
-
-
 		results_write(h, he)
 
 		If Config_auto <> 0 Then
@@ -1155,7 +1160,7 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 
 	Else
 
-		Dim As Integer wnd = 1
+		'Dim As Integer wnd = 1
 
 		save(h)
 
@@ -1165,8 +1170,9 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 
 		trand_ti (h, z, 1, seans_num_out-1, Config_ti_num)
 		trand_te (h, z, 1, seans_num_out-1, Config_te_num)
-		trand_hyd(h, z, 1, seans_num_out-1, Config_hyd_num)
-		inverse_problem_hyd_ti_te(h, z)
+		'trand_hyd(h, z, 1, seans_num_out-1, Config_hyd_num)
+		'inverse_problem_hyd_ti_te(h, z)
+		inverse_problem_ti_te(h, z)
 
 	EndIf
 
@@ -1257,15 +1263,37 @@ Sub inverse_problem_v1_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_
 										'!									Next lag
 
 										d = 0
-										For tau = 1 To 18
-											d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2
-										Next tau
+										If Config_sigma <> 0 Then
+											For tau = 1 To 18
+												d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2 / dat_all_str(h, t).var(tau)
+											Next tau
+										Else
+											For tau = 1 To 18
+												d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2
+											Next tau
+										EndIf
+
+										Dim As Double ratio = 0
+
+										If z < 2 Then
+											dat_all_str(h, t).ratio = 0
+										Else
+											Dim As Double chi2constraint = (te - 2*dat_all_str(h-Hstep, t).te_c + dat_all_str(h-2*Hstep, t).te_c)^2 + _
+											(ti - 2*dat_all_str(h-Hstep, t).ti_c + dat_all_str(h-2*Hstep, t).ti_c)^2
+											If chi2constraint <> 0 Then
+												ratio = chi2constraint/d
+												d += Config_kappa*ratio
+											Else
+												ratio = 0
+											EndIf
+										EndIf
 
 										If d < dat_all_str(h, t).d_c Then
 											dat_all_str(h, t).d_c = d
 											dat_all_str(h, t).ti_c = ti
 											dat_all_str(h, t).te_c = te
 											dat_all_str(h, t).hyd_c = hyd
+											dat_all_str(h, t).ratio = ratio
 										EndIf
 
 										'EndIf
@@ -1505,15 +1533,37 @@ Sub inverse_problem_v2_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_
 												'!											Next lag
 
 												d = 0
-												For tau = 1 To 18
-													d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)*(dat_all_str(h, t).acf(0)/acf_teor(0)) )^2
-												Next tau
+												If Config_sigma <> 0 Then
+													For tau = 1 To 18
+														d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2 / dat_all_str(h, t).var(tau)
+													Next tau
+												Else
+													For tau = 1 To 18
+														d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2
+													Next tau
+												EndIf
+
+												Dim As Double ratio = 0
+
+												If z < 2 Then
+													dat_all_str(h, t).ratio = 0
+												Else
+													Dim As Double chi2constraint = (te - 2*dat_all_str(h-Hstep, t).te_c + dat_all_str(h-2*Hstep, t).te_c)^2 + _
+													(ti - 2*dat_all_str(h-Hstep, t).ti_c + dat_all_str(h-2*Hstep, t).ti_c)^2
+													If chi2constraint <> 0 Then
+														ratio = chi2constraint/d
+														d += Config_kappa*ratio
+													Else
+														ratio = 0
+													EndIf
+												EndIf
 
 												If d < dat_all_str(h, t).d_c Then
 													dat_all_str(h, t).d_c = d
 													dat_all_str(h, t).ti_c = ti
 													dat_all_str(h, t).te_c = te
 													dat_all_str(h, t).hyd_c = hyd
+													dat_all_str(h, t).ratio = ratio
 												EndIf
 
 											EndIf
@@ -1885,6 +1935,15 @@ Sub results_write(ByVal h As Integer, ByVal He As Integer)
 	Next t
 	Close #file
 
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "Ratio."+Str(He)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+	For t = 0 To seans_num_out-1
+		Print #file, Using "##.#####^^^^^ "; dat_all_str(h, t).ratio
+	Next t
+	Close #file
+
+
 	If He = -1 Then
 
 		file = FreeFile()
@@ -1936,6 +1995,15 @@ Sub results_write2(ByVal h As Integer, ByVal He As Integer)
 		Print #file, Using "##.#####^^^^^ "; dat_all_str(h, t).d_c
 	Next t
 	Close #file
+
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "Ratio."+Str(He)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+	For t = 0 To seans_num_out-1
+		Print #file, Using "##.#####^^^^^ "; dat_all_str(h, t).ratio
+	Next t
+	Close #file
+
 
 	If He = -1 Then
 

@@ -1,0 +1,19 @@
+80
+105
+4
+e:/lib/
+100 60 10
+100 60 10
+180 100
+180 100
+
+
+=========================
+1 Hmin
+2 Hmax
+3 Hstep
+4 library path
+5 Ti steps
+6 Te steps
+7 Ti ranges
+8 Te ranges

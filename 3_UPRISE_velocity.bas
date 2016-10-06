@@ -86,16 +86,17 @@ If Err() <> 0 Then
 	Input "Hstep: ", Hstep
 Else
 	Dim As String tmp
-	
+
 	Input #file, tmp
 	Input #file, tmp
-	Input #file, tmp	
 	Input #file, tmp
-	
+	Input #file, tmp
+	Input #file, tmp
+
 	Input #file, Hmin
 	Input #file, Hmax
-	Input #file, Hstep 
-EndIf 
+	Input #file, Hstep
+EndIf
 
 If (Hmin < 0) Or (Hmax < Hmax) Or (Hstep < 1)  Then
 	PrintErrorToLog(ErrorInputData, __FILE__, __LINE__)
@@ -237,6 +238,7 @@ Close #file
 ' Выделяем память для данных
 Print "Выделение памяти для данных... ";
 ReDim Shared As Double drift_d (0 To nh-1, 0 To seans_num_in-1)
+ReDim Shared As Double time_d (0 To seans_num_in-1)
 Print "OK"
 
 
@@ -270,6 +272,8 @@ For t = 0 To seans_num_in-1 ' по времени
 
 	time_from_str(@hh, @mm, @ss, @as_file_in.time_ )
 	time_decimal = time_2decimal(hh, mm, ss)
+
+	time_d(t) = time_decimal
 
 	file = FreeFile
 	Open SEANS_DIR_OUT + DirectoryOutput+"/step4/"+"T.txt" For Append As #file
@@ -361,6 +365,30 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 	Close #file
 
 Next h
+
+
+
+file = FreeFile()
+Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+"V.txt"  For Output As #file
+If Err() <> 0 Then
+	break
+EndIf
+
+Print #file, "      0 ";
+
+For h = Hmin To Hmax Step Hstep
+	Print #file, Using "########  "; CInt(Hkm(h));
+Next h
+
+For t As Integer = 0 To seans_num_in-1
+	Print #file,
+	Print #file, Using "##.#### "; time_d(t);
+	For h = Hmin To Hmax Step Hstep
+		Print #file, Using "#####.##  "; drift_d(h, t);
+	Next h
+Next t
+
+Close #file
 
 
 

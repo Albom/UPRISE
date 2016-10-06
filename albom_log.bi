@@ -12,6 +12,7 @@ Enum ErrorType 'Типы ошибок
 	ErrorFortranLib			' Невозможно загрузить библиотеку АКФ
 	ErrorAFunction				' Ошибка ДФН
 	ErrorFilter					' Ошибка файла фильтра
+	ErrorConfig					' Ошибка файла конфига
 End Enum
 
 
@@ -48,6 +49,8 @@ Sub PrintErrorToLog( _
 			err_message = "Ошибка в двумерной функции неопределённости (ДФН)"
 		Case ErrorFilter
 			err_message = "Ошибка загрузки файла АКФ ИХ фильтра"
+		Case ErrorConfig
+			err_message = "Не удалось открыть конфигурационный файл"
 	End Select
 	FileHandle = FreeFile 'Присваиваем дескриптору свободное значение 
 	Open "Error_Log_UPRISE.txt" For Append As #FileHandle

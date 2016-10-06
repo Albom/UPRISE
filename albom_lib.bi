@@ -60,7 +60,6 @@ KEY_S = 115
 KEY_T = 116
 KEY_U = 117
 KEY_V = 118
-KEY_W = 119
 KEY_Y = 121
 KEY_Z = 122
 KEY_F1 = 15359
@@ -565,7 +564,7 @@ Declare Function stat_distribution_d Alias "stat_distribution_d"  (ByVal in1 As 
 
 Declare Function fourier_DFT_d Alias "fourier_DFT_d"  (ByVal array_in As Double Ptr, ByVal il As Integer, ByVal array_out As Double Ptr, ByVal ol As Integer, ByVal f0 As Double, ByVal df As Double, ByVal dt As Double) As Integer
 
-Declare Function fourier_DCFT_d Alias "fourier_DCFT_d"  (ByVal array_in As Double Ptr, ByVal il As Integer, ByVal array_out As Double Ptr, ByVal ol As Integer, ByVal f0 As Double, ByVal df As Double, ByVal dt As Double) As Integer
+Declare Function fourier_DCT_d Alias "fourier_DCT_d"  (ByVal array_in As Double Ptr, ByVal il As Integer, ByVal array_out As Double Ptr, ByVal ol As Integer, ByVal f0 As Double, ByVal df As Double, ByVal dt As Double) As Integer
 
 Declare Function fourier_FFT_d Alias "fourier_FFT_d"  (ByVal array_in1 As Double Ptr, ByVal array_in2 As Double Ptr, ByVal array_out1 As Double Ptr, ByVal array_out2 As Double Ptr, ByVal len As Integer) As Integer
 
