@@ -28,10 +28,6 @@
   <PARAM name="Local" value="view.htm#filtering">
  </OBJECT>
  <LI><OBJECT type="text/sitemap">
-  <PARAM name="Name" value="&ntilde;&iuml;&euml;&agrave;&eacute;&iacute;&egrave;&eth;&icirc;&acirc;&agrave;&iacute;&egrave;&aring;">
-  <PARAM name="Local" value="spline.htm">
- </OBJECT>
- <LI><OBJECT type="text/sitemap">
   <PARAM name="Name" value="&iacute;&agrave;&ecirc;&icirc;&iuml;&euml;&aring;&iacute;&egrave;&aring;">
   <PARAM name="Local" value="integrate.htm">
  </OBJECT>

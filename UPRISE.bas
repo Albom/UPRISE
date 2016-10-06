@@ -62,19 +62,20 @@ IncludeBinary("images/search.png", SearchIcon)
 
 ''' ===================================
 
+
 font = Cast(UINT, LoadFont("Verdana", 8))
 
 
 hwnd = Cast(UINT, OpenWindow(caption,0,0,530,330, WS_VISIBLE Or WS_CAPTION Or WS_MINIMIZEBOX Or WS_SYSMENU))
 CenterWindow(CPtr(Any Ptr, hwnd))
 
-ImageGadget(IMG_NAME, 0, 0, 550, 80, Catch_Image(@ImageLogo()))
+ImageGadget(IMG_NAME, 0, 0, 550, 80, Catch_Image(ImageLogo()) )
 
-ButtonImageGadget(BTN_IN,      10,  100, 24, 24, Cast(UINT, Catch_Image(@FolderIcon())))
-ButtonImageGadget(BTN_OUT,     40,  100, 24, 24, Cast(UINT, Catch_Image(@SearchIcon())))
-ButtonImageGadget(BTN_SAVE,    70,  100, 24, 24, Cast(UINT, Catch_Image(@SaveIcon())))
-ButtonImageGadget(BTN_OPTIONS, 100, 100, 24, 24, Cast(UINT, Catch_Image(@OptionsIcon())))
-ButtonImageGadget(BTN_HELP,    130, 100, 24, 24, Cast(UINT, Catch_Image(@HelpIcon())))
+ButtonImageGadget(BTN_IN,      10,  100, 24, 24, Catch_Image(FolderIcon()))
+ButtonImageGadget(BTN_OUT,     40,  100, 24, 24, Catch_Image(SearchIcon()))
+ButtonImageGadget(BTN_SAVE,    70,  100, 24, 24, Catch_Image(SaveIcon()))
+ButtonImageGadget(BTN_OPTIONS, 100, 100, 24, 24, Catch_Image(OptionsIcon()))
+ButtonImageGadget(BTN_HELP,    130, 100, 24, 24, Catch_Image(HelpIcon()))
 
 ButtonGadget(BTN_VIEW,      10, 140, 220, 28, "1. Просмотр данных")
 ButtonGadget(BTN_INTEGRATE, 10, 170, 220, 28, "2. Временное усреднение")

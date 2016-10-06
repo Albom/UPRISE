@@ -18,7 +18,7 @@ Using FB 'для перехода в полноэкранный режим монитора
 
 '''==============================================
 
-Dim As Integer partrap
+Dim As Integer partrap(0 To 679)
 
 Dim As Integer i, j
 
@@ -47,12 +47,22 @@ Dim As Integer is_divide
 Dim Shared As Double razr(0 To 350)
 Dim As String razr_filename
 Dim As Integer file
+Dim As Integer isTrapVar
+
+Dim Shared As Double qLevel(0 To 255)
+Dim Shared As Double qHint(0 To 255)
+Dim Shared As Double qHkm(0 To 255)
+Dim Shared As Double qTrap(0 To 255)
+Dim Shared As Integer qNum = 0
+
+Dim As Integer configPartrap
 
 '''==============================================
 
 file = FreeFile()
 Open "config.dat" For Input As #file
 Input #file, razr_filename
+Input #file, isTrapVar
 Close #file
 
 If razr_load(razr_filename, @razr(0), 330) = 0 Then ' загрузка разрядника
@@ -80,9 +90,11 @@ Color 15
 Input "Введите дату начала измерений (день месяц год): ", d_day, d_month, d_year
 Input "Введите количество суток: ", d_ndays
 
-Print
-Input "Введите параметр трапецеидального суммирования: ", partrap
-Print
+If isTrapVar = 0 Then
+	Print
+	Input "Введите параметр трапецеидального суммирования: ", configPartrap
+	Print
+EndIf
 
 'partrap = 0
 'Input "Делить на количество слагаемых? (0 - нет, 1 - да): ", is_divide
@@ -137,12 +149,76 @@ EndIf
 
 Print "OK"
 
+If isTrapVar <> 0 Then
 
+	file = FreeFile()
+	Open SEANS_DIR_OUT +DirectoryOutput+"/step1/config_trap.dat" For Input As #file
+
+	While (Not Eof(file))
+		Input #file, qLevel(qNum), qHint(qNum), qHkm(qNum), qTrap(qNum)
+		qNum += 1
+	Wend
+
+	Close #file
+
+	Print
+	Print "Уровни отношения сигнал/шум:"
+	For i = 0 To qNum-1
+		Print Using "###.##     ####     ####.#     ###"; qLevel(i); qHint(i); qHkm(i); qTrap(i)
+	Next i
+
+	Color 12
+	Print
+	Print "Уровни введены правильно? (Y/N) ";
+	If GetKey_YN() = 0 Then
+		Sleep 500
+		End
+	EndIf
+	Color 15
+	Print
+
+EndIf
+
+
+MkDir(SEANS_DIR_OUT + DirectoryOutput+"/step2")
+
+
+If isTrapVar = 0 Then
+	file = FreeFile()
+	Open SEANS_DIR_OUT +DirectoryOutput+"/step2/input.txt" For Output As #file
+	Print #file, "Параметр трапецеидального суммирования: "; configPartrap
+	Close #file
+
+	For h = 0 To 679
+		partrap(h) = configPartrap
+	Next h
+
+Else
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT +DirectoryOutput+"/step2/config_trap.dat" For Output As #file
+	For i = 0 To qNum-1
+		Print #file, Using "###.##     ####     ####.#     ###"; qLevel(i); qHint(i); qHkm(i); qTrap(i)
+	Next i
+	Close #file
+
+	i = 0
+	For h = 679 To 0 Step -1
+		partrap(h) = qTrap(i)
+		If h = qHint(i) Then
+			i += 1
+		EndIf
+	Next h
+
+EndIf
 
 file = FreeFile()
-Open SEANS_DIR_OUT +DirectoryOutput+"/step2/input.txt" For Output As #file
-Print #file, "Параметр трапецеидального суммирования: "; partrap
+Open SEANS_DIR_OUT + DirectoryOutput + "/step2/" + "profileTrap.txt" For Output As #file
+For h = 0 To 679
+	Print #file, Using "####.# ###"; seans2_altL(h); partrap(h)
+Next h
 Close #file
+
 
 
 
@@ -150,7 +226,7 @@ Print "Суммирование по высоте... ";
 
 seans_num_out = seans_num_in
 
-MkDir(SEANS_DIR_OUT + DirectoryOutput+"/step2")
+
 
 For t = 0 To seans_num_out-1 ' по времени
 
@@ -286,17 +362,17 @@ For t = 0 To seans_num_out-1 ' по времени
 
 	For h = 0 To as_file_in.nh-1
 
-		If h >= 18+partrap And h <= as_file_in.nh-partrap-1 Then
+		If h >= 18+partrap(h) And h <= as_file_in.nh-partrap(h)-1 Then
 
 			For tau = 0 To 18
 
 				as_file_out.acf[h].rc(tau) = 0
-				For z = h-tau-partrap To h+partrap ' по высоте
+				For z = h-tau-partrap(h) To h+partrap(h) ' по высоте
 					as_file_out.acf[h].rc(tau) += as_file_in.acf[z].rc(tau)
 				Next z
 
 				If is_divide = 1 Then
-					as_file_out.acf[h].rc(tau) /= tau+2*partrap+1 ' делить на количество слагаемых
+					as_file_out.acf[h].rc(tau) /= tau+2*partrap(h)+1 ' делить на количество слагаемых
 				EndIf
 
 			Next tau
@@ -315,21 +391,21 @@ For t = 0 To seans_num_out-1 ' по времени
 
 	For h = 0 To as_file_in.nh-1
 
-		If h >= 18+partrap And h <= as_file_in.nh-partrap-1 Then
+		If h >= 18+partrap(h) And h <= as_file_in.nh-partrap(h)-1 Then
 
-		For tau = 0 To 18
+			For tau = 0 To 18
 
-			as_file_out.acf[h].rs(tau) = 0
-			For z = h-tau-partrap To h+partrap ' по высоте
-				as_file_out.acf[h].rs(tau) += as_file_in.acf[z].rs(tau)
-			Next z
+				as_file_out.acf[h].rs(tau) = 0
+				For z = h-tau-partrap(h) To h+partrap(h) ' по высоте
+					as_file_out.acf[h].rs(tau) += as_file_in.acf[z].rs(tau)
+				Next z
 
-			If is_divide = 1 Then
-				as_file_out.acf[h].rs(tau) /= tau+2*partrap+1 ' делить на количество слагаемых
-			EndIf
+				If is_divide = 1 Then
+					as_file_out.acf[h].rs(tau) /= tau+2*partrap(h)+1 ' делить на количество слагаемых
+				EndIf
 
-		Next tau
-		
+			Next tau
+
 		Else
 
 			For tau = 0 To 18
@@ -337,7 +413,7 @@ For t = 0 To seans_num_out-1 ' по времени
 			Next tau
 
 		EndIf
-		
+
 	Next h
 
 	' Запись корректированной мощности и отношения с/ш, расчёт и запись отношения с/ш

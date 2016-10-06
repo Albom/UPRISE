@@ -79,6 +79,7 @@ Open "config.dat" For Input As #file
 Input #file, tmp
 Input #file, tmp
 Input #file, tmp
+Input #file, tmp
 Input #file, pulseLength
 Close #file
 
@@ -260,10 +261,10 @@ Do
 			If DX > 1 Then DX = DX/2 End If
 
 		Case KEY_DOWN
-			If START_X < seans_loaded-1 Then START_X = START_X + 1 End If
+			If START_X < seans_loaded-1 Then START_X += 1 End If
 
 		Case KEY_UP
-			If START_X > 0  Then START_X = START_X - 1  End If
+			If START_X > 0  Then START_X -= 1  End If
 
 		Case KEY_CTRL_DOWN
 			If START_X < seans_loaded-10 Then START_X += 10 End If

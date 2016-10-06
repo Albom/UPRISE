@@ -98,6 +98,7 @@ Open "config.dat" For Input As #file
 Input #file, tmp
 Input #file, tmp
 Input #file, tmp
+Input #file, tmp
 Input #file, pulseLength
 Close #file
 

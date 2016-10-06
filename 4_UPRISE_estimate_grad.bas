@@ -84,6 +84,8 @@ Dim Shared As Integer ConfigAmbig
 
 Dim Shared As Integer Config_h_min_q
 
+Dim Shared As Integer isTrapVar
+
 '''==============================================
 
 Dim Shared As Integer START_X = 0
@@ -156,6 +158,8 @@ PARAM_TE
 PARAM_H
 PARAM_HE
 End Enum
+
+Dim Shared As Integer trapProfile(0 To 679)
 
 '''==============================================
 
@@ -253,6 +257,9 @@ Color 15
 file = FreeFile()
 Open "config.dat" For Input As #file
 If Err() > 0 Then
+
+	isTrapVar = 0
+
 	Input "Введите длительность зондирующего импульса (мкс): ", pulse_length
 	LIBRARY_PATH = "d:/lib/"
 	isConv = 0
@@ -299,6 +306,8 @@ Else
 	Dim As String tmp_string
 
 	Input #file, tmp_string ' в первой строке записано имя файла характеристики разрядника, в данной программе она не используется
+	
+	Input #file, isTrapVar
 
 	Input #file, isConv
 	Input #file, LIBRARY_PATH
@@ -701,44 +710,65 @@ Print #1, Str(seans_num_out)+" files loaded"
 
 
 
+file = FreeFile()
+Open SEANS_DIR_OUT+DirectoryOutput+"/step2/profileTrap.txt" For Input As #file
+
+For h = 0 To 679
+	Dim As Double tmp
+	Input #file, tmp, trapProfile(h)
+Next h
+
+Close #file
 
 
 
 
 ' выделяем память для коэффициентов
 Dim As Integer hZero = 60
-ReDim Shared As Single Ambig(0 To 50, 0 To hZero, 0 To 18)
+ReDim Shared As Single Ambig(0 To 20, 0 To 50, 0 To hZero, 0 To 18)' partrap, tau, h, lag
 ReDim Shared As Single AmbigCoeff(0 To 50, 0 To (hMax-hMin)\hStep+1, 0 To seans_num_out-1, 0 To 18)'tau, h, t, lag
 
 
 ' Загрузка ДФН
 Print "Загрузка ДФН... ";
-For lag = 0 To 18
-	Print_process_percent((lag*100)/19)
-
-	file = FreeFile()
-	ext = Str(lag)
-	If lag < 10 Then ext = "0"+ext
-	If pulse_length = 663 Then
-		filename = "./ambig/663/00/ambig"+ext+".dat"
+For partrap As Integer = 0 To 20
+	
+	Print_process_percent((lag*100)/21)
+	
+	Dim As String DirNum
+	
+	If partrap < 10 Then
+		DirNum = "0" + Str(partrap)
 	Else
-		If pulse_length = 795 Then
-			filename = "./ambig/795/00/ambig"+ext+".dat"
+		DirNum = Str(partrap)
+	EndIf
+	 
+	
+	For lag = 0 To 18
+		file = FreeFile()
+		ext = Str(lag)
+		If lag < 10 Then ext = "0"+ext
+		If pulse_length = 663 Then
+			filename = "./ambig/663/"+ DirNum +"/ambig"+ext+".dat"
+		Else
+			If pulse_length = 795 Then
+				filename = "./ambig/795/00/ambig"+ext+".dat"
+			EndIf
 		EndIf
-	EndIf
 
-	Open filename For Input As #file
-	If Err() <> 0 Then
-		PrintErrorToLog(ErrorAFunction, __FILE__, __LINE__)
-		End
-	EndIf
-	For h = 0 To hZero
-		For tau = 0 To 50
-			Input #file, Ambig(tau, h, lag)
-		Next tau
-	Next h
-	Close #file
-Next lag
+		Open filename For Input As #file
+		If Err() <> 0 Then
+			PrintErrorToLog(ErrorAFunction, __FILE__, __LINE__)
+			End
+		EndIf
+		For h = 0 To hZero
+			For tau = 0 To 50
+				Input #file, Ambig(partrap, tau, h, lag)
+			Next tau
+		Next h
+		Close #file
+	Next lag
+Next partrap
 Print_process_percent(1000)
 Print "OK"
 
@@ -751,8 +781,8 @@ For t = 0 To seans_num_out-1
 		For lag = 0 To 18
 			For tau = 0 To 50
 				AmbigCoeff(tau, (h-hMin)\hStep, t, lag) = 0
-				For z = 0 To hZero
-					AmbigCoeff(tau, (h-hMin)\hStep, t, lag) += dat_all_str(h-z+num_point_acf\2, t).acf(0) * Ambig(tau, z, lag)
+				For z = 0 To hZero+trapProfile(h)*2
+						AmbigCoeff(tau, (h-hMin)\hStep, t, lag) += dat_all_str(h-z+num_point_acf\2+trapProfile(h), t).acf(0) * Ambig(trapProfile(h), tau, z, lag)
 				Next z
 			Next tau
 		Next lag
@@ -850,7 +880,14 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 			EndIf
 		Next t
 
-		Print Using "n = ###   h = ####   He+ = ##   Qmin = ####.##"; h; Hkm(h); he; qMin;
+		Dim As Double qMax = -1e200
+		For t = 0 To seans_num_out-1 ' по времени
+			if dat_all_str(h, t).q > qMax Then
+				qMax = dat_all_str(h, t).q
+			EndIf
+		Next t
+
+		Print Using "n = ###   h = ####   He+ = ##   Qmin = ####.##   Qmax = ####.##"; h; Hkm(h); he; qMin; qMax;
 		Print ,
 
 
@@ -1122,6 +1159,7 @@ Sub inverse_problem_v1_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_
 
 						For t = 0 To seans_num_out-1 ' по времени
 
+
 							If ( te >= dat_all_str(h, t).te_start ) And ( te <= dat_all_str(h, t).te_end ) And ( ti >= dat_all_str(h, t).ti_start ) And ( ti <= dat_all_str(h, t).ti_end ) And ( hyd >= dat_all_str(h, t).hyd_start ) And ( hyd <= dat_all_str(h, t).hyd_end ) Then
 
 								If ( te >= RegRange(0, t) ) And ( te <= RegRange(1, t) ) And ( ti >= RegRange(2, t) ) And ( ti <= RegRange(3, t) ) And ( hyd >= RegRange(4, t) ) And ( hyd <= RegRange(5, t) ) Then
@@ -1156,6 +1194,7 @@ Sub inverse_problem_v1_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_
 								EndIf
 
 							EndIf
+
 
 						Next t
 
@@ -1360,6 +1399,8 @@ Sub inverse_problem_v2_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_
 
 									If (te/ti <= 4) And (te/ti >= 0.7) Then
 
+
+
 										If acf_library_light_short( libraries_file(hyd), @temperatures(0), temperatures_len, ti, te, @acf_lib(25), num_point_acf) <> 0 Then
 
 
@@ -1392,6 +1433,9 @@ Sub inverse_problem_v2_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_
 											EndIf
 
 										EndIf
+
+
+
 
 									EndIf
 
@@ -5911,6 +5955,6 @@ Sub save_and_exit()
 	Close #file
 
 
-	
+
 
 End Sub

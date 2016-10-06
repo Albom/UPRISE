@@ -82,6 +82,15 @@ Dim Shared As Double R0DAC_4(0 To 18) ' 0 АЦП 2-го синусного канала
 
 Dim As as_file_struct as_file_str ' буфер для выходного файла
 
+Dim Shared As Double qMaxDiurnalMin = 1e200
+Dim Shared As Double qProfile(0 To 679)
+
+Dim Shared As Double qLevel(0 To 255)
+Dim Shared As Double qHint(0 To 255)
+Dim Shared As Integer qNum = 0
+
+
+
 '''==============================================
 
 SetEnviron("fbgfx=GDI")
@@ -110,9 +119,20 @@ Print
 Input "Введите время накопления (в мин): ", Tnak
 Input "Введите шаг перемещения окна (в мин): ", Tstep
 Input "Введите количество точек для интерполяции: ", n2
-				
+
 isVar = 0 'Input "Рассчитывать дисперсию? (0 - нет, 1 - да): ", isVar
 'Input "Нормировать АКФ? (0 - нет, 1 - да): ", isR
+
+
+file = FreeFile()
+Open "config_trap.dat" For Input As #file
+
+While (Not Eof(file))
+	Input #file, qLevel(qNum)
+	qNum += 1
+Wend
+
+Close #file
 
 
 If isVar <> 0 Then
@@ -293,8 +313,6 @@ For i = 0 To seans_out_num-1 'выделяем память на строки для даты и времени
 		End
 	EndIf
 Next i
-
-
 
 
 
@@ -670,6 +688,22 @@ Do Until t + tNak > seans_out_num-1
 
 
 
+	Dim As Double qMax = -1e200
+	For h = 0 To as_file_str.nh - 1
+		If as_file_str.acf[h].q > qMax Then
+			qMax = as_file_str.acf[h].q
+		EndIf
+	Next h
+
+	If qMax < qMaxDiurnalMin Then
+		qMaxDiurnalMin = qMax
+		For h = 0 To as_file_str.nh - 1
+			qProfile(h) = as_file_str.acf[h].q
+		Next h
+	EndIf
+
+
+
 	For h = 0 To as_file_str.nh - 1
 		For tau = 0 To 18 ' по задержке
 			as_file_str.acf[h].var(tau) = 0
@@ -729,7 +763,30 @@ Print "OK"
 
 
 
+Dim As Integer nLevel = 0
+For h = as_file_str.nh - 1 To 0 Step -1
+	If nLevel >= qNum Then
+		Exit For
+	EndIf
+	If qProfile(h) > qLevel(nLevel) Then
+		qHint(nLevel) = h
+		nLevel += 1
+	EndIf
+Next h
 
+file = FreeFile()
+Open SEANS_DIR_OUT + DirectoryOutput + "/step1/" + "config_trap.dat" For Output As #file 
+For nLevel = 0 To qNum-1
+	Print #file, Using "###.### #### ####.#"; qLevel(nLevel); qHint(nLevel); seans2_altL(qHint(nLevel))
+Next nLevel
+Close #file
+
+file = FreeFile()
+Open SEANS_DIR_OUT + DirectoryOutput + "/step1/" + "profile.txt" For Output As #file 
+For h = 0 To 679
+	Print #file, Using "####.# ###.###"; seans2_altL(h); qProfile(h)
+Next h
+Close #file
 
 Print
 Print "OK"

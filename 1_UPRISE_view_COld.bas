@@ -79,6 +79,7 @@ Open "config.dat" For Input As #file
 Input #file, tmp
 Input #file, tmp
 Input #file, tmp
+Input #file, tmp
 Input #file, pulseLength
 Close #file
 
@@ -149,7 +150,6 @@ Print #1, Str(seans_loaded)+" files loaded"
 Print "Сортировка по времени... ";
 qsort(@seans_str(0), seans_loaded, SizeOf(seans_struct), @seans_struct_time_compare)
 Print "OK"
-Sleep 300
 
 HMIN = 11
 HMAX = 350
@@ -257,11 +257,18 @@ Do
 		Case KEY_MINUS
 			If DX > 1 Then DX = DX/2 End If
 
-		Case KEY_CTRL_LEFT
-			If START_X < seans_loaded-1 Then START_X = START_X + 1 End If
+		Case KEY_DOWN
+			If START_X < seans_loaded-1 Then START_X += 1 End If
 
-		Case KEY_CTRL_RIGHT
-			If START_X > 0  Then START_X = START_X - 1  End If
+		Case KEY_UP
+			If START_X > 0  Then START_X -= 1  End If
+
+		Case KEY_CTRL_DOWN
+			If START_X < seans_loaded-10 Then START_X += 10 End If
+
+		Case KEY_CTRL_UP
+			If START_X > 10  Then START_X -= 10  End If
+
 
 		Case KEY_H
 			Color 15
@@ -418,7 +425,8 @@ Sub HelpPrint
 	Print "       Home       Перемещение курсора на сеанс в начале экрана"
 	Print "       End        Перемещение курсора на сеанс в конце экрана"
 	Print "       Tab        Перемещение курсора на 10 сеансов вправо"
-	Print "Ctrl + Left Right Сдвиг сеансов по оси времени"
+	Print "       Up Down    Сдвиг сеансов по оси времени на 1"
+	Print "Ctrl + Up Down    Сдвиг сеансов по оси времени на 10"
 	Print "        +   -     Изменение масштаба по оси времени"
 	Print "       PgUp PgDn  Перемещение по высотам"
 	Print "       H          Задать текущую высоту"
@@ -750,7 +758,7 @@ Sub ACFPrint()
 		Next i
 
 		For i = 1 To 3
-			Draw String (x0+i*dxdy*2+2-12, 400+2*dxdy+2), Str(CInt((i+6)*30.555*2)) /'Left(Str(i*30.555*2), 5)'/, 15
+			Draw String (x0+i*dxdy*2+2-12, 400+2*dxdy+2), Str(CInt((i+3)*39.285)*2) /'Left(Str(i*30.555*2), 5)'/, 15
 		Next i
 
 		For i = 0 To 4 ' выводим надписи от 1 до 0.2
