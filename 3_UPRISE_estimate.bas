@@ -11,6 +11,7 @@
 #Include "file.bi"
 
 #Include "window9.bi"
+#Include "dir.bi"
 
 '''==============================================
 
@@ -589,9 +590,22 @@ If Config_ti_interpolate <> 0 Then
 EndIf
 
 
-Cls()
-Color 15, 0
+Cls
+Color 11
 
+Print "Результаты обработки в папке " + Chr(34) + "out" + Chr(34) + ":"
+Color 10
+Dim As String fn
+fn = Dir("./out/*", fbDirectory)
+While Len(fn) > 0 
+	fn = Dir()
+	If (Len(fn)=13) And (Mid(fn, 7, 1)="-") Then
+		Print fn
+	EndIf
+Wend
+Print
+
+Color 15
 
 num_point_acf = CDbl(pulse_length)/delta_tau
 
@@ -1012,8 +1026,14 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 		EndIf
 
 		If MultiKey(FB.SC_Q) Then
-			save_and_exit()
-			End
+			Color 10
+			Print
+			Print "Сохранить результаты и выйти из программы? (Y/N) "
+			If GetKey_YN() <> 0 Then
+				save_and_exit()
+				End
+			EndIf
+			Color 15
 		EndIf
 
 
@@ -1209,10 +1229,8 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 
 Next h ' !!!!
 
-Print "OK"
 
-
-
+save_and_exit()
 
 Print
 Print "OK"
@@ -5626,14 +5644,6 @@ Sub save_and_exit()
 	Dim As Integer t, h
 	Dim As Integer file
 	Dim As Double temp
-
-	Color 10
-	Print
-	Print "Сохранить результаты и выйти из программы? (Y/N) "
-	If GetKey_YN() = 0 Then
-		Return
-	EndIf
-
 
 
 	' получаем количество сеансов

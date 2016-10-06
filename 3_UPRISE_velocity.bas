@@ -9,6 +9,7 @@
 #Include "fbgfx.bi"			'Подключение графической библиотеки
 
 #Include "window9.bi"
+#Include "dir.bi"
 
 
 '''==============================================
@@ -28,7 +29,7 @@ Const DELTA_TAU_INTERPOLATED = 1e-6
 
 Dim As Integer file, fileSpectrumBefore, fileSpectrumAfter, fileRcosBefore, fileRsinBefore, fileRcosAfter, fileRsinAfter
 
-Dim As Integer num_points
+Dim As Integer kMax, kMin
 Dim As Integer nh
 Dim As Integer Hmin, Hmax, Hstep
 
@@ -105,6 +106,8 @@ Else
 	Input #file, isSpectrumMod
 	Input #file, isVelocityTrap
 	Input #file, isAcf
+	Input #file, kMin, kMax
+	Input #file, num_algo
 EndIf
 
 If (Hmin < 0) Or (Hmax < Hmax) Or (Hstep < 1)  Then
@@ -122,6 +125,9 @@ Print "Номер минимальной высоты Hmin: "; Hmin
 Print "Номер максимальной высоты Hmax: "; Hmax
 Print "Шаг по высоте Hstep: "; Hstep
 Print
+Print "Номера минимальной и максимальной задержки: kMin = "; kMin; ", kMax = "; kMax
+Print "Номер алгоритма: "; num_algo
+Print
 If isSpectrum <> 0 Then
 	Print "+ Расчёт спектра."
 EndIf
@@ -138,15 +144,28 @@ Print
 Color 12
 Print "Нажмите Enter"
 
+
 Dim As Integer key
 Do
 	key = GetKey()
 Loop Until key = KEY_ENTER
 
+Cls
+Color 11
+
+Print "Результаты обработки в папке " + Chr(34) + "out" + Chr(34) + ":"
+Color 10
+Dim As String fn
+fn = Dir("./out/*", fbDirectory)
+While Len(fn) > 0 
+	fn = Dir()
+	If (Len(fn)=13) And (Mid(fn, 7, 1)="-") Then
+		Print fn
+	EndIf
+Wend
 Print
+
 Color 15
-
-
 Input "Введите дату начала измерений (день месяц год): ", d_day, d_month, d_year
 Input "Введите количество суток: ", d_ndays
 
@@ -154,18 +173,6 @@ If (d_day < 1) Or (d_month < 1) Or (d_year < 1996) Or (d_ndays < 1) Then
 	PrintErrorToLog(ErrorInputData, __FILE__, __LINE__)
 	End
 EndIf
-
-Print
-Input "Введите количество точек (от 1 до 18): ", num_points
-
-If (num_points < 1) Or (num_points > 18) Then
-	PrintErrorToLog(ErrorInputData, __FILE__, __LINE__)
-	End
-EndIf
-
-Print
-Print "Учитывать вес каждой точки? (y/n) ";
-num_algo = GetKey_YN()
 
 
 
@@ -480,49 +487,69 @@ For t = 0 To seans_num_in-1 ' по времени
 
 		EndIf
 
-		If num_algo = 1 Then
+		Select case num_algo
 
-			For tau = 1 To num_points
-				r2(tau) = (as_file_in.acf[h].rc(tau)/as_file_in.acf[h].rc(0))^2 + (as_file_in.acf[h].rs(tau)/as_file_in.acf[h].rc(0))^2
-			Next tau
+			Case 1
 
-			Dim As Double c, z ' числитель и знаменатель
-
-			c = 0
-			For tau = 1 To num_points
-				If as_file_in.acf[h].rc(tau)/as_file_in.acf[h].rc(0) > 0.05 Then
-					c += Atn( as_file_in.acf[h].rs(tau)/as_file_in.acf[h].rc(tau) ) * r2(tau) * DELTA_TAU * tau
-				EndIf
-			Next tau
-
-			z = 0
-			For tau = 1 To num_points
-				If as_file_in.acf[h].rc(tau)/as_file_in.acf[h].rc(0) > 0.05 Then
-					z += r2(tau) * (DELTA_TAU * tau)^2
-				EndIf
-			Next tau
-
-			drift_d(h, t) = -LAMBDA/(4*M_PI)*c/z
-
-		Else
-
-			Dim As Double c ' количество слагаемых
-			c = 0
-			drift_d(h, t) = 0
-			For tau = 1 To num_points
-				If as_file_in.acf[h].rc(tau)/as_file_in.acf[h].rc(0) > 0.05 Then
-					drift_d(h, t) += Atn( as_file_in.acf[h].rs(tau)/as_file_in.acf[h].rc(tau) ) / (DELTA_TAU * tau)
-					c += 1
-				EndIf
-			Next tau
-
-			If c <> 0 Then
-				drift_d(h, t) *= -LAMBDA/(4*M_PI)/c
-			Else
+				Dim As Double c ' количество слагаемых
+				c = 0
 				drift_d(h, t) = 0
-			EndIf
+				For tau = kMin To kMax
+					If Abs(as_file_in.acf[h].rc(tau)/as_file_in.acf[h].rc(0)) > 0.05 Then
+						drift_d(h, t) += Atn( as_file_in.acf[h].rs(tau)/as_file_in.acf[h].rc(tau) ) / (DELTA_TAU * tau)
+						c += 1
+					EndIf
+				Next tau
 
-		EndIf
+				If c <> 0 Then
+					drift_d(h, t)  *= -LAMBDA/(4*M_PI)/c
+				Else
+					drift_d(h, t) = 0
+				EndIf
+
+			Case 2
+
+				For tau = kMin To kMax
+					r2(tau) = (as_file_in.acf[h].rc(tau)/as_file_in.acf[h].rc(0))^2 + (as_file_in.acf[h].rs(tau)/as_file_in.acf[h].rc(0))^2
+				Next tau
+
+				Dim As Double c, z ' числитель и знаменатель
+
+				c = 0
+				For tau = kMin To kMax
+					If Abs(as_file_in.acf[h].rc(tau)/as_file_in.acf[h].rc(0)) > 0.05 Then
+						c += Atn( as_file_in.acf[h].rs(tau)/as_file_in.acf[h].rc(tau) ) * r2(tau) * DELTA_TAU * tau
+					EndIf
+				Next tau
+
+				z = 0
+				For tau = kMin To kMax
+					If Abs(as_file_in.acf[h].rc(tau)/as_file_in.acf[h].rc(0)) > 0.05 Then
+						z += r2(tau) * (DELTA_TAU * tau)^2
+					EndIf
+				Next tau
+
+				drift_d(h, t) = -LAMBDA/(4*M_PI)*c/z
+
+			Case 3
+
+				Dim As Double c ' количество слагаемых
+				c = 0
+				drift_d(h, t) = 0
+				For tau = kMin To kMax-1
+					If (Abs(as_file_in.acf[h].rc(tau)/as_file_in.acf[h].rc(0)) > 0.01) And (Abs(as_file_in.acf[h].rc(tau+1)/as_file_in.acf[h].rc(0)) > 0.01) Then
+						drift_d(h, t) += Atn( as_file_in.acf[h].rs(tau+1)/as_file_in.acf[h].rc(tau+1) ) - Atn( as_file_in.acf[h].rs(tau)/as_file_in.acf[h].rc(tau) )
+						c += 1
+					EndIf
+				Next tau
+
+				If c <> 0 Then
+					drift_d(h, t) *= -LAMBDA/(4*M_PI*DELTA_TAU*c)
+				Else
+					drift_d(h, t) = 0
+				EndIf
+
+		End Select
 
 	Next h
 

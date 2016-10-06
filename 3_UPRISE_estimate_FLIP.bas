@@ -197,6 +197,7 @@ Declare Sub inverse_problem_hyd_ti_te(ByVal h As Integer, ByVal z As Integer)
 Declare Sub ranges_set(ByVal h As Integer, ByVal delta_hyd As Integer, ByVal delta_te As Integer, ByVal delta_ti As Integer)
 Declare Sub ranges_reset(ByVal h As Integer, t_start As Integer = -1 , t_end As Integer = -1)
 Declare Sub ranges_reg_set(ByVal h As Integer)
+Declare Sub ranges_set_FLIP(ByVal h As Integer)
 
 Declare Sub results_write(ByVal h As Integer, ByVal He As Integer)
 Declare Sub intervals_input(ByVal h As Integer)
@@ -815,7 +816,7 @@ Print "OK"
 Print #1, Str(seans_num_out)+" files loaded"
 
 
-ReDim Shared As Double temp_flip(0 To 20000)
+ReDim As Double temp_flip(0 To 20000)
 Dim As Integer nRow, nColumn, temp_flip_length
 
 filename = SEANS_DIR_OUT+DirectoryOutput+"/step2/FLIP_TI_"+DirectoryOutput+".txt"
@@ -825,7 +826,7 @@ If ( (temp_flip_length <> nRow*nColumn) Or (temp_flip_length = 0) ) Then
 	End
 EndIf
 
-ReDim Shared As Double ti_flip(0 To nRow-1-1, 0 To nColumn-1-1)
+ReDim As Double ti_flip(0 To nRow-1-1, 0 To nColumn-1-1)
 For r As Integer = 0 To nRow-1-1
 	For c As Integer = 0 To nColumn-1-1
 		ti_flip(r, c) = temp_flip( (r+1)*nColumn + c + 1 )
@@ -839,21 +840,21 @@ If ( (temp_flip_length <> nRow*nColumn) Or (temp_flip_length = 0) ) Then
 	End
 EndIf
 
-ReDim Shared As Double te_flip(0 To nRow-1-1, 0 To nColumn-1-1)
+ReDim As Double te_flip(0 To nRow-1-1, 0 To nColumn-1-1)
 For r As Integer = 0 To nRow-1-1
 	For c As Integer = 0 To nColumn-1-1
 		te_flip(r, c) = temp_flip( (r+1)*nColumn + c + 1 )
 	Next
 Next
 
-ReDim Shared As Double time_flip(0 To nColumn-1-1)
+ReDim As Double time_flip(0 To nColumn-1-1)
 For c As Integer = 0 To nColumn-1
 	time_flip(c) = temp_flip( c+1 )
 Next
 
 
 
-ReDim Shared As Double alt_flip(0 To nColumn-1-1)
+ReDim As Double alt_flip(0 To nColumn-1-1)
 For r As Integer = 0 To nRow-1-1
 	alt_flip(r) = temp_flip( (r+1)*nColumn )
 Next
@@ -862,28 +863,85 @@ Next
 nRow -= 1
 nColumn -= 1
 
+ReDim As Double time_decimal_all(0 To seans_num_out-1)
 
-For c As Integer = 0 To nColumn-1
-	Print #1, time_flip(c)
+file = FreeFile()
+Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+"T.txt" For Input As #file
+For t = 0 To seans_num_out-1 ' по времени
+	Input #file, time_decimal_all(t)
 Next
+Close #file
 
-Print #1,
-
+ReDim As Double ti_flip_time(0 To nRow-1, 0 To seans_num_out-1)
+ReDim As Double te_flip_time(0 To nRow-1, 0 To seans_num_out-1)
 
 For r As Integer = 0 To nRow-1
-	Print #1, alt_flip(r)
-Next
 
-Print #1,
+	Dim As Double temperatures_flip_time(0 To nColumn-1)
 
-For r As Integer = 0 To nRow-1
-	For c As Integer = 0 To nColumn-1
-		Print #1, Using "#### "; ti_flip(r, c);
+	For t = 0 To nColumn-1
+		temperatures_flip_time(t) = ti_flip(r, t)
+	Next t
+
+	For t = 0 To seans_num_out-1
+		ti_flip_time(r, t) = array_linear_d(time_decimal_all(t), @time_flip(0), @temperatures_flip_time(0), nColumn)
+	Next t
+
+	For t = 0 To nColumn-1
+		temperatures_flip_time(t) = te_flip(r, t)
+	Next t
+
+	For t = 0 To seans_num_out-1
+		te_flip_time(r, t) = array_linear_d(time_decimal_all(t), @time_flip(0), @temperatures_flip_time(0), nColumn)
+	Next t
+
+Next r
+
+
+
+ReDim Shared As Double ti_flip_all(0 To nh-1, 0 To seans_num_out-1)
+ReDim Shared As Double te_flip_all(0 To nh-1, 0 To seans_num_out-1)
+
+For t = 0 To seans_num_out-1
+
+	Dim As Double temperatures_flip_alt(0 To nRow-1)
+
+	For r As Integer = 0 To nRow-1
+		temperatures_flip_alt(r) = ti_flip_time(r, t)
 	Next
-	Print #1,
-Next
 
-break
+	For r As Integer = 0 To nH-1
+		ti_flip_all(r, t) = array_linear_d(Hkm(r), @alt_flip(0), @temperatures_flip_alt(0), nRow)
+	Next
+
+	For r As Integer = 0 To nRow-1
+		temperatures_flip_alt(r) = te_flip_time(r, t)
+	Next
+
+	For r As Integer = 0 To nH-1
+		te_flip_all(r, t) = array_linear_d(Hkm(r), @alt_flip(0), @temperatures_flip_alt(0), nRow)
+	Next
+
+Next t
+
+/'
+file = FreeFile()
+Open "out.txt" For Output As #file
+Print #file, Using "##### "; 0;
+For c As Integer = 0 To seans_num_out-1
+	Print #file, Using "##.## "; time_decimal_all(c);
+Next
+Print #file,
+For r As Integer = 0 To nH-1
+	Print #file, Using "##### "; Hkm(r);
+	For c As Integer = 0 To seans_num_out-1
+		Print #file, Using "##### "; ti_flip_all(r, c);
+	Next
+	Print #file,
+Next
+Close #file
+'/
+
 
 
 file = FreeFile()
@@ -1010,33 +1068,22 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "He."+Str(CInt(Hkm(h)))+".txt" For Output As #file
 	Close #file
 
-	If Config_auto <> 0 Then
-		Print
-		Color 12
-		Print "јвтоматический режим."
-		Print "ƒл€ перехода в ручной режим зажмите ESC."
-		Print
-		Color 15
-	EndIf
-
 	Dim As Integer auto
 
 	auto = 1
 
 	For he = 0 To he_max Step he_step
 
-		If Config_auto <> 0 Then
-			If MultiKey(FB.SC_ESCAPE) And auto = 1 Then
-				auto = 0
-				Color 11
-				Print "¬ключЄн ручной режим."
-				Color 15
-			EndIf
-		EndIf
 
 		If MultiKey(FB.SC_Q) Then
-			save_and_exit()
-			End
+			Color 10
+			Print
+			Print "—охранить результаты и выйти из программы? (Y/N) "
+			If GetKey_YN() <> 0 Then
+				save_and_exit()
+				End
+			EndIf
+			Color 15
 		EndIf
 
 
@@ -1096,120 +1143,15 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 		Print "OK"
 
 
+		ranges_set_FLIP(h) ' установка температур согласно FLIP и очистка погрешностей
 
-
-		' очистка погрешностей
-		For t = 0 To seans_num_out-1
-			dat_all_str(h, t).d_c = 1e200
-		Next t
-
-		ranges_reset(h)
-
-		If Config_auto <> 0 Then
-			If MultiKey(FB.SC_ESCAPE) And auto = 1 Then
-				auto = 0
-				Color 11
-				Print "¬ключЄн ручной режим."
-				Color 15
-			EndIf
-		EndIf
-
-
-
-		' 1 шаг
-		If isConv <> 0 Then
-			inverse_problem_v1_conv(h, z, Config_step_h_1, Config_step_te_1, Config_step_ti_1)
-		Else
-			If ConfigAmbig <> 0 Then
-				inverse_problem_v1_ambig(h, z, Config_step_h_1, Config_step_te_1, Config_step_ti_1)
-			Else
-				inverse_problem_v1(h, z, Config_step_h_1, Config_step_te_1, Config_step_ti_1)
-			EndIf
-		EndIf
-
-
-
-		If Config_auto <> 0 Then
-			If MultiKey(FB.SC_ESCAPE) And auto = 1 Then
-				auto = 0
-				Color 11
-				Print "¬ключЄн ручной режим."
-				Color 15
-			EndIf
-		EndIf
-
-		' 2 шаг
-		ranges_set(h, Config_range_h_2, Config_range_te_2, Config_range_ti_2)
-		If isConv <> 0 Then
-			inverse_problem_v2_conv(h, z, Config_step_h_2, Config_step_te_2, Config_step_ti_2)
-		Else
-			If ConfigAmbig <> 0 Then
-				inverse_problem_v2_ambig(h, z, Config_step_h_2, Config_step_te_2, Config_step_ti_2)
-			Else
-				inverse_problem_v2(h, z, Config_step_h_2, Config_step_te_2, Config_step_ti_2)
-			EndIf
-		EndIf
-
-
-		If Config_auto <> 0 Then
-			If MultiKey(FB.SC_ESCAPE) And auto = 1 Then
-				auto = 0
-				Color 11
-				Print "¬ключЄн ручной режим."
-				Color 15
-			EndIf
-		EndIf
-
-
-		' 3 шаг
-		ranges_set(h, Config_range_h_3, Config_range_te_3, Config_range_ti_3)
-		If isConv <> 0 Then
-			inverse_problem_v2_conv(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_3)
-		Else
-			If ConfigAmbig <> 0 Then
-				inverse_problem_v2_ambig(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_3)
-			Else
-				inverse_problem_v2(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_3)
-			EndIf
-		EndIf
+		inverse_problem_v2_ambig(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_3)
 
 		results_write(h, he)
-
-		If Config_auto <> 0 Then
-			If MultiKey(FB.SC_ESCAPE) And auto = 1 Then
-				auto = 0
-				Color 11
-				Print "¬ключЄн ручной режим."
-				Color 15
-			EndIf
-		EndIf
 
 	Next he
 
 	intervals_input_auto(h)
-
-	If (auto = 0) Or (Config_auto = 0) Then
-
-		draw_all(h, z)
-
-	Else
-
-		'Dim As Integer wnd = 1
-
-		save(h)
-
-		If Config_ti_interpolate = 1 Then
-			interpolate_ti(h, z)
-		EndIf
-
-		trand_ti (h, z, 1, seans_num_out-1, Config_ti_num)
-		trand_te (h, z, 1, seans_num_out-1, Config_te_num)
-		'trand_hyd(h, z, 1, seans_num_out-1, Config_hyd_num)
-		'inverse_problem_hyd_ti_te(h, z)
-		inverse_problem_ti_te(h, z)
-
-	EndIf
-
 
 
 
@@ -1220,7 +1162,7 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 	Close #file
 
 
-	ranges_reg_set(h) ' регул€ризаци€
+	'ranges_reg_set(h) ' регул€ризаци€
 
 	z += 1
 
@@ -1232,9 +1174,8 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 
 Next h ' !!!!
 
-Print "OK"
 
-
+save_and_exit()
 
 
 Print
@@ -1819,6 +1760,7 @@ Sub ranges_set(ByVal h As Integer, ByVal delta_hyd As Integer, ByVal delta_te As
 
 End Sub
 
+
 ''' ================================================================
 
 Sub ranges_reset(ByVal h As Integer, t_start As Integer = -1 , t_end As Integer = -1)
@@ -1836,6 +1778,27 @@ Sub ranges_reset(ByVal h As Integer, t_start As Integer = -1 , t_end As Integer 
 
 		dat_all_str(h, t).ti_start = 500
 		dat_all_str(h, t).ti_end = 4000
+
+		dat_all_str(h, t).hyd_start = 0
+		dat_all_str(h, t).hyd_end = libraries_num-1
+
+		dat_all_str(h, t).d_c = 1e200
+	Next t
+
+End Sub
+
+''' ================================================================
+
+Sub ranges_set_FLIP(ByVal h As Integer)
+
+	Dim As Integer t
+
+	For t = 0 To seans_num_out-1
+		dat_all_str(h, t).te_start = te_flip_all(h, t)
+		dat_all_str(h, t).te_end = te_flip_all(h, t)
+
+		dat_all_str(h, t).ti_start = ti_flip_all(h, t)
+		dat_all_str(h, t).ti_end = ti_flip_all(h, t)
 
 		dat_all_str(h, t).hyd_start = 0
 		dat_all_str(h, t).hyd_end = libraries_num-1
@@ -5649,14 +5612,6 @@ Sub save_and_exit()
 	Dim As Integer t, h
 	Dim As Integer file
 	Dim As Double temp
-
-	Color 10
-	Print
-	Print "—охранить результаты и выйти из программы? (Y/N) "
-	If GetKey_YN() = 0 Then
-		Return
-	EndIf
-
 
 
 	' получаем количество сеансов

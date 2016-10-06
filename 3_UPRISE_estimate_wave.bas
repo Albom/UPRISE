@@ -101,9 +101,6 @@ SetEnviron("fbgfx=GDI")
 Screen 20
 #Include Once "albom_font.bi"
 
-
-
-
 Cls
 
 Color 11
@@ -477,7 +474,7 @@ Sub inverse_problem_v1(h As Integer, z As Integer, step_te As Integer, step_ti A
 					For t As Integer = 0 To seans_num-1 ' по времени
 
 						Dim As Double d = 0
-						For tau As Integer = dat_all_str(h, t).nTau To 18 
+						For tau As Integer = dat_all_str(h, t).nTau To 18
 							d += ( dat_all_str(h, t).acf(tau) - dat_all_str(h, t).acf(0)*acf_teor(tau) )^2
 						Next tau
 
@@ -524,7 +521,7 @@ Sub inverse_problem_v2(h As Integer, z As Integer, step_te As Integer, step_ti A
 						array_norm0_d(@acf_teor(0), @acf_teor(0), num_point_acf)
 
 						Dim As Double d = 0
-						For tau As Integer = dat_all_str(h, t).nTau To 18 
+						For tau As Integer = dat_all_str(h, t).nTau To 18
 							d += ( dat_all_str(h, t).acf(tau) - dat_all_str(h, t).acf(0)*acf_teor(tau) )^2
 						Next tau
 
@@ -623,7 +620,7 @@ Sub save_all()
 
 	Dim As Integer nH, nT
 	Dim As Integer t, h
-	
+
 	Dim As Double temp
 
 	' получаем количество сеансов
@@ -652,16 +649,16 @@ Sub save_all()
 	Loop
 
 	Close #file
-	
-	
+
+
 
 	' выделяем память
 	ReDim As Double  t_array  (0 To nT-1)
 	ReDim As Integer h_array  (0 To nH-1)
-	
+
 	ReDim As Double  q_array  (0 To nT-1, 0 To nH-1)
 	ReDim As Integer  n_array  (0 To nT-1, 0 To nH-1)
-	
+
 	ReDim As Double  ti_array (0 To nT-1, 0 To nH-1)
 	ReDim As Double  te_array (0 To nT-1, 0 To nH-1)
 	ReDim As Double   d_array (0 To nT-1, 0 To nH-1)
@@ -669,7 +666,7 @@ Sub save_all()
 	ReDim As Double  ti2_array (0 To nT-1, 0 To nH-1)
 	ReDim As Double  te2_array (0 To nT-1, 0 To nH-1)
 	ReDim As Double   d2_array (0 To nT-1, 0 To nH-1)
-	
+
 
 
 	' считываем время сеансов
@@ -680,7 +677,7 @@ Sub save_all()
 		Input #file, t_array(t)
 	Next t
 
-	Close #file	
+	Close #file
 
 
 
@@ -694,8 +691,8 @@ Sub save_all()
 	Next h
 
 	Close #file
-	
-	
+
+
 
 
 	' чтение данных из файла
@@ -759,10 +756,10 @@ Sub save_all()
 		Next t
 		Close #file
 
-	Next h	
-	
-	
-	
+	Next h
+
+
+
 	' запись Ti 1
 
 	file = FreeFile()
@@ -783,11 +780,11 @@ Sub save_all()
 	Next t
 
 	Close #file
-	
-	
+
+
 	' запись Ti 2
-	
-		file = FreeFile()
+
+	file = FreeFile()
 	Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/Ti2.txt" For Output As #file
 
 
@@ -806,7 +803,7 @@ Sub save_all()
 	Next t
 
 	Close #file
-	
+
 
 	' запись Te 1
 
@@ -828,7 +825,7 @@ Sub save_all()
 		Next h
 	Next t
 
-	Close #file	
+	Close #file
 
 
 	' запись Te 2
@@ -851,7 +848,7 @@ Sub save_all()
 		Next h
 	Next t
 
-	Close #file	
+	Close #file
 
 
 
@@ -874,7 +871,7 @@ Sub save_all()
 		Next h
 	Next t
 
-	Close #file	
+	Close #file
 
 
 
@@ -896,7 +893,7 @@ Sub save_all()
 		Next h
 	Next t
 
-	Close #file	
+	Close #file
 
 
 
@@ -918,7 +915,7 @@ Sub save_all()
 		Next h
 	Next t
 
-	Close #file	
+	Close #file
 
 
 
@@ -941,7 +938,7 @@ Sub save_all()
 		Next h
 	Next t
 
-	Close #file	
+	Close #file
 
 
 End Sub
