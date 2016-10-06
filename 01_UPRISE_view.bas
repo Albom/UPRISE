@@ -27,7 +27,7 @@ Dim is1s As Integer
 Dim As String SEANS_DIR = "./in/"
 Dim As Integer symbol = 0 ' вспомогательная переменная для отображения процесса загрузки сеансов
 
-Dim timestr As ZString*16 ' переменная для представления времени в виде строки
+Dim Shared timestr As ZString*16 ' переменная для представления времени в виде строки
 
 ReDim Preserve Shared As seans_struct seans_str(0 To 1)
 Dim Shared seans_loaded As Integer   ' сеансов загружено
@@ -72,12 +72,12 @@ Open Err For Output As #1
 
 Cls
 Color 11
-Print "UPRISE version 1.0 beta"
+Print "UPRISE version 1.1 beta"
 Print "(Unified Processing of the Results of Incoherent Scatter Experiments)"
-Print 
+Print
 Color 7
 Print "View - программа просмотра S-файлов системы К3"
-Print "автор: Александр Богомаз, н.с. Института ионосферы"
+Print "(c) Богомаз А.В., Котов Д.В. (Институт ионосферы)"
 Print
 
 Color 15
@@ -124,7 +124,7 @@ EndIf
 
 Print "OK"
 
-Print #1, Str(seans_loaded)+" files loaded" 
+Print #1, Str(seans_loaded)+" files loaded"
 
 
 ' Сортировка сеансов по времени
@@ -190,17 +190,17 @@ Do
 		Print " ",
 	End If
 	Color 14
-	Print Using "###.###    "; seans_str(CUR).time_decimal;
+	Print Using "Время: ###.###  "; seans_str(CUR).time_decimal;
 	time_2str(seans_str(CUR).seans.Hour1, seans_str(CUR).seans.Minute1, seans_str(CUR).seans.Second1, @timestr)
 	Print timestr,
 	Color 11
-	Print Using "###"; H+1;
+	Print Using "Высота: № ###"; H+1;
 	If H > HMAX-100 Then
 		Print  "*";
 	Else
 		Print " ";
 	End If
-	Print Using "    #### км"; seans2_altL(H);
+	Print Using "  #### км"; seans2_altL(H);
 	Color 10
 	Print ,CHANNEL;
 	Color 12
@@ -214,9 +214,9 @@ Do
 
 	key = GetKey()
 
-'	Cls
-'	Print key
-'	Sleep 1000
+	'	Cls
+	'	Print key
+	'	Sleep 1000
 
 	Select Case key
 
@@ -300,6 +300,264 @@ Do
 				CUR=seans_loaded-1
 			End If
 
+		Case KEY_D
+			Dim As Integer fileTemp
+			Dim As Double pN1, pN2
+
+			pN1 = 0
+			pN2 = 0
+			For i = 650 To 670
+				pN1 += seans_str(CUR).seans.datps1(i)
+				pN2 += seans_str(CUR).seans.datps2(i)
+			Next i
+			pN1 /= 20
+			pN2 /= 20
+
+			fileTemp = FreeFile()
+			Open "S1-"+ Str(seans_str(CUR).seans.Year1) + "-" + Str(seans_str(CUR).seans.Month1) + "-"+ Str(seans_str(CUR).seans.Day1) + "__" + Str(seans_str(CUR).seans.Hour1) + "."+Str(seans_str(CUR).seans.Minute1) + "."+Str(seans_str(CUR).seans.Second1) + ".csv" For Output As #fileTemp
+			For i = 0 To 679
+				Print #fileTemp, Using "####.#; ####.####"; seans2_altS(i); (seans_str(CUR).seans.datps1(i)-pN1)/pN1
+			Next i
+			Close #fileTemp
+
+			fileTemp = FreeFile()
+			Open "S2-"+ Str(seans_str(CUR).seans.Year1) + "-" + Str(seans_str(CUR).seans.Month1) + "-"+ Str(seans_str(CUR).seans.Day1) + "__" + Str(seans_str(CUR).seans.Hour1) + "."+Str(seans_str(CUR).seans.Minute1) + "."+Str(seans_str(CUR).seans.Second1) + ".csv" For Output As #fileTemp
+			For i = 0 To 679
+				Print #fileTemp, Using "####.#; ####.####"; seans2_altS(i); (seans_str(CUR).seans.datps2(i)-pN2)/pN2
+			Next i
+			Close #fileTemp
+
+			pN1 = 0
+			pN2 = 0
+			For i = 650 To 670
+				pN1 += seans_str(CUR).seans.dat1(i, 0)
+				pN2 += seans_str(CUR).seans.dat3(i, 0)
+			Next i
+			pN1 /= 20
+			pN2 /= 20
+
+
+			fileTemp = FreeFile()
+			Open "L1-"+ Str(seans_str(CUR).seans.Year1) + "-" + Str(seans_str(CUR).seans.Month1) + "-"+ Str(seans_str(CUR).seans.Day1) + "__" + Str(seans_str(CUR).seans.Hour1) + "."+Str(seans_str(CUR).seans.Minute1)  + "."+Str(seans_str(CUR).seans.Second1) + ".csv" For Output As #fileTemp
+			For i = 0 To 679
+				Print #fileTemp, Using "####.#; ####.####"; seans2_altL(i); (seans_str(CUR).seans.dat1(i, 0)-pN1)/pN1
+			Next i
+			Close #fileTemp
+
+			fileTemp = FreeFile()
+			Open "L2-"+ Str(seans_str(CUR).seans.Year1) + "-" + Str(seans_str(CUR).seans.Month1) + "-"+ Str(seans_str(CUR).seans.Day1) + "__" + Str(seans_str(CUR).seans.Hour1) + "."+Str(seans_str(CUR).seans.Minute1) +  "."+Str(seans_str(CUR).seans.Second1) + ".csv" For Output As #fileTemp
+			For i = 0 To 679
+				Print #fileTemp, Using "####.#; ####.####"; seans2_altL(i); (seans_str(CUR).seans.dat3(i, 0)-pN2)/pN2
+			Next i
+			Close #fileTemp
+
+
+		Case KEY_Z
+
+			ReDim As Double zt1(0 To seans_loaded-1)
+			ReDim As Double zt2(0 To seans_loaded-1)
+			ReDim As Double zt3(0 To seans_loaded-1)
+			ReDim As Double zt4(0 To seans_loaded-1)
+
+			ReDim As Double ztr1(0 To seans_loaded-1)
+			ReDim As Double ztr2(0 To seans_loaded-1)
+
+			ReDim As Double rnz1(0 To 18, 0 To seans_loaded-1)
+			ReDim As Double rnz2(0 To 18, 0 To seans_loaded-1)
+
+			ReDim As Double rnz1s(0 To 18, 0 To seans_loaded-1)
+			ReDim As Double rnz2s(0 To 18, 0 To seans_loaded-1)
+
+			Dim As Integer t
+
+			Dim As Integer file1, file2, file3, file4
+			Dim As Integer file5, file6, file7, file8
+			Dim As Integer file9, file10
+
+			file1 = FreeFile()
+			Open "Z1-"+ Str(seans_str(CUR).seans.Year1) + "-" + Str(seans_str(CUR).seans.Month1) + "-"+ Str(seans_str(CUR).seans.Day1) + ".csv" For Output As #file1
+
+			file2 = FreeFile()
+			Open "Z2-"+ Str(seans_str(CUR).seans.Year1) + "-" + Str(seans_str(CUR).seans.Month1) + "-"+ Str(seans_str(CUR).seans.Day1) + ".csv" For Output As #file2
+
+			file3 = FreeFile()
+			Open "Z3-"+ Str(seans_str(CUR).seans.Year1) + "-" + Str(seans_str(CUR).seans.Month1) + "-"+ Str(seans_str(CUR).seans.Day1) + ".csv" For Output As #file3
+
+			file4 = FreeFile()
+			Open "Z4-"+ Str(seans_str(CUR).seans.Year1) + "-" + Str(seans_str(CUR).seans.Month1) + "-"+ Str(seans_str(CUR).seans.Day1) + ".csv" For Output As #file4
+
+			file5 = FreeFile()
+			Open "Z1r-"+ Str(seans_str(CUR).seans.Year1) + "-" + Str(seans_str(CUR).seans.Month1) + "-"+ Str(seans_str(CUR).seans.Day1) + ".csv" For Output As #file5
+
+			file6 = FreeFile()
+			Open "Z2r-"+ Str(seans_str(CUR).seans.Year1) + "-" + Str(seans_str(CUR).seans.Month1) + "-"+ Str(seans_str(CUR).seans.Day1) + ".csv" For Output As #file6
+
+			file7 = FreeFile()
+			Open "RNZ1-"+ Str(seans_str(CUR).seans.Year1) + "-" + Str(seans_str(CUR).seans.Month1) + "-"+ Str(seans_str(CUR).seans.Day1) + ".csv" For Output As #file7
+
+			file8 = FreeFile()
+			Open "RNZ2-"+ Str(seans_str(CUR).seans.Year1) + "-" + Str(seans_str(CUR).seans.Month1) + "-"+ Str(seans_str(CUR).seans.Day1) + ".csv" For Output As #file8
+
+			file9 = FreeFile()
+			Open "RNZ1s-"+ Str(seans_str(CUR).seans.Year1) + "-" + Str(seans_str(CUR).seans.Month1) + "-"+ Str(seans_str(CUR).seans.Day1) + ".csv" For Output As #file9
+
+			file10 = FreeFile()
+			Open "RNZ2s-"+ Str(seans_str(CUR).seans.Year1) + "-" + Str(seans_str(CUR).seans.Month1) + "-"+ Str(seans_str(CUR).seans.Day1) + ".csv" For Output As #file10
+
+
+			For t = 0 To seans_loaded-1
+				zt1(t) = 0
+				zt2(t) = 0
+				zt3(t) = 0
+				zt4(t) = 0
+
+				ztr1(t) = 0
+				ztr2(t) = 0
+
+				For tau As Integer = 0 To 18
+					rnz1(tau, t) = 0
+					rnz2(tau, t) = 0
+					rnz1s(tau, t) = 0
+					rnz2s(tau, t) = 0
+				Next tau
+
+				Dim As Integer numH = 0
+
+				For i = 500 To 600
+					zt1(t) += seans_str(t).seans.dat01(i)
+					zt2(t) += seans_str(t).seans.dat02(i)
+					zt3(t) += seans_str(t).seans.dat03(i)
+					zt4(t) += seans_str(t).seans.dat04(i)
+
+					For tau As Integer = 0 To 18
+						rnz1(tau, t) += seans_str(t).seans.dat1(i, tau)
+						rnz2(tau, t) += seans_str(t).seans.dat3(i, tau)
+						rnz1s(tau, t) += seans_str(t).seans.dat2(i, tau)
+						rnz2s(tau, t) += seans_str(t).seans.dat4(i, tau)
+					Next tau
+
+					For tau As Integer = 15 To 18
+						ztr1(t) += seans_str(t).seans.dat1(i, tau)
+						ztr2(t) += seans_str(t).seans.dat3(i, tau)
+					Next tau
+
+					numH += 1
+				Next i
+
+				zt1(t) /= numH
+				zt2(t) /= numH
+				zt3(t) /= numH
+				zt4(t) /= numH
+
+				ztr1(t) /= 4*numH
+				ztr2(t) /= 4*numH
+
+				For tau As Integer = 0 To 18
+					rnz1(tau, t) /= numH
+					rnz2(tau, t) /= numH
+					rnz1s(tau, t) /= numH
+					rnz2s(tau, t) /= numH
+				Next tau
+
+				For tau As Integer = 0 To 18
+					rnz1(tau, t) -= zt1(t)*zt1(t)/1463.0
+					rnz2(tau, t) -= zt2(t)*zt2(t)/1463.0
+				Next tau
+
+				Print #file1, Using "##.####; ##.####^^^"; seans_str(t).time_decimal; zt1(t)
+				Print #file2, Using "##.####; ##.####^^^"; seans_str(t).time_decimal; zt2(t)
+				Print #file3, Using "##.####; ##.####^^^"; seans_str(t).time_decimal; zt3(t)
+				Print #file4, Using "##.####; ##.####^^^"; seans_str(t).time_decimal; zt4(t)
+
+				Print #file5, Using "##.####; ##.####^^^"; seans_str(t).time_decimal; ztr1(t)
+				Print #file6, Using "##.####; ##.####^^^"; seans_str(t).time_decimal; ztr2(t)
+
+				For tau As Integer = 0 To 18
+					Print #file7, Using "######.####; "; rnz1(tau, t);'/rnz1(0, t);
+					Print #file8, Using "######.####; "; rnz2(tau, t);'/rnz2(0, t);
+					Print #file9,  Using "######.####; "; rnz1s(tau, t);
+					Print #file10, Using "######.####; "; rnz2s(tau, t);
+				Next tau
+				Print #file7,
+				Print #file8,
+				Print #file9,
+				Print #file10,
+
+				/'
+				For i As Integer = 0 To 679
+					Print #file7, Using "######.####; "; seans_str(t).seans.dat01(i);
+					Print #file8, Using "######.####; "; seans_str(t).seans.dat02(i);
+				Next i
+				Print #file7,
+				Print #file8,
+'/
+			Next t
+
+			Close #file1
+			Close #file2
+			Close #file3
+			Close #file4
+			Close #file5
+			Close #file6
+			Close #file7
+			Close #file8
+			Close #file9
+			Close #file10
+
+/'
+		Case KEY_I
+			ReDim As Double p(0 To 679, 0 To seans_loaded-1)
+			Dim As Integer file
+
+
+			For h As Integer = 0 To 679
+				For t As Integer = 0 To seans_loaded-1
+					p(h, t) = 0
+					For tau As Integer = 0 To 18
+						p(h, t) += seans_str(t).seans.dat1(h, tau)
+					Next tau
+				Next t
+			Next h
+
+			file = FreeFile()
+			Open "p.csv" For Output As #file
+
+			For h As Integer = 0 To 679 Step 1
+				For t As Integer = 0 To seans_loaded-1 Step 1
+					Print #file, Using "##.###^^^; "; p(h, t);
+				Next t
+				Print #file,
+			Next h
+
+			Close #file
+
+			file = FreeFile()
+			Open "p2.csv" For Output As #file
+			For h As Integer = 0 To 679 Step 1
+				For t As Integer = 0 To seans_loaded-1 Step 1
+					Print #file, Using "##.###^^^^; "; seans_str(t).seans.dat1(h, 0);
+				Next t
+				Print #file,
+			Next h
+			Close #file
+
+
+			file = FreeFile()
+			Open "t.csv" For Output As #file
+			For t As Integer = 0 To seans_loaded-1 Step 1
+				Print #file, Using "##.###^^^^; "; seans_str(t).time_decimal;
+			Next t
+			Close #file
+
+
+			file = FreeFile()
+			Open "h.csv" For Output As #file
+			For h As Integer = 0 To 679 Step 1
+				Print #file, Using "##.###^^^^; "; seans2_altL_front(h)
+			Next h
+			Close #file
+'/
+
 		Case KEY_A
 			Color 15
 			AutomaticClear()
@@ -318,6 +576,14 @@ Do
 			seans2_saveM3(seans_str(CUR).filename_full, @(seans_str(CUR).seans))
 			If CUR < seans_loaded-1 Then CUR = CUR + 1 End If
 			Vis_array_load ' загрузить данные для отображения
+
+		Case KEY_CTRL_DEL
+			For i = 0 To 679
+				seans_str(CUR).seans.m(i) = 1
+			Next i
+			seans_str(CUR).isM = 2
+			seans2_saveM3(seans_str(CUR).filename_full, @(seans_str(CUR).seans))
+			Vis_array_load ' загрузить данные для отображения			
 
 		Case KEY_BACKSPACE
 			seans_str(CUR).seans.m(H) = 1
@@ -373,7 +639,7 @@ Sub HelpPrint
 	Print
 	Color 7
 	Print "View - программа просмотра S-файлов системы К3 (многоканального коррелятора)"
-	Print "автор: Александр Богомаз, н.с. Института ионосферы"
+	Print "(c) Богомаз А.В., Котов Д.В. (Институт ионосферы)"
 	Color 8
 	Print
 	Print "================================"
@@ -534,18 +800,18 @@ Sub AutomaticClear()
 				seans_str(t).isM = 1
 				seans2_saveM0(seans_str(t).filename_full)
 				symbol = Print_process(symbol)
-				For h = 0 To 679
-					seans_str(t).seans.m(h) = 0
-				Next h
+				For i As Integer = 0 To 679
+					seans_str(t).seans.m(i) = 0
+				Next i
 			Next t
 
-		Case 2
+		Case 2 ' проверка предыдущей точки
 			Input "Ширина окна: ", wnd_width
 			Input "Уровень: ", lev
 
 			For ord = 0 To 12 ' по ординатам
-				For h = 0 To 679 ' по высоте
-					For t = 1 To seans_loaded-1-wnd_width ' по времени
+				For h As Integer = 0 To 679 ' по высоте
+					For t = seans_loaded-1-wnd_width To 1 Step -1 ' по времени
 
 						num = 0
 						mean = 0
@@ -589,7 +855,7 @@ Sub AutomaticClear()
 			Input "Уровень: ", lev
 
 			For ord = 0 To 12 ' по ординатам
-				For h = 0 To 679 ' по высоте
+				For h As Integer = 0 To 679 ' по высоте
 					For t = 0 To seans_loaded-1-wnd_width ' по времени
 
 						num = 0
@@ -657,6 +923,7 @@ Sub ACFPrint()
 	Dim As Double R0DAC_3(0 To 18) ' 0 АЦП 2-го косинусного канала
 	Dim As Double R0DAC_4(0 To 18) ' 0 АЦП 2-го синусного канала
 
+	Dim As Integer curVariancePoint = 0 ' Текущая точка дисперсии (от 0 до 18)
 
 	Do
 
@@ -688,30 +955,30 @@ Sub ACFPrint()
 					For i = 0 To 18
 						Select Case CHANNEL
 							Case 1
-								n(i) = n(i) + seans_str(CUR).seans.dat1(j, i) - R0DAC_1(i)
+								n(i) += seans_str(CUR).seans.dat1(j, i) - R0DAC_1(i)
 							Case 2
-								n(i) = n(i) + seans_str(CUR).seans.dat2(j, i) - R0DAC_2(i)
+								n(i) += seans_str(CUR).seans.dat2(j, i) - R0DAC_2(i)
 							Case 3
-								n(i) = n(i) + seans_str(CUR).seans.dat3(j, i) - R0DAC_3(i)
+								n(i) += seans_str(CUR).seans.dat3(j, i) - R0DAC_3(i)
 							Case 4
-								n(i) = n(i) + seans_str(CUR).seans.dat4(j, i) - R0DAC_4(i)
+								n(i) += seans_str(CUR).seans.dat4(j, i) - R0DAC_4(i)
 						End Select
 					Next i
 				Else
 					For i = 0 To 18
 						Select Case CHANNEL
 							Case 1
-								n(i) = n(i) + seans_str(CUR).seans.dat1(j, i)
+								n(i) += seans_str(CUR).seans.dat1(j, i)
 							Case 2
-								n(i) = n(i) + seans_str(CUR).seans.dat2(j, i)
+								n(i) += seans_str(CUR).seans.dat2(j, i)
 							Case 3
-								n(i) = n(i) + seans_str(CUR).seans.dat3(j, i)
+								n(i) += seans_str(CUR).seans.dat3(j, i)
 							Case 4
-								n(i) = n(i) + seans_str(CUR).seans.dat4(j, i)
+								n(i) += seans_str(CUR).seans.dat4(j, i)
 						End Select
 					Next i
 				EndIf
-				k = k + 1
+				k += 1
 			EndIf
 		Next j
 
@@ -786,26 +1053,126 @@ Sub ACFPrint()
 		array_norm0_d(@r(0), @r(0), 19)
 		array_norm0_d(@n(0), @n(0), 19)
 
+
+		' Расчёт дисперсии каждой точки АКФ
+
+		ReDim As Double r15(0 To 18, -7 To 7)
+		ReDim As Double n15(0 To 18, -7 To 7)
+		ReDim As Double m15(0 To 18) ' мат. ожидание (mean)
+		ReDim As Double v15(0 To 18) ' дисперсия (variance)
+		ReDim As Double vn15(0 To 18) ' нормированная дисперсия
+
+		If CUR > 7 And CUR < seans_loaded-7 Then
+
+			For t As Integer = -7 To 7
+
+				For tau = 0 To 18
+					n15(tau, t) = 0
+					k = 0
+					For z As Integer = HMAX-100 To HMAX-10
+						If seans_str(CUR+t).seans.m(z) = 0 Then
+							n15(tau, t) += seans_str(CUR+t).seans.dat1(z, tau)
+							k += 1
+						EndIf
+					Next z
+					If k <> 0 Then
+						n15(tau, t) /= k
+					Else
+						n15(tau, t) = 0
+					EndIf
+
+					r15(tau, t) = seans_str(CUR+t).seans.dat1(H, tau) - n15(tau, t)
+
+				Next tau
+
+			Next t
+
+			For tau = 0 To 18
+				m15(tau) = 0
+				k = 0
+				For t As Integer = -7 To 7
+					If seans_str(CUR+t).seans.m(H) = 0 Then
+						m15(tau) += r15(tau, t)
+						k += 1
+					EndIf
+				Next t
+				If k > 9 Then
+					m15(tau) /= k
+				Else
+					m15(tau) = 0
+				EndIf
+
+			Next tau
+
+			For tau = 0 To 18
+				v15(tau) = 0
+				k = 0
+				For t As Integer = -7 To 7
+					If seans_str(CUR+t).seans.m(H) = 0 Then
+						v15(tau) += ( r15(tau, t)-m15(tau) )^2
+						k += 1
+					EndIf
+				Next t
+				If k > 9 Then
+					v15(tau) /= k
+				Else
+					v15(tau) = 0
+				EndIf
+			Next tau
+
+			For tau = 0 To 18
+				v15(tau) /= 1-30.555*tau/663.0
+			Next
+
+
+			For tau = 0 To 18
+				vn15(tau) = v15(tau)/v15(0)
+			Next
+
+		EndIf
+
+
+
+		' Рисование
+
 		Cls
 
 		Color 11
 		If is_noise_ACF > 0 Then  ' вычитать шум или нет?
-			Print "с",
-			Color 15
-			Print Using "с/ш = ###.##     "; sn;
+			Print "Режим: с  ";
+			Color 13
+			Print Using "с/ш = ###.##   "; sn;
 		Else
-			Print "с+ш",
+			Print "Режим: с+ш               ";
 		EndIf
+
+		Color 15
+		Print Using "Время: ###.###    "; seans_str(CUR).time_decimal;
+		time_2str(seans_str(CUR).seans.Hour1, seans_str(CUR).seans.Minute1, seans_str(CUR).seans.Second1, @timestr)
+		Print timestr,
+
+		Color 11
+		Print Using "Высота: № ###"; H+1;
+		Print Using "  #### км  "; seans2_altL(H);
 
 		Color 14
 		If is_R0_ACF > 0 Then
-			Print "-0"
+			Print "-0";
 		Else
-			Print "+0"
+			Print "+0";
 		EndIf
 
+		Color 10
+		Print "   Дисперсия в"; curVariancePoint; " точке:"; CInt(v15(curVariancePoint)/10000)
+
+
+		Color 7
+		Print
+		Print "Перемещение по времени: Влево/Вправо     Перемещение по точке АКФ: Вверх/Вниз     Перемещение по высоте: PageDown/PageUp"
+		Print "С / С+Ш: N                               '0' АЦП: A"
 		Color 12
-		Print "Нажмите Enter"
+		Print
+		Print "Для выхода нажмите Enter"
 
 		x0 = 50
 		dxdy = 50
@@ -824,17 +1191,17 @@ Sub ACFPrint()
 		Next i
 
 		For i = 0 To 17
-			Line (x0+i*dxdy, 400-5*dxdy*r(i))-(x0+(i+1)*dxdy, 400-5*dxdy*r(i+1)), 15
-			Line (x0+i*dxdy, 400-5*dxdy*n(i))-(x0+(i+1)*dxdy, 400-5*dxdy*n(i+1)), 7
+			Line (x0+i*dxdy, 400-5*dxdy*r(i))-(x0+(i+1)*dxdy, 400-5*dxdy*r(i+1)), 10
+			Line (x0+i*dxdy, 400-5*dxdy*n(i))-(x0+(i+1)*dxdy, 400-5*dxdy*n(i+1)), 9
 		Next i
 
 		For i = 0 To 18
-			Circle (x0+i*dxdy, 400-5*dxdy*r(i)), 3, 15
-			Circle (x0+i*dxdy, 400-5*dxdy*n(i)), 3, 7
+			Circle (x0+i*dxdy, 400-5*dxdy*r(i)), 3, 10
+			Circle (x0+i*dxdy, 400-5*dxdy*n(i)), 3, 9
 		Next i
 
-		For i = 0 To 9
-			Draw String (x0+i*dxdy*2+2, 400+2*dxdy+2), Left(Str(i*30.555*2), 5), 15
+		For i = 1 To 9
+			Draw String (x0+i*dxdy*2+2-12, 400+2*dxdy+2), Str(CInt(i*30.555*2)) /'Left(Str(i*30.555*2), 5)'/, 15
 		Next i
 
 		For i = 0 To 4 ' выводим надписи от 1 до 0.2
@@ -848,10 +1215,48 @@ Sub ACFPrint()
 			Draw String (x0-40, 400-5*dxdy+i*dxdy), Left(Str( (100-20*i)/100 ), 5), 15
 		Next i
 
+		' вывод дисперсии
+
+		Line (x0, 700-dxdy*3)-(x0+18*dxdy, 700-dxdy*3), 7, , &b0000000011110000
+		Line (x0, 700-dxdy*2)-(x0+18*dxdy, 700-dxdy*2), 7, , &b0000000011110000
+		Line (x0, 700-dxdy*1)-(x0+18*dxdy, 700-dxdy*1), 7, , &b0000000011110000
+		Line (x0, 700)-(x0+18*dxdy, 700), 7
+		Line (x0, 700+dxdy*1)-(x0+18*dxdy, 700+dxdy*1), 7, , &b0000000011110000
+
+		For i = 0 To 18
+			Line(x0+i*dxdy, 700-dxdy*3)-(x0+i*dxdy, 700+dxdy*1), 7, , &b0000000011110000
+		Next i
+
+		For i = 0 To 4 ' выводим надписи от 3 до -2
+			Draw String (x0-32, 700-2*dxdy+i*dxdy), Left(Str( 3-i ), 5), 15
+		Next i
+
+		If CUR > 7 And CUR < seans_loaded-7 Then
+
+			For i = 0 To 17
+				Line (x0+i*dxdy, 700+dxdy-dxdy*vn15(i))-(x0+(i+1)*dxdy, 700+dxdy-dxdy*vn15(i+1)), 12
+			Next i
+
+			For i = 0 To 18
+				Circle (x0+i*dxdy, 700+dxdy-dxdy*vn15(i)), 3, 12
+			Next i
+
+		EndIf
+
 
 		key = GetKey
 
 		Select Case key
+
+			Case KEY_UP
+				If curVariancePoint < 18 Then
+					curVariancePoint += 1
+				EndIf
+
+			Case KEY_DOWN
+				If curVariancePoint > 0 Then
+					curVariancePoint -= 1
+				EndIf
 
 			Case KEY_RIGHT
 				If CUR < seans_loaded-1 Then CUR = CUR + 1 End If
@@ -864,6 +1269,14 @@ Sub ACFPrint()
 
 			Case KEY_A
 				is_R0_ACF *= -1
+
+			Case KEY_PAGE_UP
+				If H < HMAX-1 Then H += 1 End If
+				Vis_array_load() ' загрузить данные для отображения
+
+			Case KEY_PAGE_DOWN
+				If H > HMIN Then H -= 1 End If
+				Vis_array_load() ' загрузить данные для отображения
 
 		End Select
 
@@ -928,9 +1341,9 @@ Sub LoadFiles(ByVal Directory As String)
 
 		If (isM <> 0) Then
 			seans2_load ( directory + "/" + filename, @(seans_str(seans_loaded).seans) )
-			
-			Print #1, filename 
-			
+
+			Print #1, filename
+
 			seans_str(seans_loaded).filename = filename
 			seans_str(seans_loaded).filename_full = directory + "/" + filename
 			seans_str(seans_loaded).isM = isM

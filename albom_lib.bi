@@ -39,6 +39,12 @@ Enum AlbomKeys
 	KEY_3 = 51
 	KEY_4 = 52
 	KEY_A = 97
+	KEY_B = 98
+	KEY_C = 99
+	KEY_D = 100
+	KEY_E = 101
+	KEY_F = 102
+	KEY_G = 103
 	KEY_H = 104
 	KEY_I = 105
 	KEY_M = 109
@@ -52,12 +58,14 @@ Enum AlbomKeys
 	KEY_U = 117
 	KEY_V = 118
 	KEY_Y = 121
+	KEY_Z = 122
 	KEY_F1 = 15359
 	KEY_LEFT = 19455
 	KEY_RIGHT = 19967 
 	KEY_UP = 18687
 	KEY_DOWN = 20735
 	KEY_DEL = 21503
+	KEY_CTRL_DEL = 37887 
 	KEY_CTRL_LEFT = 29695
 	KEY_CTRL_RIGHT = 29951
 	KEY_CTRL_UP = 36351
@@ -172,7 +180,7 @@ Type  seans1s_data Field = 1
 	Dim Datm(0 To 679)			As Integer 
 	Dim Datp(0 To 679)			As Integer 
 
-	Dim m(0 To 179)				As Integer 
+	Dim m(0 To 679)				As Integer 
 	
 End Type
 
@@ -224,6 +232,9 @@ Declare Function  seans1s_saveM3 Alias "seans1s_saveM3" (_
 										) As Integer
 
 Declare Function  seans1s_alt Alias "seans1s_alt" (ByVal H As Integer) As Double
+Declare Function  seans1s_alt_front Alias "seans1s_alt_front" (ByVal H As Integer) As Double
+Declare Function  seans1s_alt_795 Alias "seans1s_alt_795" (ByVal H As Integer) As Double
+
 
 Declare Function  seans1s_noise Alias "seans1s_noise" (_
 											 ByVal seans As seans1s_data Ptr, _
@@ -408,7 +419,56 @@ End Type
 
 Extern "c"
 
-Declare Function  seans3_load Alias "seans3_load" ( ByVal filename As ZString Ptr, ByVal seans As seans3_data Ptr) As Integer
+Declare Function seans3_load Alias "seans3_load" ( ByVal filename As ZString Ptr, ByVal seans As seans3_data Ptr) As Integer
+Declare Function seans3_close Alias "seans3_close" (ByVal seans As seans3_data Ptr) As Integer 
+
+End Extern
+
+
+''' ===================================================================================================
+''' seansH
+
+Type  seansH_data Field = 0
+
+	Dim Day1								As Integer 
+	Dim Month1							As Integer 
+	Dim Year1							As Integer 
+	Dim Hour1							As Integer 
+	Dim Minute1							As Integer 
+	Dim Second1							As Integer 
+
+	Dim nH								As Integer 
+	Dim nP								As Integer 
+	Dim nR								As Integer 
+
+	Dim dT								As Double
+	Dim dH								As Double
+
+	Dim magic							As Short 
+
+	Dim Dat1(0 To 679, 0 To 113)	As LongInt 
+	Dim Dat2(0 To 679, 0 To 113)	As LongInt 
+	Dim Dat3(0 To 679, 0 To 113)	As LongInt 
+	Dim Dat4(0 To 679, 0 To 113)	As LongInt 
+
+	Dim Dat01(0 To 679)				As LongInt 
+	Dim Dat02(0 To 679)				As LongInt 
+
+	Dim Datps1(0 To 679)				As LongInt 
+	Dim Datps2(0 To 679)				As LongInt 
+
+	Dim Dat03(0 To 679)				As LongInt 
+	Dim Dat04(0 To 679)				As LongInt 
+
+End Type
+
+Extern "c"
+
+
+Declare Function  seansH_load Alias "seansH_load" ( _
+											ByVal filename As ZString Ptr, _ 
+											ByVal seans As seansH_data Ptr _
+										) As Integer
 
 End Extern
 
@@ -433,6 +493,8 @@ Declare Function filelist_get Alias "filelist_get"  (ByVal directory As ZString 
 Declare Function filelist_get_filename Alias "filelist_get_filename"  (ByVal filelist As ZString Ptr, ByVal filename As ZString Ptr, ByVal num As Integer) as Integer
 
 Declare Function file_creat Alias "file_creat"  (ByVal filename As String) As Integer
+
+Declare Function file_creat_and_add_s Alias "file_creat_and_add_s"  (ByVal filename As String, ByVal zstr As String Ptr) As Integer
 
 Declare Function file_newline Alias "file_newline"  (ByVal filename As String) As Integer
 
@@ -534,6 +596,8 @@ Declare Function random_rdtsc Alias "random_rdtsc"  () as Integer
 
 Declare Function random_rnd Alias "random_rnd"  () as Double
 
+Declare Function random_rnd_int Alias "random_rnd_int"  (n As Integer) as Integer
+
 Declare Function random_gauss Alias "random_gauss"  () as Double
 
 End Extern
@@ -570,6 +634,14 @@ Declare Function prz_acf_fortran_conv  Alias "prz_acf_fortran_conv" (ByVal f As 
 Declare Function prz_m_library_make Alias "prz_M_library_make" (ByVal filename As ZString Ptr, ByVal O As Integer) As Integer
 Declare Function prz_m_library_list_of_temperatures_get  Alias "prz_M_library_list_of_temperatures_get" (ByVal list As Integer Ptr ) As Integer
 Declare Function prz_m_acf Alias "prz_M_acf" (ByVal f As FILE Ptr, ByVal temperatures As Integer Ptr, ByVal temperatures_len As Integer, ByVal ti As Double, ByVal te As Double, ByVal acf As Double Ptr, ByVal length As Integer) As Integer
+
+Declare Function fortran_library_list_of_temperatures_get_5  Alias "fortran_library_list_of_temperatures_get_5" (ByVal list As Integer Ptr ) As  Integer
+Declare Function prz_acf_fortran_5  Alias "prz_acf_fortran_5" (ByVal f As FILE Ptr, ByVal temperatures As Integer Ptr, ByVal temperatures_len As Integer, ByVal ti As Double, ByVal te As Double, ByVal acf As Double Ptr, ByVal length As Integer) As  Integer
+
+Declare Function fortran_library_list_get_conv_short_663  Alias "fortran_library_list_get_conv_short_663" (ByVal he_percent_int As Integer, ByVal list As ZString Ptr ) As  Integer
+Declare Function fortran_library_list_get_conv_short_795  Alias "fortran_library_list_get_conv_short_795" (ByVal he_percent_int As Integer, ByVal list As ZString Ptr ) As  Integer
+Declare Function fortran_library_list_of_temperatures_get_short_663_795  Alias "fortran_library_list_of_temperatures_get_short_663_795" (ByVal list As Integer Ptr ) As  Integer
+Declare Function prz_acf_fortran_conv_short_663_795  Alias "prz_acf_fortran_conv_short_663_795" (ByVal f As FILE Ptr, ByVal temperatures As Integer Ptr, ByVal temperatures_len As Integer, ByVal ti As Double, ByVal te As Double, ByVal acf As Double Ptr, ByVal length As Integer) As  Integer
 
 
 End Extern
