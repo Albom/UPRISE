@@ -348,6 +348,7 @@ Function ResultsExportTxt(directory_in As String) As Integer
 	ReDim As Double  he_array (0 To nT-1, 0 To nH-1)
 	ReDim As Double  hyd_array(0 To nT-1, 0 To nH-1)
 	ReDim As Double  m_array  (0 To nT-1, 0 To nH-1)
+	ReDim As Double  o_array  (0 To nT-1, 0 To nH-1)
 
 
 	' считываем время сеансов
@@ -442,6 +443,13 @@ Function ResultsExportTxt(directory_in As String) As Integer
 		Open directory_in+"\M.-1."+ Str(h_array(h)) +".txt" For Input As #file
 		For t = 0 To nT-1
 			Input #file, m_array(t, h)
+		Next t
+		Close #file
+
+		file = FreeFile()
+		Open directory_in+"\O.-1."+ Str(h_array(h)) +".txt" For Input As #file
+		For t = 0 To nT-1
+			Input #file, o_array(t, h)
 		Next t
 		Close #file
 
@@ -870,6 +878,32 @@ Function ResultsExportTxt(directory_in As String) As Integer
 	Next t
 
 	Close #file
+
+
+	' запись O
+
+	file = FreeFile()
+	Open directory_out+"\O.txt" For Output As #file
+	If Err() <> 0 Then
+		Return EXPORT_ERROR_OPEN_FILE
+	EndIf
+
+	Print #file, "      0 ";
+
+	For h = 0 To nH-1
+		Print #file, Using "###### "; h_array(h);
+	Next h
+
+	For t = 0 To nT-1
+		Print #file,
+		Print #file, Using "##.#### "; t_array(t);
+		For h = 0 To nH-1
+			Print #file, Using "###.## "; o_array(t, h);
+		Next h
+	Next t
+
+	Close #file
+
 
 	Return EXPORT_OK
 

@@ -92,6 +92,8 @@ Dim Shared As Integer Config_Overlap_prohibition
 
 Dim Shared As Integer Config_ti_interpolate, Config_ti_interpolate_num, Config_ti_interpolate_points, Config_ti_interpolate_dev
 
+Dim Shared As Integer Config_ti_te_recalc_oxygen
+
 '''==============================================
 
 Dim Shared As Integer START_X = 0
@@ -421,6 +423,9 @@ Else
 
 	' 35
 	Input #file, Config_ti_interpolate, Config_ti_interpolate_num, Config_ti_interpolate_points, Config_ti_interpolate_dev
+
+	' 36
+	Input #file, Config_ti_te_recalc_oxygen
 
 	Close #file
 
@@ -986,19 +991,27 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 			libraries_num = 1
 		EndIf
 
-		For hyd = 0 To libraries_num-1
-			Print_process_percent((hyd*100)/libraries_num)
-			library_light_list_get_filename(@zfilename, @libraries_filelist, hyd)
-			zfilename = LIBRARY_PATH + zfilename
-			libraries_file(hyd) = fopen (zfilename, "rb")
-			If libraries_file(hyd) = NULL Then
+		If Config_oxygen <> 0 Then
+			libraries_file(0) = fopen (LIBRARY_PATH +"O+.lib", "rb")
+			If libraries_file(0) = NULL Then
 				PrintErrorToLog(ErrorFortranLib, __FILE__, __LINE__)
 				End
 			EndIf
-		Next hyd
+		Else
+			For hyd = 0 To libraries_num-1
+				Print_process_percent((hyd*100)/libraries_num)
+				library_light_list_get_filename(@zfilename, @libraries_filelist, hyd)
+				zfilename = LIBRARY_PATH + zfilename
+				libraries_file(hyd) = fopen (zfilename, "rb")
+				If libraries_file(hyd) = NULL Then
+					PrintErrorToLog(ErrorFortranLib, __FILE__, __LINE__)
+					End
+				EndIf
+				Print_process_percent(1000)
+				Print "OK"
+			Next hyd
 
-		Print_process_percent(1000)
-		Print "OK"
+		EndIf
 
 
 

@@ -83,6 +83,8 @@ Dim Shared As Integer  Config_step_ox_2,  Config_step_ti_2,  Config_step_te_2
 Dim Shared As Integer Config_range_ox_3, Config_range_ti_3, Config_range_te_3
 Dim Shared As Integer  Config_step_ox_3,  Config_step_ti_3,  Config_step_te_3
 
+Dim Shared As Integer  ConfigPlusTe, ConfigPlusTi, ConfigMinusTe, ConfigMinusTi
+
 
 '''==============================================
 
@@ -135,6 +137,9 @@ Input #file, Config_range_ox_2, Config_range_ti_2, Config_range_te_2
 Input #file, Config_step_ox_2,  Config_step_ti_2,  Config_step_te_2
 Input #file, Config_range_ox_3, Config_range_ti_3, Config_range_te_3
 Input #file, Config_step_ox_3,  Config_step_ti_3,  Config_step_te_3
+
+Input #file, ConfigMinusTi, ConfigPlusTi 
+Input #file, ConfigMinusTe, ConfigPlusTe 
 
 Close #file
 
@@ -372,16 +377,17 @@ For h = hMax To hMin Step -hStep ' по высоте
 
 	libraries_min = 1
 	For t = 0 To nT-1 ' по времени
-		RegRange(0, t) = dat_all_str(h, t).te_c-100
-		RegRange(1, t) = dat_all_str(h, t).te_c+10
-		RegRange(2, t) = dat_all_str(h, t).ti_c-100
-		RegRange(3, t) = dat_all_str(h, t).ti_c+10
+		RegRange(0, t) = dat_all_str(h, t).te_c-ConfigMinusTe
+		RegRange(1, t) = dat_all_str(h, t).te_c+ConfigPlusTe
+		RegRange(2, t) = dat_all_str(h, t).ti_c-ConfigMinusTi
+		RegRange(3, t) = dat_all_str(h, t).ti_c+ConfigPlusTi
 		RegRange(4, t) = dat_all_str(h, t).ox_c-20
 	Next t
 
 Next h
 
-
+Print
+Print "OK"
 
 break
 
@@ -527,21 +533,21 @@ Sub results_write(ByVal h As Integer)
 	Dim As Integer t
 
 	file = FreeFile()
-	Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "O."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "O.-1."+Str(CInt(Hkm(h)))+".txt" For Output As #file
 	For t = 0 To nT-1
 		Print #file, Using "###.# "; dat_all_str(h, t).ox_c
 	Next t
 	Close #file
 
 	file = FreeFile()
-	Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "Ti."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "Ti.-1."+Str(CInt(Hkm(h)))+".txt" For Output As #file
 	For t = 0 To nT-1
 		Print #file, Using "####.# "; dat_all_str(h, t).ti_c
 	Next t
 	Close #file
 
 	file = FreeFile()
-	Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "Te."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "Te.-1."+Str(CInt(Hkm(h)))+".txt" For Output As #file
 	For t = 0 To nT-1
 		Print #file, Using "####.# "; dat_all_str(h, t).te_c
 	Next t
@@ -549,7 +555,7 @@ Sub results_write(ByVal h As Integer)
 
 
 	file = FreeFile()
-	Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "D."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "D.-1."+Str(CInt(Hkm(h)))+".txt" For Output As #file
 	For t = 0 To nT-1
 		Print #file, Using "##.#####^^^^^ "; dat_all_str(h, t).d_c
 	Next t

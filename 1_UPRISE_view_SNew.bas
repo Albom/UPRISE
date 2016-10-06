@@ -326,6 +326,7 @@ Do
 				CUR=seans_loaded-1
 			End If
 
+		/'
 		Case KEY_D
 			Dim As Integer fileTemp
 			Dim As Double pN1, pN2
@@ -376,8 +377,10 @@ Do
 				Print #fileTemp, Using "####.#; ####.####"; seans2_altL(i); (seans_str(CUR).seans.dat3(i, 0)-pN2)/pN2
 			Next i
 			Close #fileTemp
+			'/
 
 
+		/'
 		Case KEY_Z
 
 			ReDim As Double zt1(0 To seans_loaded-1)
@@ -499,8 +502,8 @@ Do
 				Print #file6, Using "##.####; ##.####^^^"; seans_str(t).time_decimal; ztr2(t)
 
 				For tau As Integer = 0 To 18
-					Print #file7, Using "######.####; "; rnz1(tau, t);'/rnz1(0, t);
-					Print #file8, Using "######.####; "; rnz2(tau, t);'/rnz2(0, t);
+					Print #file7, Using "######.####; "; rnz1(tau, t);
+					Print #file8, Using "######.####; "; rnz2(tau, t);
 					Print #file9,  Using "######.####; "; rnz1s(tau, t);
 					Print #file10, Using "######.####; "; rnz2s(tau, t);
 				Next tau
@@ -509,14 +512,6 @@ Do
 				Print #file9,
 				Print #file10,
 
-				/'
-				For i As Integer = 0 To 679
-					Print #file7, Using "######.####; "; seans_str(t).seans.dat01(i);
-					Print #file8, Using "######.####; "; seans_str(t).seans.dat02(i);
-				Next i
-				Print #file7,
-				Print #file8,
-'/
 			Next t
 
 			Close #file1
@@ -529,6 +524,8 @@ Do
 			Close #file8
 			Close #file9
 			Close #file10
+			'/
+			
 
 /'
 		Case KEY_I

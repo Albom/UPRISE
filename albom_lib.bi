@@ -39,8 +39,9 @@ KEY_1 = 49
 KEY_2 = 50
 KEY_3 = 51
 KEY_4 = 52
-KEY_A = 97
 KEY_A_CAPITAL = 65
+KEY_P_CAPITAL = 80
+KEY_A = 97
 KEY_B = 98
 KEY_C = 99
 KEY_D = 100
@@ -53,13 +54,13 @@ KEY_M = 109
 KEY_N = 110
 KEY_O = 111
 KEY_P = 112
-KEY_P_CAPITAL = 80
 KEY_Q = 113
 KEY_R = 114
 KEY_S = 115
 KEY_T = 116
 KEY_U = 117
 KEY_V = 118
+KEY_W = 119
 KEY_Y = 121
 KEY_Z = 122
 KEY_F1 = 15359
@@ -623,7 +624,7 @@ Declare Function acf_1  Alias "acf_1" ( ByVal m1 As Double, ByVal ti As Double, 
 Declare Function acf_2  Alias "acf_2" ( ByVal m1 As Double, ByVal m2 As Double, ByVal g1 As Double, ByVal ti As Double, ByVal te As Double, ByVal acf As Double Ptr, ByVal length As Integer) As Integer
 Declare Function acf_3  Alias "acf_3" ( ByVal m1 As Double, ByVal m2 As Double, ByVal m3 As Double, ByVal g1 As Double, ByVal g2 As Double, ByVal ti As Double, ByVal te As Double, ByVal acf As Double Ptr, ByVal length As Integer) As  Integer
 
-Declare Function acf_3_full Alias "acf3_full" ( ByVal m1 As Double, ByVal m2 As Double, ByVal m3 As Double, ByVal g1 As Double, ByVal g2 As Double, ByVal ti As Double, ByVal te As Double, ByVal ne As Double, ByVal iskD As Integer, ByVal acf As Double Ptr, ByVal length As Integer, ByVal dt As Double) As  Integer
+Declare Function acf_3_full Alias "acf_3_full" ( ByVal m1 As Double, ByVal m2 As Double, ByVal m3 As Double, ByVal g1 As Double, ByVal g2 As Double, ByVal ti As Double, ByVal te As Double, ByVal ne As Double, ByVal iskD As Integer, ByVal acf As Double Ptr, ByVal length As Integer, ByVal dt As Double) As  Integer
 Declare Function spectrum_3_full Alias "spectrum_3_full" ( ByVal m1 As Double, ByVal m2 As Double, ByVal m3 As Double, ByVal g1 As Double, ByVal g2 As Double, ByVal ti As Double, ByVal te As Double, ByVal ne As Double, ByVal iskD As Integer, ByVal freq As Double) As Double
 
 Declare Function acf_library_light_short       Alias "acf_library_light_short"      (ByVal f As FILE Ptr, ByVal temperatures As Integer Ptr, ByVal temperatures_len As Integer, ByVal ti As Double, ByVal te As Double, ByVal acf As Double Ptr, ByVal length As Integer) As  Integer
@@ -631,8 +632,12 @@ Declare Function acf_library_light_short_conv  Alias "acf_library_light_short_co
 Declare Function library_light_list_of_temperatures_get  Alias "library_light_list_of_temperatures_get" (ByVal list As Integer Ptr ) As Integer
 Declare Function library_light_list_get  Alias "library_light_list_get" (ByVal prefix As ZString Ptr, ByVal he_percent_int As Integer, ByVal list As ZString Ptr ) As  Integer
 Declare Function library_light_list_get_filename  Alias "library_light_list_get_filename" (ByVal filename As ZString Ptr, ByVal filelist As ZString Ptr, ByVal num As Integer) As  Integer
+
 Declare Function library_heavy_list_of_temperatures_get  Alias "library_heavy_list_of_temperatures_get" (ByVal list As Integer Ptr ) As Integer
 Declare Function acf_library_heavy Alias "acf_library_heavy" (ByVal f As FILE Ptr, ByVal temperatures As Integer Ptr, ByVal temperatures_len As Integer, ByVal ti As Double, ByVal te As Double, ByVal acf As Double Ptr, ByVal length As Integer) As  Integer
+
+Declare Function library_oxygen_list_of_temperatures_get  Alias "library_oxygen_list_of_temperatures_get" (ByVal list As Integer Ptr ) As Integer
+Declare Function acf_library_oxygen Alias "acf_library_oxygen" (ByVal f As FILE Ptr, ByVal temperatures As Integer Ptr, ByVal temperatures_len As Integer, ByVal ti As Double, ByVal te As Double, ByVal acf As Double Ptr, ByVal length As Integer) As  Integer
 
 End Extern
 
