@@ -627,6 +627,8 @@ Declare Function acf_library_light_short_conv  Alias "acf_library_light_short_co
 Declare Function library_light_list_of_temperatures_get  Alias "library_light_list_of_temperatures_get" (ByVal list As Integer Ptr ) As Integer
 Declare Function library_light_list_get  Alias "library_light_list_get" (ByVal prefix As ZString Ptr, ByVal he_percent_int As Integer, ByVal list As ZString Ptr ) As  Integer
 Declare Function library_light_list_get_filename  Alias "library_light_list_get_filename" (ByVal filename As ZString Ptr, ByVal filelist As ZString Ptr, ByVal num As Integer) As  Integer
+Declare Function library_heavy_list_of_temperatures_get  Alias "library_heavy_list_of_temperatures_get" (ByVal list As Integer Ptr ) As Integer
+Declare Function acf_library_heavy Alias "acf_library_heavy" (ByVal f As FILE Ptr, ByVal temperatures As Integer Ptr, ByVal temperatures_len As Integer, ByVal ti As Double, ByVal te As Double, ByVal acf As Double Ptr, ByVal length As Integer) As  Integer
 
 End Extern
 

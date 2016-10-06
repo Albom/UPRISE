@@ -56,6 +56,7 @@ copy filter_COld.dat UPRISE
 copy config.dat UPRISE
 copy config_COld.dat UPRISE
 copy config_short.dat UPRISE
+copy report.xls UPRISE
 
 xcopy ambig UPRISE\ambig /e /i /h
 

@@ -68,8 +68,6 @@ Dim Shared As Integer Config_range_h_2, Config_range_ti_2, Config_range_te_2
 Dim Shared As Integer  Config_step_h_2,  Config_step_ti_2,  Config_step_te_2
 Dim Shared As Integer Config_range_h_3, Config_range_ti_3, Config_range_te_3
 Dim Shared As Integer  Config_step_h_3,  Config_step_ti_3,  Config_step_te_3
-Dim Shared As Integer Config_range_h_4, Config_range_ti_4, Config_range_te_4
-Dim Shared As Integer  Config_step_h_4,  Config_step_ti_4,  Config_step_te_4
 Dim Shared As Integer  Config_oxygen
 Dim Shared As Integer  Config_auto
 Dim Shared As Double  Config_coeff(0 To 18)
@@ -90,7 +88,6 @@ Dim Shared As Integer START_X = 0
 Dim Shared As Integer CUR = 0
 
 Dim Shared As Integer He_max
-Dim Shared As Integer He_max2
 Dim Shared As Integer He_grad
 Dim Shared As Integer He_maxLib
 
@@ -121,7 +118,7 @@ Dim As as_file_struct	as_file_in
 
 
 
-ReDim Shared As dat_all_struct dat_all_str(0 To 679, 0 To 99)
+'ReDim Shared As dat_all_struct dat_all_str(0 To 679, 0 To 99)
 ReDim Shared As Integer Hkm(0 To 679)
 
 
@@ -152,10 +149,10 @@ Dim Shared As Integer heCurrent
 Dim Shared As Double  acf_filter(0 To 100) ' АКФ фильтра
 
 Enum Params
-PARAM_TI
-PARAM_TE
-PARAM_H
-PARAM_HE
+	PARAM_TI
+	PARAM_TE
+	PARAM_H
+	PARAM_HE
 End Enum
 
 '''==============================================
@@ -261,7 +258,6 @@ If Err() > 0 Then
 	Input "Hstep: ", Hstep
 
 	Input "He max на первой высоте: ", He_max
-	Input "He max на других высотах: ", He_max2
 
 	Input "|+deltaTe|: ",   DeltaTePlus   ' максимальный градиент температуры электронов
 	Input "|-deltaTe|: ",   DeltaTeMinus  ' максимальный градиент температуры электронов
@@ -277,8 +273,6 @@ If Err() > 0 Then
 	Config_step_h_2  = 5  :  Config_step_ti_2 = 50  :  Config_step_te_2 = 50
 	Config_range_h_3 = 10 : Config_range_ti_3 = 100 : Config_range_te_3 = 100
 	Config_step_h_3  = 2  : Config_step_ti_3  = 20  : Config_step_te_3  = 20
-	Config_range_h_4 = 4  : Config_range_ti_4 = 40  : Config_range_te_4 = 40
-	Config_step_h_4  = 1  : Config_step_ti_4  = 10  : Config_step_te_4  = 10
 
 	Config_oxygen = 0
 
@@ -311,14 +305,10 @@ Else
 	Input #file, Hstep
 
 	Input #file, He_max
-	Input #file, He_max2
 
-	Input #file, DeltaTePlus   ' максимальный градиент температуры электронов
-	Input #file, DeltaTeMinus  ' максимальный градиент температуры электронов
-	Input #file, DeltaTiPlus   ' максимальный градиент температуры ионов
-	Input #file, DeltaTiMinus  ' максимальный градиент температуры ионов
-	Input #file, DeltaHydPlus  ' максимальный градиент Hyd (60 - это 30%)
-	Input #file, DeltaHydMinus
+	Input #file, DeltaTePlus, DeltaTeMinus   ' максимальный градиент температуры электронов
+	Input #file, DeltaTiPlus, DeltaTiMinus   ' максимальный градиент температуры ионов
+	Input #file, DeltaHydPlus, DeltaHydMinus  ' максимальный градиент Hyd (60 - это 30%)
 
 	Input #file, RegN
 	Input #file, RegWnd
@@ -328,8 +318,6 @@ Else
 	Input #file, Config_step_h_2,  Config_step_ti_2,  Config_step_te_2
 	Input #file, Config_range_h_3, Config_range_ti_3, Config_range_te_3
 	Input #file, Config_step_h_3,  Config_step_ti_3,  Config_step_te_3
-	Input #file, Config_range_h_4, Config_range_ti_4, Config_range_te_4
-	Input #file, Config_step_h_4,  Config_step_ti_4,  Config_step_te_4
 
 	Input #file, he_step
 	Input #file, Config_oxygen
@@ -392,7 +380,6 @@ Print "Шаг по высоте Hstep: "; Hstep
 If Config_oxygen = 0 Then
 	Print
 	Print "He max на первой высоте: ";  He_max; " %"
-	Print "He max на других высотах: "; He_max2; " %"
 EndIf
 
 Print
@@ -419,14 +406,9 @@ If Config_oxygen = 0 Then
 	Print "Интервалы при 3-м приближении (H+, Ti, Te):   +-";  Config_range_h_3; " (+-"; Config_range_h_3/2;" % ), +-" ; Config_range_ti_3; " K, +-"; Config_range_te_3; " K"
 	Print "Шаги при 3-м приближении (H+, Ti, Te):      ";  Config_step_h_3; " ("; Config_step_h_3/2;" % ), " ; Config_step_ti_3; " K, "; Config_step_te_3; " K"
 	Print
-	Print "Интервалы при 4-м приближении (H+, Ti, Te):   +-";  Config_range_h_4; " (+-"; Config_range_h_4/2;" % ), +-" ; Config_range_ti_4; " K, +-"; Config_range_te_4; " K"
-	Print "Шаги при 4-м приближении (H+, Ti, Te):      ";  Config_step_h_4; " ("; Config_step_h_4/2;" % ), " ; Config_step_ti_4; " K, "; Config_step_te_4; " K"
-
-	Print
 	Print "Шаг по He+: ", he_step; "%"
 	Print "Градиент по He+ (на 4.5 км): "; he_grad; "%"
 Else
-
 	Print "Шаги при 1-м приближении (Ti, Te):      ";   Config_step_ti_1; " K, "; Config_step_te_1; " K"
 	Print
 	Print "Интервалы при 2-м приближении (Ti, Te):   +-";  Config_range_ti_2; " K, +-"; Config_range_te_2; " K"
@@ -434,9 +416,6 @@ Else
 	Print
 	Print "Интервалы при 3-м приближении (Ti, Te):   +-";  Config_range_ti_3; " K, +-"; Config_range_te_3; " K"
 	Print "Шаги при 3-м приближении (Ti, Te):      "; Config_step_ti_3; " K, "; Config_step_te_3; " K"
-	Print
-	Print "Интервалы при 4-м приближении (Ti, Te):   +-";  Config_range_ti_4; " K, +-"; Config_range_te_4; " K"
-	Print "Шаги при 4-м приближении (Ti, Te):      ";  Config_step_ti_4; " K, "; Config_step_te_4; " K"
 EndIf
 
 If Config_oxygen <> 0 Then
@@ -613,11 +592,13 @@ temperatures_len = library_light_list_of_temperatures_get(@temperatures(0))
 
 
 
-
-
 ' Выделяем память для данных
 Print "Выделение памяти для данных... ";
 ReDim Shared As dat_all_struct dat_all_str(0 To nh-1, 0 To seans_num_out-1)
+If Err() <> 0 Then
+	PrintErrorToLog(ErrorNotEnoughMemory, __FILE__, __LINE__)
+	End
+EndIf
 ReDim Shared As Double noise_acf(0 To seans_num_out-1, 0 To 255)
 
 ReDim Shared As Double heRange(0 To seans_num_out-1)
@@ -850,7 +831,7 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 			EndIf
 		Next t
 
-		Print Using "n = ###   h = ####   He+ = ##   Qmin = ####.#"; h; Hkm(h); he; qMin;
+		Print Using "n = ###   h = ####   He+ = ##   Qmin = ####.##"; h; Hkm(h); he; qMin;
 		Print ,
 
 
@@ -908,6 +889,8 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 			EndIf
 		EndIf
 
+
+
 		' 1 шаг
 		If isConv <> 0 Then
 			inverse_problem_v1_conv(h, z, Config_step_h_1, Config_step_te_1, Config_step_ti_1)
@@ -918,7 +901,6 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 				inverse_problem_v1(h, z, Config_step_h_1, Config_step_te_1, Config_step_ti_1)
 			EndIf
 		EndIf
-
 
 
 		If Config_auto <> 0 Then
@@ -952,6 +934,7 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 			EndIf
 		EndIf
 
+
 		' 3 шаг
 		ranges_set(h, Config_range_h_3, Config_range_te_3, Config_range_ti_3)
 		If isConv <> 0 Then
@@ -963,6 +946,62 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 				inverse_problem_v2(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_3)
 			EndIf
 		EndIf
+
+
+		For z = 0 To seans_num_out-1
+			If dat_all_str(h, z).d_c > 1e100 Then
+				file = FreeFile()
+				Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "RangesTi."+ Str(He) +"."+Str(CInt(Hkm(h)))+".csv" For Output As #file
+				For t = 0 To seans_num_out-1
+					If RegRange(2, t) > dat_all_str(h, t).ti_start Then
+						Print #file, RegRange(2, t); ";" ; dat_all_str(h, t).ti_c; ";";
+					Else
+						Print #file, dat_all_str(h, t).ti_start; ";";  dat_all_str(h, t).ti_c; ";";
+					EndIf
+
+					If RegRange(3, t) < dat_all_str(h, t).ti_end Then
+						Print #file, RegRange(3, t)
+					Else
+						Print #file, dat_all_str(h, t).ti_end
+					EndIf
+				Next t
+				Close #file
+
+				Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "RangesTe."+ Str(He) +"."+Str(CInt(Hkm(h)))+".csv" For Output As #file
+				For t = 0 To seans_num_out-1
+					If RegRange(0, t) > dat_all_str(h, t).te_start Then
+						Print #file, RegRange(0, t); ";" ; dat_all_str(h, t).te_c; ";";
+					Else
+						Print #file, dat_all_str(h, t).te_start; ";";  dat_all_str(h, t).te_c; ";";
+					EndIf
+
+					If RegRange(1, t) < dat_all_str(h, t).te_end Then
+						Print #file, RegRange(1, t)
+					Else
+						Print #file, dat_all_str(h, t).te_end
+					EndIf
+				Next t
+				Close #file
+
+
+				Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "RangesHyd."+ Str(He) +"."+Str(CInt(Hkm(h)))+".csv" For Output As #file
+				For t = 0 To seans_num_out-1
+					If RegRange(4, t) > dat_all_str(h, t).hyd_start Then
+						Print #file, RegRange(4, t); ";" ; dat_all_str(h, t).hyd_c; ";";
+					Else
+						Print #file, dat_all_str(h, t).hyd_start; ";";  dat_all_str(h, t).hyd_c; ";";
+					EndIf
+
+					If RegRange(5, t) < dat_all_str(h, t).hyd_end Then
+						Print #file, RegRange(5, t)
+					Else
+						Print #file, dat_all_str(h, t).hyd_end
+					EndIf
+				Next t
+				Close #file
+
+			EndIf
+		Next z
 
 
 		results_write(h, he)
@@ -1054,7 +1093,7 @@ Sub inverse_problem_v1_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_
 
 			For ti = 500 To 4000 Step step_ti
 
-				If (te/ti <= 3.5) And (te/ti >= 0.7) Then
+				If (te/ti <= 4) And (te/ti >= 0.7) Then
 
 					If acf_library_light_short( libraries_file(hyd), @temperatures(0), temperatures_len, ti, te, @acf_lib(25), num_point_acf) <> 0 Then
 
@@ -1068,32 +1107,32 @@ Sub inverse_problem_v1_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_
 
 								If ( te >= RegRange(0, t) ) And ( te <= RegRange(1, t) ) And ( ti >= RegRange(2, t) ) And ( ti <= RegRange(3, t) ) And ( hyd >= RegRange(4, t) ) And ( hyd <= RegRange(5, t) ) Then
 
-									If heCurrent <= heRange(t) Then
+									'If heCurrent <= heRange(t) Then
 
-										For lag = 0 To 18
-											acf_teor(lag) = 0
-											For tau = 0 To 50
-												acf_teor(lag) += acf_lib(tau) * AmbigCoeff(tau, (h-hMin)\hStep, t, lag)
-											Next tau
-										Next lag
-
-										For lag = 0 To 18
-											acf_teor(lag) /= lag+1
-										Next lag
-
-										d = 0
-										For tau = 1 To 18
-											d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2
+									For lag = 0 To 18
+										acf_teor(lag) = 0
+										For tau = 0 To 50
+											acf_teor(lag) += acf_lib(tau) * AmbigCoeff(tau, (h-hMin)\hStep, t, lag)
 										Next tau
+									Next lag
 
-										If d < dat_all_str(h, t).d_c Then
-											dat_all_str(h, t).d_c = d
-											dat_all_str(h, t).ti_c = ti
-											dat_all_str(h, t).te_c = te
-											dat_all_str(h, t).hyd_c = hyd
-										EndIf
+									For lag = 0 To 18
+										acf_teor(lag) /= lag+1
+									Next lag
 
+									d = 0
+									For tau = 1 To 18
+										d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2
+									Next tau
+
+									If d < dat_all_str(h, t).d_c Then
+										dat_all_str(h, t).d_c = d
+										dat_all_str(h, t).ti_c = ti
+										dat_all_str(h, t).te_c = te
+										dat_all_str(h, t).hyd_c = hyd
 									EndIf
+
+									'EndIf
 
 								EndIf
 
@@ -1286,70 +1325,70 @@ Sub inverse_problem_v2_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_
 
 		For t = 0 To seans_num_out-1 ' по времени
 
-			If heCurrent <= heRange(t) Then
+			'If heCurrent <= heRange(t) Then
 
-				If ( hyd >= RegRange(4, t) ) And ( hyd <= RegRange(5, t) ) Then
+			If ( hyd >= RegRange(4, t) ) And ( hyd <= RegRange(5, t) ) Then
 
-					If (hyd >= dat_all_str(h, t).hyd_start) And (hyd <= dat_all_str(h, t).hyd_end) Then
+				If (hyd >= dat_all_str(h, t).hyd_start) And (hyd <= dat_all_str(h, t).hyd_end) Then
 
-						For te = dat_all_str(h, t).te_start To dat_all_str(h, t).te_end Step step_te
+					For te = dat_all_str(h, t).te_start To dat_all_str(h, t).te_end Step step_te
 
-							If ( te >= RegRange(0, t) ) And ( te <= RegRange(1, t) ) Then
+						If ( te >= RegRange(0, t) ) And ( te <= RegRange(1, t) ) Then
 
-								For ti = dat_all_str(h, t).ti_start To dat_all_str(h, t).ti_end Step step_ti
+							For ti = dat_all_str(h, t).ti_start To dat_all_str(h, t).ti_end Step step_ti
 
-									If ( ti >= RegRange(2, t) ) And ( ti <= RegRange(3, t) ) Then
+								If ( ti >= RegRange(2, t) ) And ( ti <= RegRange(3, t) ) Then
 
-										If (te/ti <= 3.5) And (te/ti >= 0.7) Then
+									If (te/ti <= 4) And (te/ti >= 0.7) Then
 
-											If acf_library_light_short( libraries_file(hyd), @temperatures(0), temperatures_len, ti, te, @acf_lib(25), num_point_acf) <> 0 Then
+										If acf_library_light_short( libraries_file(hyd), @temperatures(0), temperatures_len, ti, te, @acf_lib(25), num_point_acf) <> 0 Then
 
 
-												For tau = 0 To 24
-													acf_lib(tau) = acf_lib(50-tau)
+											For tau = 0 To 24
+												acf_lib(tau) = acf_lib(50-tau)
+											Next tau
+
+
+											For lag = 0 To 18
+												acf_teor(lag) = 0
+												For tau = 0 To 50
+													acf_teor(lag) += acf_lib(tau) * AmbigCoeff(tau, (h-hMin)\hStep, t, lag)
 												Next tau
+											Next lag
 
+											For lag = 0 To 18
+												acf_teor(lag) /= lag+1
+											Next lag
 
-												For lag = 0 To 18
-													acf_teor(lag) = 0
-													For tau = 0 To 50
-														acf_teor(lag) += acf_lib(tau) * AmbigCoeff(tau, (h-hMin)\hStep, t, lag)
-													Next tau
-												Next lag
+											d = 0
+											For tau = 1 To 18
+												d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)*(dat_all_str(h, t).acf(0)/acf_teor(0)) )^2
+											Next tau
 
-												For lag = 0 To 18
-													acf_teor(lag) /= lag+1
-												Next lag
-
-												d = 0
-												For tau = 1 To 18
-													d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)*(dat_all_str(h, t).acf(0)/acf_teor(0)) )^2
-												Next tau
-
-												If d < dat_all_str(h, t).d_c Then
-													dat_all_str(h, t).d_c = d
-													dat_all_str(h, t).ti_c = ti
-													dat_all_str(h, t).te_c = te
-													dat_all_str(h, t).hyd_c = hyd
-												EndIf
-
+											If d < dat_all_str(h, t).d_c Then
+												dat_all_str(h, t).d_c = d
+												dat_all_str(h, t).ti_c = ti
+												dat_all_str(h, t).te_c = te
+												dat_all_str(h, t).hyd_c = hyd
 											EndIf
 
 										EndIf
 
 									EndIf
 
-								Next ti
+								EndIf
 
-							EndIf
+							Next ti
 
-						Next te
+						EndIf
 
-					EndIf
+					Next te
 
 				EndIf
 
 			EndIf
+
+			'EndIf
 
 		Next t
 
@@ -4406,8 +4445,8 @@ Sub inverse_problem_ti(ByVal h As Integer, ByVal z As Integer)
 
 		For t = 0 To seans_num_out-1
 
-			dat_all_str(h, t).ti_start = ti_loaded(t)-10
-			dat_all_str(h, t).ti_end   = ti_loaded(t)+10
+			dat_all_str(h, t).ti_start = ti_loaded(t)
+			dat_all_str(h, t).ti_end   = ti_loaded(t)
 
 			dat_all_str(h, t).te_start = 500
 			dat_all_str(h, t).te_end   = 4000
@@ -4421,12 +4460,12 @@ Sub inverse_problem_ti(ByVal h As Integer, ByVal z As Integer)
 
 
 		If isConv <> 0 Then
-			inverse_problem_v2_conv(h, z, Config_step_h_2, Config_step_te_2, 10)
+			inverse_problem_v2_conv(h, z, Config_step_h_2, Config_step_te_2, Config_step_ti_2)
 		Else
 			If ConfigAmbig <> 0 Then
-				inverse_problem_v2_ambig(h, z, Config_step_h_2, Config_step_te_2, 10)
+				inverse_problem_v2_ambig(h, z, Config_step_h_2, Config_step_te_2, Config_step_ti_2)
 			Else
-				inverse_problem_v2(h, z, Config_step_h_2, Config_step_te_2, 10)
+				inverse_problem_v2(h, z, Config_step_h_2, Config_step_te_2, Config_step_ti_2)
 			EndIf
 		EndIf
 
@@ -4434,12 +4473,12 @@ Sub inverse_problem_ti(ByVal h As Integer, ByVal z As Integer)
 		' 3 шаг
 		ranges_set(h, Config_range_h_3, Config_range_te_3, 0)
 		If isConv <> 0 Then
-			inverse_problem_v2_conv(h, z, Config_step_h_3, Config_step_te_3, 10)
+			inverse_problem_v2_conv(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_3)
 		Else
 			If ConfigAmbig <> 0 Then
-				inverse_problem_v2_ambig(h, z, Config_step_h_3, Config_step_te_3, 10)
+				inverse_problem_v2_ambig(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_3)
 			Else
-				inverse_problem_v2(h, z, Config_step_h_3, Config_step_te_3, 10)
+				inverse_problem_v2(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_3)
 			EndIf
 		EndIf
 
@@ -4519,8 +4558,8 @@ Sub inverse_problem_te(ByVal h As Integer, ByVal z As Integer)
 
 		For t = 0 To seans_num_out-1
 
-			dat_all_str(h, t).te_start = te_loaded(t)-10
-			dat_all_str(h, t).te_end   = te_loaded(t)+10
+			dat_all_str(h, t).te_start = te_loaded(t)
+			dat_all_str(h, t).te_end   = te_loaded(t)
 
 			dat_all_str(h, t).ti_start = 500
 			dat_all_str(h, t).ti_end   = 4000
@@ -4537,24 +4576,24 @@ Sub inverse_problem_te(ByVal h As Integer, ByVal z As Integer)
 
 
 		If isConv <> 0 Then
-			inverse_problem_v2_conv(h, z, Config_step_h_2, 10, Config_step_ti_2)
+			inverse_problem_v2_conv(h, z, Config_step_h_2, Config_step_te_2, Config_step_ti_2)
 		Else
 			If ConfigAmbig <> 0 Then
-				inverse_problem_v2_ambig(h, z, Config_step_h_2, 10, Config_step_ti_2)
+				inverse_problem_v2_ambig(h, z, Config_step_h_2, Config_step_te_2, Config_step_ti_2)
 			Else
-				inverse_problem_v2(h, z, Config_step_h_2, 10, Config_step_ti_2)
+				inverse_problem_v2(h, z, Config_step_h_2, Config_step_te_2, Config_step_ti_2)
 			EndIf
 		EndIf
 
 		' 3 шаг
 		ranges_set(h, Config_range_h_3, 0, Config_range_ti_3)
 		If isConv <> 0 Then
-			inverse_problem_v2_conv(h, z, Config_step_h_3, 10, Config_step_ti_3)
+			inverse_problem_v2_conv(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_3)
 		Else
 			If ConfigAmbig <> 0 Then
-				inverse_problem_v2_ambig(h, z, Config_step_h_3, 10, Config_step_ti_3)
+				inverse_problem_v2_ambig(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_3)
 			Else
-				inverse_problem_v2(h, z, Config_step_h_3, 10, Config_step_ti_3)
+				inverse_problem_v2(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_3)
 			EndIf
 		EndIf
 
@@ -4760,30 +4799,31 @@ Sub inverse_problem_hyd_ti_te(ByVal h As Integer, ByVal z As Integer)
 
 		For t = 0 To seans_num_out-1
 
-			dat_all_str(h, t).ti_start = ti_loaded(t)-10
-			dat_all_str(h, t).ti_end   = ti_loaded(t)+10
+			dat_all_str(h, t).ti_start = ti_loaded(t)
+			dat_all_str(h, t).ti_end   = ti_loaded(t)
 
-			dat_all_str(h, t).te_start = te_loaded(t)-10
-			dat_all_str(h, t).te_end   = te_loaded(t)+10
+			dat_all_str(h, t).te_start = te_loaded(t)
+			dat_all_str(h, t).te_end   = te_loaded(t)
 
-			dat_all_str(h, t).hyd_start = hyd_loaded(t)-1
-			dat_all_str(h, t).hyd_end   = hyd_loaded(t)+1
+			dat_all_str(h, t).hyd_start = hyd_loaded(t)
+			dat_all_str(h, t).hyd_end   = hyd_loaded(t)
 
-			dat_all_str(h, t).d_c = 1e200 '
+			dat_all_str(h, t).d_c = 1e200 ' очистка погрешностей
 
 		Next t
 
 
+		' 3 шаг
+		'ranges_set(h, 0, 0, 0)
 		If isConv <> 0 Then
-			inverse_problem_v2_conv(h, z, 1, 10, 10)
+			inverse_problem_v2_conv(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_3)
 		Else
 			If ConfigAmbig <> 0 Then
-				inverse_problem_v2_ambig(h, z, 1, 10, 10)
+				inverse_problem_v2_ambig(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_3)
 			Else
-				inverse_problem_v2(h, z, 1, 10, 10)
+				inverse_problem_v2(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_3)
 			EndIf
 		EndIf
-
 
 
 		results_write2(h, he)
@@ -4866,11 +4906,11 @@ Sub inverse_problem_ti_te(ByVal h As Integer, ByVal z As Integer)
 
 		For t = 0 To seans_num_out-1
 
-			dat_all_str(h, t).ti_start = ti_loaded(t)-10
-			dat_all_str(h, t).ti_end   = ti_loaded(t)+10
+			dat_all_str(h, t).ti_start = ti_loaded(t)
+			dat_all_str(h, t).ti_end   = ti_loaded(t)
 
-			dat_all_str(h, t).te_start = te_loaded(t)-10
-			dat_all_str(h, t).te_end   = te_loaded(t)+10
+			dat_all_str(h, t).te_start = te_loaded(t)
+			dat_all_str(h, t).te_end   = te_loaded(t)
 
 			dat_all_str(h, t).hyd_start = 0
 			dat_all_str(h, t).hyd_end   = libraries_num-1
@@ -4880,29 +4920,29 @@ Sub inverse_problem_ti_te(ByVal h As Integer, ByVal z As Integer)
 		Next t
 
 
+		' 2 шаг
+		'ranges_set(h, Config_step_h_2, 0, 0)
 		If isConv <> 0 Then
-			inverse_problem_v2_conv(h, z, Config_step_h_2, 10, 10)
+			inverse_problem_v2_conv(h, z, Config_step_h_2, Config_step_te_2, Config_step_ti_2)
 		Else
 			If ConfigAmbig <> 0 Then
-				inverse_problem_v2_ambig(h, z, Config_step_h_2, 10, 10)
+				inverse_problem_v2_ambig(h, z, Config_step_h_2, Config_step_te_2, Config_step_ti_2)
 			Else
-				inverse_problem_v2(h, z, Config_step_h_2, 10, 10)
+				inverse_problem_v2(h, z, Config_step_h_2, Config_step_te_2, Config_step_ti_2)
 			EndIf
 		EndIf
-
 
 		' 3 шаг
 		ranges_set(h, Config_range_h_3, 0, 0)
 		If isConv <> 0 Then
-			inverse_problem_v2_conv(h, z, Config_step_h_3, 10, 10)
+			inverse_problem_v2_conv(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_3)
 		Else
 			If ConfigAmbig <> 0 Then
-				inverse_problem_v2_ambig(h, z, Config_step_h_3, 10, 10)
+				inverse_problem_v2_ambig(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_3)
 			Else
-				inverse_problem_v2(h, z, Config_step_h_3, 10, 10)
+				inverse_problem_v2(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_3)
 			EndIf
 		EndIf
-
 
 		results_write2(h, he)
 
@@ -5317,6 +5357,7 @@ End Function
 
 Sub libraries_list_load(He As Integer)
 
+
 	If pulse_length = 663 Then
 
 		If isConv = 1 Then
@@ -5325,13 +5366,14 @@ Sub libraries_list_load(He As Integer)
 			libraries_num = library_light_list_get("For_Ambig+q_profile_", He, @libraries_filelist) ' получаем список библиотек для He=0 и число этих библиотек
 		EndIf
 
-	Else
+	EndIf
 
-		If pulse_length = 795 Then
+	If pulse_length = 795 Then
+
+		If isConv = 1 Then
 			libraries_num = library_light_list_get("Short_795_P+C_", He, @libraries_filelist) ' получаем список библиотек для He=0 и число этих библиотек
 		Else
-			PrintErrorToLog(ErrorFortranLib, __FILE__, __LINE__)
-			End
+			libraries_num = library_light_list_get("For_Ambig+q_profile_", He, @libraries_filelist) ' получаем список библиотек для He=0 и число этих библиотек
 		EndIf
 
 	EndIf
