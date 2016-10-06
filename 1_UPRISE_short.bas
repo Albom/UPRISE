@@ -5,7 +5,7 @@
 #Include Once "albom_version.bi"
 
 #Include  "crt/stdlib.bi"
-
+#Include "dir.bi"
 
 #If __FB_LANG__ = "fb"
 Using FB 'для перехода в полноэкранный режим монитора
@@ -123,6 +123,21 @@ Print
 Print "================================"
 Print "Программа собрана " + Mid(__DATE__, 4, 2)+"."+Mid(__DATE__, 1, 2)+"."+Mid(__DATE__, 7, 4)
 Print "================================"
+Print
+
+Color 11
+
+Print "Исходные данные, находящиеся в папке " + Chr(34) + "in" + Chr(34) + ":"
+Color 10
+Dim As String fn
+fn = Dir("./in/*", fbDirectory)
+While Len(fn) > 0
+	fn = Dir()
+	If Len(fn)=6 Then
+		Print fn;"  ";
+	EndIf
+Wend
+Print
 Print
 
 Color 15
@@ -282,12 +297,14 @@ Do
 	Color 10
 	Print Using "Высота: № ###"; hCur+1;
 	Print Using "  #### км"; seans2_altS(hCur);
-	Print ,,
+	Print
+
+	Print "A: Автоматическая фильтрация   ";
 
 	Color 15
-	Print "W - white  ";
+	Print "(W)hite - 1ch ";
 	Color 14
-	Print "Y - yellow",
+	Print "(Y)ellow - 2ch   ";
 
 	Color 10
 	Print "Ctrl+N: Продолжить обработку   ";
@@ -295,6 +312,14 @@ Do
 	Print "Ctrl+Q: Выход"
 
 	Color 15
+
+	Locate 17, 1
+	Print "Left,  Right";
+
+	Locate 48, 1
+	Print "Page Down,  Page Up";
+
+	Locate 4, 1
 
 	ScreenUnLock
 
@@ -589,28 +614,100 @@ Next t
 Print "OK"
 
 
-
 file = FreeFile()
-Open SEANS_DIR_OUT +DirectoryOutput+"/step3/Short.txt" For Output As #file
+Open SEANS_DIR_OUT +DirectoryOutput+"/step3/T.txt" For Input As #file
+If Err() <> 0 Then
 
-Print "Вывод результатов в файл... ";
 
-Print #file, "       0";
-For h = h_start To h_end Step h_step
-	Print #file, Using "        ####"; seans2_altS(h);
-Next h
-Print #file,
+	file = FreeFile()
+	Open SEANS_DIR_OUT +DirectoryOutput+"/step3/Short.txt" For Output As #file
 
-For t = 0 To seans_current-1
-	Print #file, Using " ##.####"; seans_str_out(t).time_decimal;
+	Print "Вывод результатов в файл... ";
+
+	Print #file, "       0";
 	For h = h_start To h_end Step h_step
-		Print #file, Using " #####.#####"; seans_str_out(t).p(h);
-	Next
+		Print #file, Using "        ####"; seans2_altS(h);
+	Next h
 	Print #file,
-Next t
-Print "OK"
 
-Close #file
+	For t = 0 To seans_current-1
+		Print #file, Using " ##.####"; seans_str_out(t).time_decimal;
+		For h = h_start To h_end Step h_step
+			Print #file, Using " #####.#####"; seans_str_out(t).p(h);
+		Next
+		Print #file,
+	Next t
+	Print "OK"
+
+	Close #file ' "Short.txt"
+
+Else
+
+	Dim As Integer nT = 0
+	Dim As String temp
+	Do Until Eof(file)
+		Line Input #file, temp
+		nT += 1
+	Loop
+
+	ReDim As Double out_time(0 To nT-1)
+	ReDim As Double out_q(h_start To h_end, 0 To nT-1)
+	ReDim As Double in_time(0 To seans_current-1)
+	ReDim As Double in_q(0 To seans_current-1)
+
+	For t = 0 To seans_current-1
+		in_time(t) = seans_str_out(t).time_decimal
+	Next
+
+	time_linear(@in_time(0), seans_current)
+
+	Seek #file, 1
+
+	'Print #1, seans_current, nT
+
+	For t = 0 To nT-1
+		Input #file, out_time(t)
+	Next
+
+	time_linear(@out_time(0), nT)
+
+	Close #file ' "T.txt"
+
+	For h = h_start To h_end Step h_step
+		For t = 0 To seans_current-1
+			in_q(t) = seans_str_out(t).p(h)
+		Next
+		For t = 0 To nT-1
+			out_q(h, t) = array_linear_d(out_time(t), @in_time(0), @in_q(0), seans_current)
+		Next
+	Next
+
+	time_normalize(@out_time(0), nT)
+
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT +DirectoryOutput+"/step3/Short.txt" For Output As #file
+
+	Print "Вывод результатов в файл... ";
+
+	Print #file, "       0";
+	For h = h_start To h_end Step h_step
+		Print #file, Using "        ####"; seans2_altS(h);
+	Next h
+	Print #file,
+
+	For t = 0 To nT-1
+		Print #file, Using " ##.####"; out_time(t);
+		For h = h_start To h_end Step h_step
+			Print #file, Using " #####.#####"; out_q(h, t);
+		Next
+		Print #file,
+	Next t
+	Print "OK"
+
+	Close #file ' "Short.txt"
+
+EndIf
 
 Print
 Print "OK"

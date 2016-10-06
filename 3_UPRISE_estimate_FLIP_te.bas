@@ -500,7 +500,7 @@ Print "Шаг по высоте Hstep: "; Hstep
 
 If Config_oxygen = 0 Then
 	Print
-	Print "He max на первой высоте: ";  He_max; " %"
+	Print "He max на первой высоте: ";  He_max; " %"; "       He max: "; He_maxLib; " %" 
 EndIf
 
 Print
@@ -861,7 +861,7 @@ temp_flip_length = file_table_load(filename, @nColumn, @nRow, @temp_flip(0))
 'Print nRow, nColumn
 'break
 If ( (temp_flip_length <> nRow*nColumn) Or (temp_flip_length = 0) ) Then
-	PrintErrorToLog(ErrorInputData, __FILE__, __LINE__)
+	PrintErrorToLog(ErrorFlip, __FILE__, __LINE__)
 	End
 EndIf
 
@@ -1145,8 +1145,10 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 	Print "Решение обратной задачи... "
 	Print #1, "Inverse problem solving... h="+Str(CInt(Hkm(h)))+" km"
 
-
-
+	Color 11
+	Print "Для остановки обработки и сохранения результатов зажмите Q."
+	Print
+	Color 15
 
 	file = FreeFile()
 	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Q."+Str(CInt(Hkm(h)))+".txt" For Output As #file
@@ -1238,8 +1240,6 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 		If Hkm(h) < Config_alt_oxygen Then
 			libraries_num = 1
 		EndIf
-
-		'Print libraries_num
 
 		For hyd = 0 To libraries_num-1
 			Print_process_percent((hyd*100)/libraries_num)
@@ -5862,6 +5862,7 @@ Sub save_and_exit()
 		Next t
 		Close #file
 
+		/'
 		file = FreeFile()
 		Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/_Ti.-1."+ Str(h_array(h)) +".txt" For Input As #file
 		For t = 0 To nT-1
@@ -5917,6 +5918,7 @@ Sub save_and_exit()
 			Input #file, he2_array(t, h)
 		Next t
 		Close #file
+		'/
 
 	Next h
 
@@ -5943,7 +5945,7 @@ Sub save_and_exit()
 
 	Close #file
 
-
+	/'
 	file = FreeFile()
 	Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/_Ti.txt" For Output As #file
 
@@ -5983,7 +5985,7 @@ Sub save_and_exit()
 	Next t
 
 	Close #file
-
+	'/
 
 	' запись Te
 
@@ -6007,6 +6009,7 @@ Sub save_and_exit()
 
 	Close #file
 
+	/'
 	file = FreeFile()
 	Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/_Te.txt" For Output As #file
 
@@ -6045,6 +6048,7 @@ Sub save_and_exit()
 	Next t
 
 	Close #file
+	'/
 
 	' запись He
 
@@ -6067,7 +6071,7 @@ Sub save_and_exit()
 
 	Close #file
 
-
+	/'
 	file = FreeFile()
 	Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/_He.txt" For Output As #file
 
@@ -6108,6 +6112,7 @@ Sub save_and_exit()
 	Next t
 
 	Close #file
+	'/
 
 	' запись Hyd
 
@@ -6130,7 +6135,7 @@ Sub save_and_exit()
 
 	Close #file
 
-
+	/'
 	file = FreeFile()
 	Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/_Hyd.txt" For Output As #file
 
@@ -6169,7 +6174,7 @@ Sub save_and_exit()
 	Next t
 
 	Close #file
-
+'/
 
 
 	' запись Q
@@ -6227,6 +6232,13 @@ Sub save_and_exit()
 	Close #file
 
 
+	MkDir(SEANS_DIR_OUT + DirectoryOutput+"/step3")
+
+	CopyFile( SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/Ti.F.txt", SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/Ti.FLIP.FLIP.txt", 0)
+	CopyFile( SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/Ti.txt", SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/Ti.FLIP.txt", 0)
+	CopyFile( SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/Te.txt", SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/Te.FLIP.txt", 0)
+	CopyFile( SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/Hyd.txt", SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/Hyd.FLIP.txt", 0)
+	CopyFile( SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/He.txt", SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/He.FLIP.txt", 0)
 
 
 End Sub

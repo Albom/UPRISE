@@ -13,6 +13,7 @@ Enum ErrorType 'Типы ошибок
 	ErrorAFunction				' Ошибка ДФН
 	ErrorFilter					' Ошибка файла фильтра
 	ErrorConfig					' Ошибка файла конфига
+	ErrorFlip					' Ошибка загрузки файлов FLIP
 End Enum
 
 
@@ -51,6 +52,8 @@ Sub PrintErrorToLog( _
 			err_message = "Ошибка загрузки файла АКФ ИХ фильтра"
 		Case ErrorConfig
 			err_message = "Не удалось открыть конфигурационный файл"
+		Case ErrorFlip
+			err_message = "Ошибка загрузки файлов из модели FLIP"
 	End Select
 	FileHandle = FreeFile 'Присваиваем дескриптору свободное значение 
 	Open "Error_Log_UPRISE.txt" For Append As #FileHandle

@@ -627,6 +627,8 @@ Declare Function date_valid Alias "date_valid" (ByVal day1 As Integer, ByVal mon
 Declare Function time_from_str Alias "time_from_str"  (ByVal hh As Integer Ptr, ByVal mm As Integer Ptr, ByVal ss As Integer Ptr,  ByVal timestr As ZString Ptr) As Integer
 Declare Function date_from_str Alias "date_from_str"  (ByVal dd As Integer Ptr, ByVal mm As Integer Ptr, ByVal yy As Integer Ptr,  ByVal datestr As ZString Ptr) As Integer
 Declare Function tdatetime_2date Alias "tdatetime_2date"  (ByVal tdatetime As Double, ByVal day1 As Integer Ptr, ByVal month1 As Integer Ptr, ByVal year1 As Integer Ptr, ByVal hh As Integer Ptr, ByVal mm As Integer Ptr, ByVal ss As Integer Ptr, ByVal ms As Integer Ptr) As Integer
+Declare Function time_linear Alias "time_linear" (ByVal arr As Double Ptr, ByVal length As Integer) As Integer
+Declare Function time_normalize Alias "time_normalize" (ByVal arr As Double Ptr, ByVal length As Integer) As Integer
 
 End Extern
 
@@ -757,7 +759,7 @@ End Extern
 ''' ===================================================================================================
 ' Работа с ионограммами
 
-Type ionogram_data Field = 1
+Type ionogram_data Field = 0
 
 	Dim Day1							As Integer
 	Dim Month1						As Integer
@@ -766,11 +768,11 @@ Type ionogram_data Field = 1
 	Dim Minute1						As Integer
 	Dim Second1						As Integer
 
-	Dim nc							As Integer
+	Dim nr							As Integer
 	Dim nf							As Integer
-	Dim np							As Integer
+	Dim nh							As Integer
 
-	Dim Dat(0 To 399, 0 To 15, 0 To 249) As UByte
+	Dim Dat(0 To 15, 0 To 399, 0 To 249) As UByte
 
 End Type
 

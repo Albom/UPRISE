@@ -104,6 +104,8 @@ Dim Shared As Integer Config_sigma
 
 Dim Shared As Integer Config_filter
 
+Dim Shared As Double Config_alt_oxygen
+
 '''==============================================
 
 Dim Shared As Integer START_X = 0
@@ -327,8 +329,10 @@ If Err() > 0 Then
 	ConfigAmbig = 0
 
 	Config_h_min_q = 45
-	
+
 	Config_filter = 9
+
+	Config_alt_oxygen = 0
 
 Else
 
@@ -449,9 +453,12 @@ Else
 
 	'38
 	Input #file, Config_sigma
-	
+
 	'39
 	Input #file, Config_filter
+
+	'40
+	Input #file, Config_alt_oxygen
 
 	Close #file
 
@@ -492,7 +499,7 @@ Print "Шаг по высоте Hstep: "; Hstep
 
 If Config_oxygen = 0 Then
 	Print
-	Print "He max на первой высоте: ";  He_max; " %"
+	Print "He max на первой высоте: ";  He_max; " %"; "       He max: "; He_maxLib; " %"
 EndIf
 
 Print
@@ -597,7 +604,7 @@ Print "Результаты обработки, находящиеся в папке " + Chr(34) + "out" + Chr(34) +
 Color 10
 Dim As String fn
 fn = Dir("./out/*", fbDirectory)
-While Len(fn) > 0 
+While Len(fn) > 0
 	fn = Dir()
 	If (Len(fn)=13) And (Mid(fn, 7, 1)="-") Then
 		Print fn;"   ";
@@ -1011,9 +1018,18 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 		Color 15
 	EndIf
 
+	Color 11
+	Print "Для остановки обработки и сохранения результатов зажмите Q."
+	Print
+	Color 15
+
 	Dim As Integer auto
 
 	auto = 1
+
+	If Hkm(h) < Config_alt_oxygen Then
+		he_max = 0
+	EndIf
 
 	For he = 0 To he_max Step he_step
 
@@ -1076,6 +1092,10 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 		libraries_list_load(He)
 
 		If Config_oxygen <> 0 Then
+			libraries_num = 1
+		EndIf
+
+		If Hkm(h) < Config_alt_oxygen Then
 			libraries_num = 1
 		EndIf
 
@@ -1228,6 +1248,10 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 		he_max = 0
 	EndIf
 
+	If Hkm(h) < Config_alt_oxygen Then
+		he_max = 0
+	EndIf
+
 Next h ' !!!!
 
 
@@ -1298,9 +1322,9 @@ Sub inverse_problem_v1_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_
 												If dat_all_str(h, t).var(tau) <> 0 Then '!!! грязный хак (если дисперсия по каким-то причинам оказалась равна 0)
 													d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2 / dat_all_str(h, t).var(tau)
 												Else
-													d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2 
+													d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2
 												EndIf
-												
+
 											Next tau
 										Else
 											For tau = 1 To 18
@@ -1573,9 +1597,9 @@ Sub inverse_problem_v2_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_
 														If dat_all_str(h, t).var(tau) <> 0 Then
 															d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2 / dat_all_str(h, t).var(tau)
 														Else
-															d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2 
+															d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2
 														EndIf
-														
+
 													Next tau
 												Else
 													For tau = 1 To 18
