@@ -3,6 +3,8 @@ echo 1_UPRISE_view_SNew.bas
 fbc -s console -t 10000 -fpu sse  -arch 686 1_UPRISE_view_SNew.bas
 echo 1_UPRISE_view_SOld.bas
 fbc -s console -t 10000 -fpu sse  -arch 686 1_UPRISE_view_SOld.bas
+echo 1_UPRISE_view_COld.bas
+fbc -s console -t 10000 -fpu sse  -arch 686 1_UPRISE_view_COld.bas
 echo 2_UPRISE_integrate_SNew.bas
 fbc -s console -t 10000 -fpu sse  -arch 686 2_UPRISE_integrate_SNew.bas
 echo 2_UPRISE_integrate_SOld.bas

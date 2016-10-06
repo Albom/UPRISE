@@ -203,7 +203,7 @@ Type  seans1c_data Field = 1
 	Dim Dat2(0 To 359, 0 To 6)	As Integer 
 	Dim Dat0(0 To 359)			As Integer 
 
-	Dim m(0 To 269)				As Integer 
+	Dim m(0 To 359)				As Integer 
 	
 End Type
 
@@ -231,6 +231,7 @@ Declare Function  seans1s_saveM3 Alias "seans1s_saveM3" (_
 											 ByVal seans As seans1s_data Ptr _
 										) As Integer
 
+
 Declare Function  seans1s_alt Alias "seans1s_alt" (ByVal H As Integer) As Double
 Declare Function  seans1s_alt_front Alias "seans1s_alt_front" (ByVal H As Integer) As Double
 Declare Function  seans1s_alt_795 Alias "seans1s_alt_795" (ByVal H As Integer) As Double
@@ -243,6 +244,8 @@ Declare Function  seans1s_noise Alias "seans1s_noise" (_
 											 ByVal alt_start As Integer, _
 											 ByVal alt_end As Integer _
 										) As Integer
+
+Declare Function  seans1c_alt Alias "seans1c_alt" (ByVal H As Integer) As Double
 
 Declare Function  seans1c_test Alias "seans1c_test" ( ByVal filename As ZString Ptr) As Integer
 
