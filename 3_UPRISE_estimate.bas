@@ -101,6 +101,8 @@ Dim Shared As Double Config_kappa
 
 Dim Shared As Integer Config_sigma
 
+Dim Shared As Integer Config_filter
+
 '''==============================================
 
 Dim Shared As Integer START_X = 0
@@ -324,6 +326,8 @@ If Err() > 0 Then
 	ConfigAmbig = 0
 
 	Config_h_min_q = 45
+	
+	Config_filter = 9
 
 Else
 
@@ -444,6 +448,9 @@ Else
 
 	'38
 	Input #file, Config_sigma
+	
+	'39
+	Input #file, Config_filter
 
 	Close #file
 
@@ -887,13 +894,14 @@ For partrap As Integer = 0 To 0'20
 		ext = Str(lag)
 		If lag < 10 Then ext = "0"+ext
 		If pulse_length = 663 Then
-			filename = "./ambig/663/"+ DirNum +"/ambig"+ext+".dat"
+			filename = "./ambig/663-"+Str(Config_filter)+"/"+ DirNum +"/ambig"+ext+".dat"
 		Else
 			If pulse_length = 795 Then
-				filename = "./ambig/795/00/ambig"+ext+".dat"
+				filename = "./ambig/795-"+Str(Config_filter)+"/"+"00/ambig"+ext+".dat"
 			EndIf
 		EndIf
 
+		Print #1, filename
 		Open filename For Input As #file
 		If Err() <> 0 Then
 			PrintErrorToLog(ErrorAFunction, __FILE__, __LINE__)

@@ -108,7 +108,7 @@ AddComboBoxItem(COMBO_TYPE, "Файлы SOld (коррелятор K1)", -1)
 AddComboBoxItem(COMBO_TYPE, "Файлы COld (4-й режим)", -1)
 SetItemComboBox(COMBO_TYPE, 0)
 
-TextGadget (TEXT_COPYRIGHT, 10, 240, 520, 24 ,"© 2013–2015 Богомаз А.В., Котов Д.В. (Институт ионосферы)")
+TextGadget (TEXT_COPYRIGHT, 10, 240, 520, 24 ,"© 2013–2016 Богомаз А.В., Котов Д.В. (Институт ионосферы)")
 
 
 SetGadgetFont(BTN_VIEW,      font)

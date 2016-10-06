@@ -1,1 +1,1 @@
-Const As String UPRISE_VERSION = "1.5.8"
+Const As String UPRISE_VERSION = "1.5.9"
