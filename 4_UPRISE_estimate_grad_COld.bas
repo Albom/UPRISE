@@ -71,18 +71,14 @@ Dim Shared As Integer  Config_step_h_3,  Config_step_ti_3,  Config_step_te_3
 Dim Shared As Integer Config_range_h_4, Config_range_ti_4, Config_range_te_4
 Dim Shared As Integer  Config_step_h_4,  Config_step_ti_4,  Config_step_te_4
 Dim Shared As Integer  Config_oxygen
+Dim Shared As Double  Config_harmonic
 Dim Shared As Integer  Config_auto
 Dim Shared As Double  Config_coeff(0 To 18)
 Dim Shared As Integer  Config_triangle
-Dim Shared As Integer Config_ti_num
-Dim Shared As Integer Config_te_num
-Dim Shared As Integer Config_hyd_num
 
 Dim Shared As Integer he_step
 
 Dim Shared As Integer Config_sinus
-
-Dim Shared As Integer ConfigAmbig
 
 '''==============================================
 
@@ -164,8 +160,6 @@ Declare Sub inverse_problem_v1_conv(ByVal h As Integer, ByVal z As Integer, ByVa
 Declare Sub inverse_problem_v2_conv(ByVal h As Integer, ByVal z As Integer, ByVal step_hyd As Integer, ByVal step_te As Integer, ByVal step_ti As Integer)
 Declare Sub inverse_problem_v1(ByVal h As Integer, ByVal z As Integer, ByVal step_hyd As Integer, ByVal step_te As Integer, ByVal step_ti As Integer)
 Declare Sub inverse_problem_v2(ByVal h As Integer, ByVal z As Integer, ByVal step_hyd As Integer, ByVal step_te As Integer, ByVal step_ti As Integer)
-Declare Sub inverse_problem_v1_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_hyd As Integer, ByVal step_te As Integer, ByVal step_ti As Integer)
-Declare Sub inverse_problem_v2_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_hyd As Integer, ByVal step_te As Integer, ByVal step_ti As Integer)
 
 Declare Sub inverse_problem_he(ByVal h As Integer, ByVal z As Integer, ByVal t_start As Integer, ByVal t_end As Integer)
 Declare Sub inverse_problem_ti(ByVal h As Integer, ByVal z As Integer)
@@ -250,7 +244,7 @@ Color 15
 
 
 file = FreeFile()
-Open "config.dat" For Input As #file
+Open "config_COld.dat" For Input As #file
 If Err() > 0 Then
 	Input "Введите длительность зондирующего импульса (мкс): ", pulse_length
 	LIBRARY_PATH = "d:/lib/"
@@ -286,6 +280,8 @@ If Err() > 0 Then
 
 	Config_sinus = 1
 
+	Config_harmonic = 0.05
+
 	Config_auto = 1
 
 	For i = 0 To 18
@@ -293,8 +289,6 @@ If Err() > 0 Then
 	Next i
 
 	Config_triangle = 1
-
-	ConfigAmbig = 0
 
 Else
 
@@ -338,6 +332,7 @@ Else
 
 	Input #file, He_grad
 	Input #file, He_maxLib
+	Input #file, Config_harmonic
 
 	Input #file, Config_auto
 
@@ -346,12 +341,6 @@ Else
 	Next i
 
 	Input #file, Config_triangle
-
-	Input #file, Config_ti_num
-	Input #file, Config_te_num
-	Input #file, Config_hyd_num
-
-	Input #file, ConfigAmbig
 
 	Close #file
 
@@ -366,23 +355,15 @@ DeltaHydMinus = Abs(DeltaHydMinus)
 
 Print
 Color 12
-Print "Проверьте параметры программы. При необходимости внесите исправления в config.dat и перезапустите программу."
+Print "Проверьте параметры программы. При необходимости внесите исправления в config_COld.dat и перезапустите программу."
 Print
 Color 15
 Print "Длительность зондирующего импульса: "; pulse_length; " мкс. ";
 If Config_triangle <> 0 Then
-	Print "Уменьшение коррелирующего объёма учитывается. "
+	Print "Уменьшение коррелирующего объёма учитывается."
 Else
-	Print "Уменьшение коррелирующего объёма не учитывается. "
+	Print "Уменьшение коррелирующего объёма не учитывается."
 EndIf
-
-If ConfigAmbig <> 0 Then
-	Print "Расчёт параметров с использованием ДФН. ";
-Else
-	Print "Расчёт параметров без использования ДФН. ";
-EndIf
-
-
 Print "Путь к библиотекам АКФ: "; LIBRARY_PATH
 Print
 Print "Номер минимальной высоты Hmin: "; Hmin
@@ -437,6 +418,7 @@ Else
 	Print
 	Print "Интервалы при 4-м приближении (Ti, Te):   +-";  Config_range_ti_4; " K, +-"; Config_range_te_4; " K"
 	Print "Шаги при 4-м приближении (Ti, Te):      ";  Config_step_ti_4; " K, "; Config_step_te_4; " K"
+
 EndIf
 
 If Config_oxygen <> 0 Then
@@ -456,6 +438,7 @@ EndIf
 If Config_auto <> 0 Then
 	Print
 	Print "Включён автоматический режим."
+	Print "Уровень гармоники для определения ширины окна сглаживания (сейчас не используется): "; Config_harmonic
 EndIf
 
 
@@ -464,10 +447,6 @@ Print "Весовые коэффициенты: ";
 For i = 0 To 18
 	Print Using "##.# "; Config_coeff(i);
 Next i
-
-Print
-Print
-Print "Количество точек для сглаживание временных рядов (по Ti, Te и H+): "; Config_ti_num; " "; Config_te_num; " "; Config_hyd_num
 
 Print
 Print
@@ -560,13 +539,13 @@ seans_num_out = seans_num_in
 DeleteDir(SEANS_DIR_OUT + DirectoryOutput+"/step3", /'FOF_ALLOWUNDO Or '/FOF_NOCONFIRMATION Or FOF_SILENT)
 MkDir(SEANS_DIR_OUT + DirectoryOutput+"/step3")
 
-FileCopy("config.dat", SEANS_DIR_OUT + DirectoryOutput+"/step3/config.dat")
+FileCopy("config_COld.dat", SEANS_DIR_OUT + DirectoryOutput+"/step3/config_COld.dat")
 
 If isConv = 0 Then
 
 	' загрузка АКФ ИХ фильтра
 	file = FreeFile()
-	Open "filter.dat" For Input As #file
+	Open "filter_COld.dat" For Input As #file
 	If Err <> 0 Then
 		PrintErrorToLog(ErrorFilter, __FILE__, __LINE__)
 		End
@@ -609,7 +588,12 @@ Close #file
 
 
 ' загружаем массив температур (для которых рассчитаны библиотеки)
-temperatures_len = library_light_list_of_temperatures_get(@temperatures(0))
+'If isConv <> 0 Then
+'	temperatures_len = fortran_library_list_of_temperatures_get_short_663_795(@temperatures(0))
+'Else
+	temperatures_len = fortran_library_list_of_temperatures_get_M(@temperatures(0))
+'EndIf
+
 
 
 
@@ -718,54 +702,10 @@ Print #1, Str(seans_num_out)+" files loaded"
 
 
 
-' выделяем память для коэффициентов
-Dim As Integer hZero = 60
-ReDim Shared As Single Ambig(0 To 50, 0 To hZero, 0 To 18)
-ReDim Shared As Single AmbigCoeff(0 To 50, 0 To (hMax-hMin)\hStep+1, 0 To seans_num_out-1, 0 To 18)'tau, h, t, lag
 
 
-' Загрузка ДФН
-Print "Загрузка ДФН... ";
-For lag = 0 To 18
-	Print_process_percent((lag*100)/19)
-	file = FreeFile
-	ext = Str(lag)
-	If lag < 10 Then ext = "0"+ext
-	filename = "./ambig/00/ambig"+ext+".dat"
-	Open filename For Input As #file
-	If Err() <> 0 Then
-		PrintErrorToLog(ErrorAFunction, __FILE__, __LINE__)
-		End
-	EndIf
-	For h = 0 To hZero
-		For tau = 0 To 50
-			Input #file, Ambig(tau, h, lag)
-		Next tau
-	Next h
-	Close #file
-Next lag
-Print_process_percent(1000)
-Print "OK"
 
-Print "Расчёт коэффициентов... ";
-For t = 0 To seans_num_out-1
 
-	Print_process_percent((t*100)/seans_num_out)
-
-	For h = hMin To hMax Step hStep
-		For lag = 0 To 18
-			For tau = 0 To 50
-				AmbigCoeff(tau, (h-hMin)\hStep, t, lag) = 0
-				For z = 0 To hZero
-					AmbigCoeff(tau, (h-hMin)\hStep, t, lag) += dat_all_str(h-z+num_point_acf\2, t).acf(0) * Ambig(tau, z, lag)
-				Next z
-			Next tau
-		Next lag
-	Next h
-
-Next t
-Print_process_percent(1000)
-Print "OK"
 
 
 ' Решение обратной задачи
@@ -776,13 +716,15 @@ EndIf
 
 
 z = 0
-For h = Hmin To Hmax Step Hstep ' по высоте
+For h = Hmax To Hmin Step -Hstep ' по высоте
+
 
 	Cls
 	Print "Решение обратной задачи... "
 	Print #1, "Inverse problem solving... h="+Str(CInt(Hkm(h)))+" km"
 
-
+	'	Print h, hmax, hmin, hstep
+	'	Sleep
 
 
 	file = FreeFile()
@@ -843,14 +785,7 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 
 		heCurrent = he
 
-		Dim As Double qMin = 1e200
-		For t = 0 To seans_num_out-1 ' по времени
-			if dat_all_str(h, t).q < qMin Then
-				qMin = dat_all_str(h, t).q
-			EndIf
-		Next t
-
-		Print Using "n = ###   h = ####   He+ = ##   Qmin = ####.#"; h; Hkm(h); he; qMin;
+		Print Using "n = ###   h = ####   He+ = ##"; h; Hkm(h); he;
 		Print ,
 
 
@@ -869,16 +804,23 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 			Next hyd
 		EndIf
 
-		libraries_list_load(He)
-
-		If Config_oxygen <> 0 Then
+		If z = 0 Then
 			libraries_num = 1
+		Else
+			libraries_num = 100
 		EndIf
+		
 
 		For hyd = 0 To libraries_num-1
 			Print_process_percent((hyd*100)/libraries_num)
-			library_light_list_get_filename(@zfilename, @libraries_filelist, hyd)
-			zfilename = LIBRARY_PATH + zfilename
+			'fortran_library_list_get_filename(@zfilename, @libraries_filelist, hyd)
+			Dim As String fn
+			fn = Str(100-hyd)
+			If (100-hyd) < 10  Then fn = "0"+fn
+			If (100-hyd) < 100 Then fn = "0"+fn
+			fn = "O="+fn+".dat"
+			
+			zfilename = LIBRARY_PATH + fn'"O=100.dat"'zfilename
 			libraries_file(hyd) = fopen (zfilename, "rb")
 			If libraries_file(hyd) = NULL Then
 				PrintErrorToLog(ErrorFortranLib, __FILE__, __LINE__)
@@ -912,13 +854,8 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 		If isConv <> 0 Then
 			inverse_problem_v1_conv(h, z, Config_step_h_1, Config_step_te_1, Config_step_ti_1)
 		Else
-			If ConfigAmbig <> 0 Then
-				inverse_problem_v1_ambig(h, z, Config_step_h_1, Config_step_te_1, Config_step_ti_1)
-			Else
-				inverse_problem_v1(h, z, Config_step_h_1, Config_step_te_1, Config_step_ti_1)
-			EndIf
+			inverse_problem_v1(h, z, Config_step_h_1, Config_step_te_1, Config_step_ti_1)
 		EndIf
-
 
 
 		If Config_auto <> 0 Then
@@ -935,11 +872,7 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 		If isConv <> 0 Then
 			inverse_problem_v2_conv(h, z, Config_step_h_2, Config_step_te_2, Config_step_ti_2)
 		Else
-			If ConfigAmbig <> 0 Then
-				inverse_problem_v2_ambig(h, z, Config_step_h_2, Config_step_te_2, Config_step_ti_2)
-			Else
-				inverse_problem_v2(h, z, Config_step_h_2, Config_step_te_2, Config_step_ti_2)
-			EndIf
+			inverse_problem_v2(h, z, Config_step_h_2, Config_step_te_2, Config_step_ti_2)
 		EndIf
 
 
@@ -957,11 +890,7 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 		If isConv <> 0 Then
 			inverse_problem_v2_conv(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_3)
 		Else
-			If ConfigAmbig <> 0 Then
-				inverse_problem_v2_ambig(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_3)
-			Else
-				inverse_problem_v2(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_3)
-			EndIf
+			inverse_problem_v2(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_3)
 		EndIf
 
 
@@ -979,26 +908,6 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 	Next he
 
 	intervals_input_auto(h)
-
-	If (auto = 0) Or (Config_auto = 0) Then
-
-		draw_all(h, z)
-
-	Else
-
-		Dim As Integer wnd = 1
-
-		save(h)
-
-
-		trand_ti (h, z, 1, seans_num_out-1, Config_ti_num)
-		trand_te (h, z, 1, seans_num_out-1, Config_te_num)
-		trand_hyd(h, z, 1, seans_num_out-1, Config_hyd_num)
-		inverse_problem_hyd_ti_te(h, z)
-
-	EndIf
-
-
 
 
 	' запись значения обработанной высоты в файл
@@ -1034,89 +943,6 @@ break
 
 
 
-Sub inverse_problem_v1_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_hyd As Integer, ByVal step_te As Integer, ByVal step_ti As Integer)
-
-	Dim As Integer hyd
-	Dim As Double  ti, te
-	Dim As Integer tau
-	Dim As Integer t
-	Dim As Integer lag
-	Dim As Double  d
-
-	Dim As Double acf_lib(0 To 255)
-	Dim As Double acf_teor(0 To 255)
-
-
-
-	For hyd = 0 To libraries_num-1 Step step_hyd
-
-		For te = 500 To 4000 Step step_te
-
-			For ti = 500 To 4000 Step step_ti
-
-				If (te/ti <= 3.5) And (te/ti >= 0.7) Then
-
-					If acf_library_light_short( libraries_file(hyd), @temperatures(0), temperatures_len, ti, te, @acf_lib(25), num_point_acf) <> 0 Then
-
-						For tau = 0 To 24
-							acf_lib(tau) = acf_lib(50-tau)
-						Next tau
-
-						For t = 0 To seans_num_out-1 ' по времени
-
-							If ( te >= dat_all_str(h, t).te_start ) And ( te <= dat_all_str(h, t).te_end ) And ( ti >= dat_all_str(h, t).ti_start ) And ( ti <= dat_all_str(h, t).ti_end ) And ( hyd >= dat_all_str(h, t).hyd_start ) And ( hyd <= dat_all_str(h, t).hyd_end ) Then
-
-								If ( te >= RegRange(0, t) ) And ( te <= RegRange(1, t) ) And ( ti >= RegRange(2, t) ) And ( ti <= RegRange(3, t) ) And ( hyd >= RegRange(4, t) ) And ( hyd <= RegRange(5, t) ) Then
-
-									If heCurrent <= heRange(t) Then
-
-										For lag = 0 To 18
-											acf_teor(lag) = 0
-											For tau = 0 To 50
-												acf_teor(lag) += acf_lib(tau) * AmbigCoeff(tau, (h-hMin)\hStep, t, lag)
-											Next tau
-										Next lag
-
-										For lag = 0 To 18
-											acf_teor(lag) /= lag+1
-										Next lag
-
-										d = 0
-										For tau = 1 To 18
-											d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2
-										Next tau
-
-										If d < dat_all_str(h, t).d_c Then
-											dat_all_str(h, t).d_c = d
-											dat_all_str(h, t).ti_c = ti
-											dat_all_str(h, t).te_c = te
-											dat_all_str(h, t).hyd_c = hyd
-										EndIf
-
-									EndIf
-
-								EndIf
-
-							EndIf
-
-						Next t
-
-					EndIf
-
-				EndIf
-
-			Next ti
-
-		Next te
-
-	Next hyd
-
-
-End Sub
-
-''' ================================================================
-
-
 
 
 
@@ -1141,9 +967,9 @@ Sub inverse_problem_v1_conv(ByVal h As Integer, ByVal z As Integer, ByVal step_h
 
 			For ti = 500 To 4000 Step step_ti
 
-				If (te/ti <= 3.5) And (te/ti >= 0.7) Then
+				If (te/ti <= 3.5) And (te/ti >= 0.5) Then
 
-					If acf_library_light_short_conv( libraries_file(hyd), @temperatures(0), temperatures_len, ti, te, @acf_teor(0), 19) <> 0 Then
+					If prz_acf_fortran_conv_short_663_795( libraries_file(hyd), @temperatures(0), temperatures_len, ti, te, @acf_teor(0), 19) <> 0 Then
 
 						For t = 0 To seans_num_out-1 ' по времени
 
@@ -1207,20 +1033,20 @@ Sub inverse_problem_v1(ByVal h As Integer, ByVal z As Integer, ByVal step_hyd As
 
 	For hyd = 0 To libraries_num-1 Step step_hyd
 
-		For te = 500 To 4000 Step step_te
+		For te = 200 To 4000 Step step_te
 
-			For ti = 500 To 4000 Step step_ti
+			For ti = 200 To 4000 Step step_ti
 
-				If (te/ti <= 3.5) And (te/ti >= 0.7) Then
+				If (te/ti <= 3.5) And (te/ti >= 0.5) Then
 
-					If acf_library_light_short( libraries_file(hyd), @temperatures(0), temperatures_len, ti, te, @acf_teor(0), num_point_acf) <> 0 Then
-
+					If prz_acf_fortran_M( libraries_file(hyd), @temperatures(0), temperatures_len, ti, te, @acf_teor(0), num_point_acf) <> 0 Then
+						/'
 						If Config_triangle <> 0 Then
 							For tau = 0 To num_point_acf-1
 								acf_teor(tau) *= 1-tau*delta_tau/pulse_length
 							Next tau
 						EndIf
-
+'/
 						func_conv_d(@acf_teor(0), @acf_filter(0), @acf_teor(0), num_point_acf)
 						array_norm0_d(@acf_teor(0), @acf_teor(0), num_point_acf)
 
@@ -1269,99 +1095,6 @@ End Sub
 
 
 
-Sub inverse_problem_v2_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_hyd As Integer, ByVal step_te As Integer, ByVal step_ti As Integer)
-
-	Dim As Integer hyd
-	Dim As Double  ti, te
-	Dim As Integer tau
-	Dim As Integer t
-	Dim As Integer lag
-	Dim As Double  d
-
-	Dim As Double acf_lib(0 To 255)
-	Dim As Double acf_teor(0 To 255)
-
-
-	For hyd = 0 To libraries_num-1 Step step_hyd
-
-		For t = 0 To seans_num_out-1 ' по времени
-
-			If heCurrent <= heRange(t) Then
-
-				If ( hyd >= RegRange(4, t) ) And ( hyd <= RegRange(5, t) ) Then
-
-					If (hyd >= dat_all_str(h, t).hyd_start) And (hyd <= dat_all_str(h, t).hyd_end) Then
-
-						For te = dat_all_str(h, t).te_start To dat_all_str(h, t).te_end Step step_te
-
-							If ( te >= RegRange(0, t) ) And ( te <= RegRange(1, t) ) Then
-
-								For ti = dat_all_str(h, t).ti_start To dat_all_str(h, t).ti_end Step step_ti
-
-									If ( ti >= RegRange(2, t) ) And ( ti <= RegRange(3, t) ) Then
-
-										If (te/ti <= 3.5) And (te/ti >= 0.7) Then
-
-											If acf_library_light_short( libraries_file(hyd), @temperatures(0), temperatures_len, ti, te, @acf_lib(25), num_point_acf) <> 0 Then
-
-
-												For tau = 0 To 24
-													acf_lib(tau) = acf_lib(50-tau)
-												Next tau
-
-
-												For lag = 0 To 18
-													acf_teor(lag) = 0
-													For tau = 0 To 50
-														acf_teor(lag) += acf_lib(tau) * AmbigCoeff(tau, (h-hMin)\hStep, t, lag)
-													Next tau
-												Next lag
-
-												For lag = 0 To 18
-													acf_teor(lag) /= lag+1
-												Next lag
-
-												d = 0
-												For tau = 1 To 18
-													d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)*(dat_all_str(h, t).acf(0)/acf_teor(0)) )^2
-												Next tau
-
-												If d < dat_all_str(h, t).d_c Then
-													dat_all_str(h, t).d_c = d
-													dat_all_str(h, t).ti_c = ti
-													dat_all_str(h, t).te_c = te
-													dat_all_str(h, t).hyd_c = hyd
-												EndIf
-
-											EndIf
-
-										EndIf
-
-									EndIf
-
-								Next ti
-
-							EndIf
-
-						Next te
-
-					EndIf
-
-				EndIf
-
-			EndIf
-
-		Next t
-
-	Next hyd
-
-End Sub
-
-
-
-''' ================================================================
-
-
 
 
 
@@ -1395,9 +1128,9 @@ Sub inverse_problem_v2_conv(ByVal h As Integer, ByVal z As Integer, ByVal step_h
 
 								If ( ti >= RegRange(2, t) ) And ( ti <= RegRange(3, t) ) Then
 
-									If (te/ti <= 3.5) And (te/ti >= 0.7) Then
+									If (te/ti <= 3.5) And (te/ti >= 0.5) Then
 
-										If acf_library_light_short_conv( libraries_file(hyd), @temperatures(0), temperatures_len, ti, te, @acf_teor(0), 19) <> 0 Then
+										If prz_acf_fortran_conv_short_663_795( libraries_file(hyd), @temperatures(0), temperatures_len, ti, te, @acf_teor(0), 19) <> 0 Then
 
 											d = 0
 											For tau = 1 To 18
@@ -1469,16 +1202,16 @@ Sub inverse_problem_v2(ByVal h As Integer, ByVal z As Integer, ByVal step_hyd As
 
 									If ( ti >= RegRange(2, t) ) And ( ti <= RegRange(3, t) ) Then
 
-										If (te/ti <= 3.5) And (te/ti >= 0.7) Then
+										If (te/ti <= 3.5) And (te/ti >= 0.5) Then
 
-											If acf_library_light_short( libraries_file(hyd), @temperatures(0), temperatures_len, ti, te, @acf_teor(0), num_point_acf) <> 0 Then
-
+											If prz_acf_fortran_M( libraries_file(hyd), @temperatures(0), temperatures_len, ti, te, @acf_teor(0), num_point_acf) <> 0 Then
+												/'
 												If Config_triangle <> 0 Then
 													For tau = 0 To num_point_acf-1
 														acf_teor(tau) *= 1-tau*delta_tau/pulse_length
 													Next tau
 												EndIf
-
+'/
 												func_conv_d(@acf_teor(0), @acf_filter(0), @acf_teor(0), num_point_acf)
 												array_norm0_d(@acf_teor(0), @acf_teor(0), num_point_acf)
 
@@ -1570,7 +1303,7 @@ End Sub
 ''' ================================================================
 
 Sub ranges_reg_set(ByVal h As Integer)
-
+/'
 	Dim As Double RegMx
 	Dim As Double RegSigma
 	Dim As Double RegArray(0 To RegWnd-1)
@@ -1661,6 +1394,21 @@ Sub ranges_reg_set(ByVal h As Integer)
 		RegRange(4, seans_num_out-1-i) = RegRange(4, seans_num_out-1-RegWnd/2)
 		RegRange(5, seans_num_out-1-i) = RegRange(5, seans_num_out-1-RegWnd/2)
 	Next i
+'/
+
+Dim As Integer t
+
+For t = 0 To seans_num_out-1
+	RegRange(0, t) = dat_all_str(h, t).te_c-200
+	RegRange(1, t) = dat_all_str(h, t).te_c+50
+
+	RegRange(2, t) = dat_all_str(h, t).ti_c-200
+	RegRange(3, t) = dat_all_str(h, t).ti_c+50
+	
+'	RegRange(4, t) = dat_all_str(h, t).hyd_c-10
+'	RegRange(5, t) = dat_all_str(h, t).hyd_c+5
+	
+Next t
 
 End Sub
 
@@ -1672,7 +1420,7 @@ Sub results_write(ByVal h As Integer, ByVal He As Integer)
 	Dim As Integer t
 
 	file = FreeFile()
-	Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "Hyd."+Str(He)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "M."+Str(He)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
 	For t = 0 To seans_num_out-1
 		Print #file, Using "###.# "; dat_all_str(h, t).hyd_c
 	Next t
@@ -2015,7 +1763,7 @@ Sub intervals_input_auto(ByVal h As Integer)
 	' загрузка временного хода H+
 	For he = 0 To He_max Step he_step
 		file = FreeFile()
-		Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "Hyd."+Str(He)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "M."+Str(He)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
 		For t = 0 To seans_num_out-1
 			Input #file, hyd_loaded(he, t)
 		Next t
@@ -2052,6 +1800,43 @@ Sub intervals_input_auto(ByVal h As Integer)
 	Next t
 
 	results_write(h, -1)
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "Rt."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+	For t = 0 To seans_num_out-1
+
+		Dim As Double acf_teor(0 To 255)
+
+		prz_acf_fortran( libraries_file(dat_all_str(h, t).hyd_c*2), @temperatures(0), temperatures_len, dat_all_str(h, t).ti_c, dat_all_str(h, t).te_c, @acf_teor(0), num_point_acf)
+
+		If Config_triangle <> 0 Then
+			For tau As Integer = 0 To num_point_acf-1
+				acf_teor(tau) *= 1-tau*delta_tau/pulse_length
+			Next tau
+		EndIf
+
+		func_conv_d(@acf_teor(0), @acf_filter(0), @acf_teor(0), num_point_acf)
+		array_norm0_d(@acf_teor(0), @acf_teor(0), num_point_acf)
+
+		For tau As Integer = 0 To 18
+			Print #file, Using "##.####^^^^ "; dat_all_str(h, t).acf(0)*acf_teor(tau);
+		Next tau
+		Print #file,
+
+	Next t
+	Close #file
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "Re."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+	For t = 0 To seans_num_out-1
+
+		For tau As Integer = 0 To 18
+			Print #file, Using "##.####^^^^ "; dat_all_str(h, t).acf(tau);
+		Next tau
+		Print #file,
+
+	Next t
+	Close #file
 
 End Sub
 
@@ -4389,7 +4174,7 @@ Sub inverse_problem_ti(ByVal h As Integer, ByVal z As Integer)
 
 		For hyd = 0 To libraries_num-1
 			Print_process_percent((hyd*100)/libraries_num)
-			library_light_list_get_filename(@zfilename, @libraries_filelist, hyd)
+			fortran_library_list_get_filename(@zfilename, @libraries_filelist, hyd)
 			zfilename = LIBRARY_PATH + zfilename
 			libraries_file(hyd) = fopen (zfilename, "rb")
 			If libraries_file(hyd) = NULL Then
@@ -4423,11 +4208,7 @@ Sub inverse_problem_ti(ByVal h As Integer, ByVal z As Integer)
 		If isConv <> 0 Then
 			inverse_problem_v2_conv(h, z, Config_step_h_2, Config_step_te_2, 10)
 		Else
-			If ConfigAmbig <> 0 Then
-				inverse_problem_v2_ambig(h, z, Config_step_h_2, Config_step_te_2, 10)
-			Else
-				inverse_problem_v2(h, z, Config_step_h_2, Config_step_te_2, 10)
-			EndIf
+			inverse_problem_v2(h, z, Config_step_h_2, Config_step_te_2, 10)
 		EndIf
 
 
@@ -4436,11 +4217,7 @@ Sub inverse_problem_ti(ByVal h As Integer, ByVal z As Integer)
 		If isConv <> 0 Then
 			inverse_problem_v2_conv(h, z, Config_step_h_3, Config_step_te_3, 10)
 		Else
-			If ConfigAmbig <> 0 Then
-				inverse_problem_v2_ambig(h, z, Config_step_h_3, Config_step_te_3, 10)
-			Else
-				inverse_problem_v2(h, z, Config_step_h_3, Config_step_te_3, 10)
-			EndIf
+			inverse_problem_v2(h, z, Config_step_h_3, Config_step_te_3, 10)
 		EndIf
 
 
@@ -4498,7 +4275,7 @@ Sub inverse_problem_te(ByVal h As Integer, ByVal z As Integer)
 
 		For hyd = 0 To libraries_num-1
 			Print_process_percent((hyd*100)/libraries_num)
-			library_light_list_get_filename(@zfilename, @libraries_filelist, hyd)
+			fortran_library_list_get_filename(@zfilename, @libraries_filelist, hyd)
 			zfilename = LIBRARY_PATH + zfilename
 			libraries_file(hyd) = fopen (zfilename, "rb")
 			If libraries_file(hyd) = NULL Then
@@ -4539,23 +4316,16 @@ Sub inverse_problem_te(ByVal h As Integer, ByVal z As Integer)
 		If isConv <> 0 Then
 			inverse_problem_v2_conv(h, z, Config_step_h_2, 10, Config_step_ti_2)
 		Else
-			If ConfigAmbig <> 0 Then
-				inverse_problem_v2_ambig(h, z, Config_step_h_2, 10, Config_step_ti_2)
-			Else
-				inverse_problem_v2(h, z, Config_step_h_2, 10, Config_step_ti_2)
-			EndIf
+			inverse_problem_v2(h, z, Config_step_h_2, 10, Config_step_ti_2)
 		EndIf
+
 
 		' 3 шаг
 		ranges_set(h, Config_range_h_3, 0, Config_range_ti_3)
 		If isConv <> 0 Then
 			inverse_problem_v2_conv(h, z, Config_step_h_3, 10, Config_step_ti_3)
 		Else
-			If ConfigAmbig <> 0 Then
-				inverse_problem_v2_ambig(h, z, Config_step_h_3, 10, Config_step_ti_3)
-			Else
-				inverse_problem_v2(h, z, Config_step_h_3, 10, Config_step_ti_3)
-			EndIf
+			inverse_problem_v2(h, z, Config_step_h_3, 10, Config_step_ti_3)
 		EndIf
 
 
@@ -4617,7 +4387,7 @@ Sub inverse_problem_hyd(ByVal h As Integer, ByVal z As Integer)
 
 		For hyd = 0 To libraries_num-1
 			Print_process_percent((hyd*100)/libraries_num)
-			library_light_list_get_filename(@zfilename, @libraries_filelist, hyd)
+			fortran_library_list_get_filename(@zfilename, @libraries_filelist, hyd)
 			zfilename = LIBRARY_PATH + zfilename
 			libraries_file(hyd) = fopen (zfilename, "rb")
 			If libraries_file(hyd) = NULL Then
@@ -4651,11 +4421,7 @@ Sub inverse_problem_hyd(ByVal h As Integer, ByVal z As Integer)
 		If isConv <> 0 Then
 			inverse_problem_v2_conv(h, z, 1, Config_step_te_2, Config_step_ti_2)
 		Else
-			If ConfigAmbig <> 0 Then
-				inverse_problem_v2_ambig(h, z, 1, Config_step_te_2, Config_step_ti_2)
-			Else
-				inverse_problem_v2(h, z, 1, Config_step_te_2, Config_step_ti_2)
-			EndIf
+			inverse_problem_v2(h, z, 1, Config_step_te_2, Config_step_ti_2)
 		EndIf
 
 
@@ -4664,11 +4430,7 @@ Sub inverse_problem_hyd(ByVal h As Integer, ByVal z As Integer)
 		If isConv <> 0 Then
 			inverse_problem_v2_conv(h, z, 1, Config_step_te_3, Config_step_ti_3)
 		Else
-			If ConfigAmbig <> 0 Then
-				inverse_problem_v2_ambig(h, z, 1, Config_step_te_3, Config_step_ti_3)
-			Else
-				inverse_problem_v2(h, z, 1, Config_step_te_3, Config_step_ti_3)
-			EndIf
+			inverse_problem_v2(h, z, 1, Config_step_te_3, Config_step_ti_3)
 		EndIf
 
 
@@ -4745,7 +4507,7 @@ Sub inverse_problem_hyd_ti_te(ByVal h As Integer, ByVal z As Integer)
 
 		For hyd = 0 To libraries_num-1
 			Print_process_percent((hyd*100)/libraries_num)
-			library_light_list_get_filename(@zfilename, @libraries_filelist, hyd)
+			fortran_library_list_get_filename(@zfilename, @libraries_filelist, hyd)
 			zfilename = LIBRARY_PATH + zfilename
 			libraries_file(hyd) = fopen (zfilename, "rb")
 			If libraries_file(hyd) = NULL Then
@@ -4777,11 +4539,7 @@ Sub inverse_problem_hyd_ti_te(ByVal h As Integer, ByVal z As Integer)
 		If isConv <> 0 Then
 			inverse_problem_v2_conv(h, z, 1, 10, 10)
 		Else
-			If ConfigAmbig <> 0 Then
-				inverse_problem_v2_ambig(h, z, 1, 10, 10)
-			Else
-				inverse_problem_v2(h, z, 1, 10, 10)
-			EndIf
+			inverse_problem_v2(h, z, 1, 10, 10)
 		EndIf
 
 
@@ -4849,7 +4607,7 @@ Sub inverse_problem_ti_te(ByVal h As Integer, ByVal z As Integer)
 
 		For hyd = 0 To libraries_num-1
 			Print_process_percent((hyd*100)/libraries_num)
-			library_light_list_get_filename(@zfilename, @libraries_filelist, hyd)
+			fortran_library_list_get_filename(@zfilename, @libraries_filelist, hyd)
 			zfilename = LIBRARY_PATH + zfilename
 			libraries_file(hyd) = fopen (zfilename, "rb")
 			If libraries_file(hyd) = NULL Then
@@ -4883,11 +4641,7 @@ Sub inverse_problem_ti_te(ByVal h As Integer, ByVal z As Integer)
 		If isConv <> 0 Then
 			inverse_problem_v2_conv(h, z, Config_step_h_2, 10, 10)
 		Else
-			If ConfigAmbig <> 0 Then
-				inverse_problem_v2_ambig(h, z, Config_step_h_2, 10, 10)
-			Else
-				inverse_problem_v2(h, z, Config_step_h_2, 10, 10)
-			EndIf
+			inverse_problem_v2(h, z, Config_step_h_2, 10, 10)
 		EndIf
 
 
@@ -4896,11 +4650,7 @@ Sub inverse_problem_ti_te(ByVal h As Integer, ByVal z As Integer)
 		If isConv <> 0 Then
 			inverse_problem_v2_conv(h, z, Config_step_h_3, 10, 10)
 		Else
-			If ConfigAmbig <> 0 Then
-				inverse_problem_v2_ambig(h, z, Config_step_h_3, 10, 10)
-			Else
-				inverse_problem_v2(h, z, Config_step_h_3, 10, 10)
-			EndIf
+			inverse_problem_v2(h, z, Config_step_h_3, 10, 10)
 		EndIf
 
 
@@ -5320,20 +5070,18 @@ Sub libraries_list_load(He As Integer)
 	If pulse_length = 663 Then
 
 		If isConv = 1 Then
-			libraries_num = library_light_list_get("Short_663_P+C_", He, @libraries_filelist) ' получаем список библиотек для He=0 и число этих библиотек
+			libraries_num = fortran_library_list_get_conv_short_663(He, @libraries_filelist) ' получаем список библиотек для He=0 и число этих библиотек
 		Else
-			libraries_num = library_light_list_get("For_Ambig+q_profile_", He, @libraries_filelist) ' получаем список библиотек для He=0 и число этих библиотек
+			libraries_num = fortran_library_list_get(He, @libraries_filelist) ' получаем список библиотек для He=0 и число этих библиотек
 		EndIf
 
 	Else
-
 		If pulse_length = 795 Then
-			libraries_num = library_light_list_get("Short_795_P+C_", He, @libraries_filelist) ' получаем список библиотек для He=0 и число этих библиотек
+			libraries_num = fortran_library_list_get_conv_short_795(He, @libraries_filelist) ' получаем список библиотек для He=0 и число этих библиотек
 		Else
 			PrintErrorToLog(ErrorFortranLib, __FILE__, __LINE__)
 			End
 		EndIf
-
 	EndIf
 
 End Sub

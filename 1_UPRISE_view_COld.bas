@@ -241,6 +241,9 @@ Do
 	'	Sleep 1000
 
 	Select Case key
+		
+		Case KEY_CTRL_P
+			BSave ("screen.bmp", 0)
 
 		Case KEY_RIGHT
 			If CUR < seans_loaded-1 Then CUR = CUR + 1 End If
@@ -429,6 +432,7 @@ Sub HelpPrint
 	Print "       1 2 3 4    Выбор канала"
 	Print "       A          Автоматическое удаление когерентных отражений"
 	Print "       F1         Вызов этой помощи"
+	Print "Ctrl + P          Сохранение экрана в файл screen.bmp"
 	Print "Ctrl + Q          Выход из программы"
 	Print
 	Color 12

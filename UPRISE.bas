@@ -95,6 +95,7 @@ SetItemComboBox(COMBO_ESTIMATE, 0)
 
 AddComboBoxItem(COMBO_TYPE, "Файлы SNew (коррелятор K3)", -1)
 AddComboBoxItem(COMBO_TYPE, "Файлы SOld (коррелятор K1)", -1)
+AddComboBoxItem(COMBO_TYPE, "Файлы COld (4-й режим)", -1)
 SetItemComboBox(COMBO_TYPE, 0)
 
 TextGadget (TEXT_COPYRIGHT, 10, 270, 520, 24 ,"© 2013–2014 Богомаз А.В., Котов Д.В. (Институт ионосферы)")
@@ -126,34 +127,47 @@ Do
 			Select Case EventNumber
 
 				Case BTN_VIEW
-					If GetItemComboBox(COMBO_TYPE) = 0 Then
-						ShellExecute(CPtr(Any Ptr, hwnd), "open", "1_UPRISE_view_SNew.exe", NULL, NULL, SW_SHOWNORMAL)
-					Else
-						ShellExecute(CPtr(Any Ptr, hwnd), "open", "1_UPRISE_view_SOld.exe", NULL, NULL, SW_SHOWNORMAL)
-					EndIf
+					Select Case GetItemComboBox(COMBO_TYPE)
+						Case 0
+							ShellExecute(CPtr(Any Ptr, hwnd), "open", "1_UPRISE_view_SNew.exe", NULL, NULL, SW_SHOWNORMAL)
+						Case 1
+							ShellExecute(CPtr(Any Ptr, hwnd), "open", "1_UPRISE_view_SOld.exe", NULL, NULL, SW_SHOWNORMAL)
+						Case 2
+							ShellExecute(CPtr(Any Ptr, hwnd), "open", "1_UPRISE_view_COld.exe", NULL, NULL, SW_SHOWNORMAL)
+					End Select
 
 				Case BTN_INTEGRATE
-					If GetItemComboBox(COMBO_TYPE) = 0 Then
-						ShellExecute(CPtr(Any Ptr, hwnd), "open", "2_UPRISE_integrate_SNew.exe", NULL, NULL, SW_SHOWNORMAL)
-					Else
-						ShellExecute(CPtr(Any Ptr, hwnd), "open", "2_UPRISE_integrate_SOld.exe", NULL, NULL, SW_SHOWNORMAL)
-					EndIf
+					Select Case GetItemComboBox(COMBO_TYPE)
+						Case 0
+							ShellExecute(CPtr(Any Ptr, hwnd), "open", "2_UPRISE_integrate_SNew.exe", NULL, NULL, SW_SHOWNORMAL)
+						Case 1
+							ShellExecute(CPtr(Any Ptr, hwnd), "open", "2_UPRISE_integrate_SOld.exe", NULL, NULL, SW_SHOWNORMAL)
+						Case 2
+							ShellExecute(CPtr(Any Ptr, hwnd), "open", "2_UPRISE_integrate_COld.exe", NULL, NULL, SW_SHOWNORMAL)
+					End Select
 
 				Case BTN_APPROX
-					If GetItemComboBox(COMBO_APPROX) = 0 Then
-						ShellExecute(CPtr(Any Ptr, hwnd), "open", "3_UPRISE_approximate_trapezoidal.exe", NULL, NULL, SW_SHOWNORMAL)
+					If GetItemComboBox(COMBO_TYPE) = 0 Or  GetItemComboBox(COMBO_TYPE) = 1  Then
+						If GetItemComboBox(COMBO_APPROX) = 0 Then
+							ShellExecute(CPtr(Any Ptr, hwnd), "open", "3_UPRISE_approximate_trapezoidal.exe", NULL, NULL, SW_SHOWNORMAL)
+						Else
+							ShellExecute(CPtr(Any Ptr, hwnd), "open", "3_UPRISE_approximate_polynomial.exe", NULL, NULL, SW_SHOWNORMAL)
+						EndIf
 					Else
-						ShellExecute(CPtr(Any Ptr, hwnd), "open", "3_UPRISE_approximate_polynomial.exe", NULL, NULL, SW_SHOWNORMAL)
+						ShellExecute(CPtr(Any Ptr, hwnd), "open", "3_UPRISE_approximate_COld.exe", NULL, NULL, SW_SHOWNORMAL)
 					EndIf
 
 
 				Case BTN_ESTIMATE
-					If GetItemComboBox(COMBO_ESTIMATE) = 0 Then
-						ShellExecute(CPtr(Any Ptr, hwnd), "open", "4_UPRISE_estimate_grad.exe", NULL, NULL, SW_SHOWNORMAL)
+					If GetItemComboBox(COMBO_TYPE) = 0 Or  GetItemComboBox(COMBO_TYPE) = 1  Then
+						If GetItemComboBox(COMBO_ESTIMATE) = 0 Then
+							ShellExecute(CPtr(Any Ptr, hwnd), "open", "4_UPRISE_estimate_grad.exe", NULL, NULL, SW_SHOWNORMAL)
+						Else
+							ShellExecute(CPtr(Any Ptr, hwnd), "open", "4_UPRISE_velocity.exe", NULL, NULL, SW_SHOWNORMAL)
+						EndIf
 					Else
-						ShellExecute(CPtr(Any Ptr, hwnd), "open", "4_UPRISE_velocity.exe", NULL, NULL, SW_SHOWNORMAL)
+						ShellExecute(CPtr(Any Ptr, hwnd), "open", "4_UPRISE_estimate_grad_COld.exe", NULL, NULL, SW_SHOWNORMAL)
 					EndIf
-
 
 				Case BTN_HELP
 					ShellExecute(CPtr(Any Ptr, hwnd), "open", "Help.chm", NULL, NULL, SW_SHOWNORMAL)
@@ -236,7 +250,7 @@ Do
 
 						Dim As String directory
 						Dim As Integer result
-						directory = ShellFolder("Укажите каталог с результатами (step3)", GetCurentDir()+"\out", BIF_USENEWUI Or BIF_NONEWFOLDERBUTTON)
+						directory = ShellFolder("Укажите каталог с результатами:" + Chr(10)+ "step3 - для экспорта температур и ионного состава;"+ Chr(10)+"step4 - для экспорта скорости движения.", GetCurentDir()+"\out", BIF_USENEWUI Or BIF_NONEWFOLDERBUTTON)
 
 						If Len(directory) > 0 Then
 
@@ -332,6 +346,7 @@ Function ResultsExportTxt(directory_in As String) As Integer
 	ReDim As Double  te_array (0 To nT-1, 0 To nH-1)
 	ReDim As Double  he_array (0 To nT-1, 0 To nH-1)
 	ReDim As Double  hyd_array(0 To nT-1, 0 To nH-1)
+	ReDim As Double  m_array  (0 To nT-1, 0 To nH-1)
 
 
 	' считываем время сеансов
@@ -362,230 +377,23 @@ Function ResultsExportTxt(directory_in As String) As Integer
 	Close #file
 
 
+	For i As Integer = 0 To nH-1
+		For j As Integer = 0 To nH-1-1
+			If h_array(j) > h_array(j+1) Then
+				Dim As Integer tmp = h_array(j)
+				h_array(j) = h_array(j+1)
+				h_array(j+1) = tmp
+			EndIf
+		Next j
+	Next i
+
+
 
 	directory_out = ShellFolder("Укажите каталог, в который необходимо сохранить результаты", "", BIF_USENEWUI)
 	If Len(directory_out) < 1 Then
 		Return EXPORT_ERROR_ABORT
 	EndIf
 
-	/'
-
-	' чтение данных из файла
-	For h = 0 To nH-1
-
-
-		file = FreeFile()
-		Open directory_in+"\Ti2.-1."+ Str(h_array(h)) +".txt" For Input As #file
-		If Err() <> 0 Then
-			Open directory_in+"\Ti.-1."+ Str(h_array(h)) +".txt" For Input As #file
-			If Err() <> 0 Then
-				Return EXPORT_ERROR_OPEN_FILE
-			EndIf
-		EndIf
-
-		For t = 0 To nT-1
-			Input #file, ti_array(t, h)
-		Next t
-
-		Close #file
-
-
-		file = FreeFile()
-		Open directory_in+"\Te2.-1."+ Str(h_array(h)) +".txt" For Input As #file
-		If Err() <> 0 Then
-			Open directory_in+"\Te.-1."+ Str(h_array(h)) +".txt" For Input As #file
-			If Err() <> 0 Then
-				Return EXPORT_ERROR_OPEN_FILE
-			EndIf
-		EndIf
-
-		For t = 0 To nT-1
-			Input #file, te_array(t, h)
-		Next t
-
-		Close #file
-
-
-		file = FreeFile()
-		Open directory_in+"\Hyd2.-1."+ Str(h_array(h)) +".txt" For Input As #file
-		If Err() <> 0 Then
-			Open directory_in+"\Hyd.-1."+ Str(h_array(h)) +".txt" For Input As #file
-			If Err() <> 0 Then
-				Return EXPORT_ERROR_OPEN_FILE
-			EndIf
-		EndIf
-
-		For t = 0 To nT-1
-			Input #file, hyd_array(t, h)
-		Next t
-
-		Close #file
-
-
-		file = FreeFile()
-		Open directory_in+"\He2.-1."+ Str(h_array(h)) +".txt" For Input As #file
-		If Err() <> 0 Then
-			Open directory_in+"\He.-1."+ Str(h_array(h)) +".txt" For Input As #file
-			If Err() <> 0 Then
-				Return EXPORT_ERROR_OPEN_FILE
-			EndIf
-		EndIf
-
-		For t = 0 To nT-1
-			Input #file, he_array(t, h)
-		Next t
-
-		Close #file
-
-
-
-		file = FreeFile()
-		Open directory_in+"\Q."+ Str(h_array(h)) +".txt" For Input As #file
-		If Err() <> 0 Then
-			Return EXPORT_ERROR_OPEN_FILE
-		EndIf
-
-		For t = 0 To nT-1
-			Input #file, q_array(t, h)
-		Next t
-
-		Close #file
-
-
-	Next h
-
-
-
-	' запись Ti
-
-	file = FreeFile()
-	Open directory_out+"\Ti.txt" For Output As #file
-	If Err() <> 0 Then
-		Return EXPORT_ERROR_OPEN_FILE
-	EndIf
-
-	Print #file, "      0 ";
-
-	For h = 0 To nH-1
-		Print #file, Using "###### "; h_array(h);
-	Next h
-
-	For t = 0 To nT-1
-		Print #file,
-		Print #file, Using "##.#### "; t_array(t);
-		For h = 0 To nH-1
-			Print #file, Using "###### "; ti_array(t, h);
-		Next h
-	Next t
-
-	Close #file
-
-
-
-	' запись Te
-
-	file = FreeFile()
-	Open directory_out+"\Te.txt" For Output As #file
-	If Err() <> 0 Then
-		Return EXPORT_ERROR_OPEN_FILE
-	EndIf
-
-	Print #file, "      0 ";
-
-	For h = 0 To nH-1
-		Print #file, Using "###### "; h_array(h);
-	Next h
-
-	For t = 0 To nT-1
-		Print #file,
-		Print #file, Using "##.#### "; t_array(t);
-		For h = 0 To nH-1
-			Print #file, Using "###### "; te_array(t, h);
-		Next h
-	Next t
-
-	Close #file
-
-
-
-	' запись He
-
-	file = FreeFile()
-	Open directory_out+"\He.txt" For Output As #file
-	If Err() <> 0 Then
-		Return EXPORT_ERROR_OPEN_FILE
-	EndIf
-
-	Print #file, "      0 ";
-
-	For h = 0 To nH-1
-		Print #file, Using "###### "; h_array(h);
-	Next h
-
-	For t = 0 To nT-1
-		Print #file,
-		Print #file, Using "##.#### "; t_array(t);
-		For h = 0 To nH-1
-			Print #file, Using "###.## "; he_array(t, h);
-		Next h
-	Next t
-
-	Close #file
-
-
-
-
-	' запись Hyd
-
-	file = FreeFile()
-	Open directory_out+"\Hyd.txt" For Output As #file
-	If Err() <> 0 Then
-		Return EXPORT_ERROR_OPEN_FILE
-	EndIf
-
-	Print #file, "      0 ";
-
-	For h = 0 To nH-1
-		Print #file, Using "###### "; h_array(h);
-	Next h
-
-	For t = 0 To nT-1
-		Print #file,
-		Print #file, Using "##.#### "; t_array(t);
-		For h = 0 To nH-1
-			Print #file, Using "###.## "; hyd_array(t, h)/2;
-		Next h
-	Next t
-
-	Close #file
-
-
-
-	' запись Q
-
-	file = FreeFile()
-	Open directory_out+"\Q.txt" For Output As #file
-	If Err() <> 0 Then
-		Return EXPORT_ERROR_OPEN_FILE
-	EndIf
-
-	Print #file, "      0 ";
-
-	For h = 0 To nH-1
-		Print #file, Using "###### "; h_array(h);
-	Next h
-
-	For t = 0 To nT-1
-		Print #file,
-		Print #file, Using "##.#### "; t_array(t);
-		For h = 0 To nH-1
-			Print #file, Using "###.## "; q_array(t, h);
-		Next h
-	Next t
-
-	Close #file
-
-'/
 
 
 	ReDim As Double  _ti_array (0 To nT-1, 0 To nH-1)
@@ -626,6 +434,13 @@ Function ResultsExportTxt(directory_in As String) As Integer
 		Open directory_in+"\Hyd.-1."+ Str(h_array(h)) +".txt" For Input As #file
 		For t = 0 To nT-1
 			Input #file, hyd_array(t, h)
+		Next t
+		Close #file
+
+		file = FreeFile()
+		Open directory_in+"\M.-1."+ Str(h_array(h)) +".txt" For Input As #file
+		For t = 0 To nT-1
+			Input #file, m_array(t, h)
 		Next t
 		Close #file
 
@@ -719,6 +534,35 @@ Function ResultsExportTxt(directory_in As String) As Integer
 	Next t
 
 	Close #file
+
+
+
+
+	' запись Qh2
+
+	file = FreeFile()
+	Open directory_out+"\Qh2.txt" For Output As #file
+	If Err() <> 0 Then
+		Return EXPORT_ERROR_OPEN_FILE
+	EndIf
+
+	Print #file, "      0 ";
+
+	For h = 0 To nH-1
+		Print #file, Using "    ###### "; h_array(h);
+	Next h
+
+	For t = 0 To nT-1
+		Print #file,
+		Print #file, Using "##.#### "; t_array(t);
+		For h = 0 To nH-1
+			Print #file, Using "##.###^^^^ "; q_array(t, h)*(h_array(h)^2);
+		Next h
+	Next t
+
+	Close #file
+
+
 
 
 	' запись Ti
@@ -1000,6 +844,31 @@ Function ResultsExportTxt(directory_in As String) As Integer
 
 	Close #file
 
+
+
+	' запись M
+
+	file = FreeFile()
+	Open directory_out+"\M.txt" For Output As #file
+	If Err() <> 0 Then
+		Return EXPORT_ERROR_OPEN_FILE
+	EndIf
+
+	Print #file, "      0 ";
+
+	For h = 0 To nH-1
+		Print #file, Using "###### "; h_array(h);
+	Next h
+
+	For t = 0 To nT-1
+		Print #file,
+		Print #file, Using "##.#### "; t_array(t);
+		For h = 0 To nH-1
+			Print #file, Using "###.## "; m_array(t, h);
+		Next h
+	Next t
+
+	Close #file
 
 	Return EXPORT_OK
 

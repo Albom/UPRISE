@@ -110,7 +110,7 @@ Print
 Input "Введите время накопления (в мин): ", Tnak
 Input "Введите шаг перемещения окна (в мин): ", Tstep
 Input "Введите количество точек для интерполяции: ", n2
-Input "Рассчитывать дисперсию? (0 - нет, 1 - да): ", isVar
+'Input "Рассчитывать дисперсию? (0 - нет, 1 - да): ", isVar
 'Input "Нормировать АКФ? (0 - нет, 1 - да): ", isR
 
 
@@ -685,13 +685,13 @@ Do Until t + tNak > seans_out_num-1
 
 		tau = 0
 		For i = 0 To tNak-1
-			as_file_str.acf[h].rc(tau) += (seans_str_out(h).dat1(tau)[t+i]+seans_str_out(h).dat2(tau)[t+i])
+			as_file_str.acf[h].rc(tau) += seans_str_out(h).dat1(tau)[t+i]'(seans_str_out(h).dat1(tau)[t+i]+seans_str_out(h).dat2(tau)[t+i])
 		Next i
 		as_file_str.acf[h].rc(tau) /= tNak
 
 		For tau = 7 To 12 ' по задержке
 			For i = 0 To tNak-1
-				as_file_str.acf[h].rc(tau) += (seans_str_out(h).dat1(tau)[t+i]+seans_str_out(h).dat2(tau)[t+i])
+				as_file_str.acf[h].rc(tau) += seans_str_out(h).dat1(tau)[t+i]'(seans_str_out(h).dat1(tau)[t+i]+seans_str_out(h).dat2(tau)[t+i])
 			Next i
 			as_file_str.acf[h].rc(tau) /= tNak
 		Next tau

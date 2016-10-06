@@ -6,6 +6,8 @@
 
 #Include "crt/stdlib.bi"
 
+#Include "window9.bi"
+
 #Include "fbgfx.bi"			'Подключение графической библиотеки
 
 
@@ -51,6 +53,9 @@ Dim As Integer file
 
 '''==============================================
 
+Open Err For Output As #1
+
+
 file = FreeFile()
 Open "config.dat" For Input As #file
 Input #file, razr_filename
@@ -79,7 +84,7 @@ For h = 0 To 300
 
 	Print #33,Using "### ####.### "; h; seans1c_alt(h);
 
-	l1 = (h+10)*15
+	l1 = h*15
 
 	For tau = 0 To 18 ' по задержке
 
@@ -196,6 +201,7 @@ Print "Суммирование по высоте... ";
 
 seans_num_out = seans_num_in
 
+DeleteDir(SEANS_DIR_OUT + DirectoryOutput+"/step2", /'FOF_ALLOWUNDO Or '/FOF_NOCONFIRMATION Or FOF_SILENT)
 MkDir(SEANS_DIR_OUT + DirectoryOutput+"/step2")
 
 For t = 0 To seans_num_out-1 ' по времени
@@ -252,27 +258,30 @@ For t = 0 To seans_num_out-1 ' по времени
 		Next tau
 	Next h
 
-
+/'
 
 	' учёт разрядника
-	For h = h_start To h_end-1 ' по высоте
+'	For h = h_start To h_end-1 ' по высоте
+	For h = 19 To h_end-1 ' по высоте
 		' вспомогательные локальные переменные (видны только в цикле)
 		Dim As Integer l1, l2 ' индексы
 		Dim As Double  r1, r2 ' значения коэффициента передачи
 		Dim As Integer offset = 10
 
-		l1 = (h+offset)*15
-		For tau = 0 To 18 ' по задержке
+		l1 = ((h+offset)*15)\7
+		For tau = 0 To 12 ' по задержке
 
-			l2 = l1+tau*7
+			l2 = l1-tau*7
+			Print #1, h, l1, l2, tau
+Sleep 500
 
-			If l1\15 < 300 Then
+			If l1 < 300*7 Then
 				r1 = razr7(l1)
 			Else
 				r1 = 1.0
 			EndIf
 
-			If l2\15 < 300 Then
+			If l2 < 300*7 And l2 >= 0 Then
 				r2 = razr7(l2)
 			Else
 				r2 = 1.0
@@ -290,7 +299,10 @@ For t = 0 To seans_num_out-1 ' по времени
 
 	Next h
 
+	'break
 
+
+'/
 
 
 	For h = h_start To h_end-1 ' по высоте

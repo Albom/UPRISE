@@ -29,6 +29,7 @@ Enum AlbomKeys
 	KEY_TAB = 9
 	KEY_ENTER = 13
 	KEY_CTRL_N = 14
+	KEY_CTRL_P = 16
 	KEY_CTRL_Q = 17
 	KEY_ESC = 27
 	KEY_SPACE = 32
@@ -610,42 +611,22 @@ End Extern
 
 Extern "c"
 
-Declare Function prz_si1 Alias "prz_si1" ( ByVal m1 As Double, ByVal ti As Double, ByVal te As Double, ByVal freq As Double) As Double
-Declare Function prz_si2 Alias "prz_si2" ( ByVal m1 As Double, ByVal m2 As Double, ByVal g1 As Double, ByVal ti As Double, ByVal te As Double, ByVal freq As Double) As Double
-Declare Function prz_si3 Alias "prz_si3" ( ByVal m1 As Double, ByVal m2 As Double, ByVal m3 As Double, ByVal g1 As Double, ByVal g2 As Double, ByVal ti As Double, ByVal te As Double, ByVal freq As Double) As Double
+Declare Function spectrum_1 Alias "spectrum_1" ( ByVal m1 As Double, ByVal ti As Double, ByVal te As Double, ByVal freq As Double) As Double
+Declare Function spectrum_2 Alias "spectrum_2" ( ByVal m1 As Double, ByVal m2 As Double, ByVal g1 As Double, ByVal ti As Double, ByVal te As Double, ByVal freq As Double) As Double
+Declare Function spectrum_3 Alias "spectrum_3" ( ByVal m1 As Double, ByVal m2 As Double, ByVal m3 As Double, ByVal g1 As Double, ByVal g2 As Double, ByVal ti As Double, ByVal te As Double, ByVal freq As Double) As Double
 
-Declare Function prz_acf1  Alias "prz_acf1" ( ByVal m1 As Double, ByVal ti As Double, ByVal te As Double, ByVal acf As Double Ptr, ByVal length As Integer) As Integer
-Declare Function prz_acf2  Alias "prz_acf2" ( ByVal m1 As Double, ByVal m2 As Double, ByVal g1 As Double, ByVal ti As Double, ByVal te As Double, ByVal acf As Double Ptr, ByVal length As Integer) As Integer
-Declare Function prz_acf3  Alias "prz_acf3" ( ByVal m1 As Double, ByVal m2 As Double, ByVal m3 As Double, ByVal g1 As Double, ByVal g2 As Double, ByVal ti As Double, ByVal te As Double, ByVal acf As Double Ptr, ByVal length As Integer) As  Integer
+Declare Function acf_1  Alias "acf_1" ( ByVal m1 As Double, ByVal ti As Double, ByVal te As Double, ByVal acf As Double Ptr, ByVal length As Integer) As Integer
+Declare Function acf_2  Alias "acf_2" ( ByVal m1 As Double, ByVal m2 As Double, ByVal g1 As Double, ByVal ti As Double, ByVal te As Double, ByVal acf As Double Ptr, ByVal length As Integer) As Integer
+Declare Function acf_3  Alias "acf_3" ( ByVal m1 As Double, ByVal m2 As Double, ByVal m3 As Double, ByVal g1 As Double, ByVal g2 As Double, ByVal ti As Double, ByVal te As Double, ByVal acf As Double Ptr, ByVal length As Integer) As  Integer
 
-Declare Function prz_acf3_univers Alias "prz_acf3_univers" ( ByVal m1 As Double, ByVal m2 As Double, ByVal m3 As Double, ByVal g1 As Double, ByVal g2 As Double, ByVal ti As Double, ByVal te As Double, ByVal acf As Double Ptr, ByVal length As Integer, ByVal df As Double, ByVal dt As Double) As  Integer
+Declare Function acf_3_full Alias "acf3_full" ( ByVal m1 As Double, ByVal m2 As Double, ByVal m3 As Double, ByVal g1 As Double, ByVal g2 As Double, ByVal ti As Double, ByVal te As Double, ByVal ne As Double, ByVal iskD As Integer, ByVal acf As Double Ptr, ByVal length As Integer, ByVal dt As Double) As  Integer
+Declare Function spectrum_3_full Alias "spectrum_3_full" ( ByVal m1 As Double, ByVal m2 As Double, ByVal m3 As Double, ByVal g1 As Double, ByVal g2 As Double, ByVal ti As Double, ByVal te As Double, ByVal ne As Double, ByVal iskD As Integer, ByVal freq As Double) As Double
 
-Declare Function prz_acf3_full Alias "prz_acf3_full" ( ByVal m1 As Double, ByVal m2 As Double, ByVal m3 As Double, ByVal g1 As Double, ByVal g2 As Double, ByVal ti As Double, ByVal te As Double, ByVal ne As Double, ByVal iskD As Integer, ByVal acf As Double Ptr, ByVal length As Integer, ByVal dt As Double) As  Integer
-Declare Function prz_si3_full_array Alias "prz_si3_full_array" ( ByVal m1 As Double, ByVal m2 As Double, ByVal m3 As Double, ByVal g1 As Double, ByVal g2 As Double, ByVal ti As Double, ByVal te As Double, ByVal ne As Double, ByVal iskD As Integer, ByVal w As Double Ptr, ByVal length As Integer, ByVal df As Double) As Integer
-Declare Function prz_si3_full Alias "prz_si3_full" ( ByVal m1 As Double, ByVal m2 As Double, ByVal m3 As Double, ByVal g1 As Double, ByVal g2 As Double, ByVal ti As Double, ByVal te As Double, ByVal ne As Double, ByVal iskD As Integer, ByVal freq As Double) As Double
-
-
-Declare Function fortran_library_list_of_temperatures_get  Alias "fortran_library_list_of_temperatures_get" (ByVal list As Integer Ptr ) As  Integer
-Declare Function fortran_library_list_get  Alias "fortran_library_list_get" (ByVal he_percent_int As Integer, ByVal list As ZString Ptr ) As  Integer
-Declare Function fortran_library_list_get_filename  Alias "fortran_library_list_get_filename" (ByVal filename As ZString Ptr, ByVal filelist As ZString Ptr, ByVal num As Integer) As  Integer
-Declare Function fortran_library_memory_load  Alias "fortran_library_memory_load" (ByVal f As FILE Ptr, ByVal memory As Double Ptr ) As  Integer
-Declare Function prz_acf_fortran  Alias "prz_acf_fortran" (ByVal f As FILE Ptr, ByVal temperatures As Integer Ptr, ByVal temperatures_len As Integer, ByVal ti As Double, ByVal te As Double, ByVal acf As Double Ptr, ByVal length As Integer) As  Integer
-Declare Function prz_acf_fortran_memory  Alias "prz_acf_fortran_memory" (ByVal memory As Double Ptr, ByVal temperatures As Integer Ptr, ByVal temperatures_len As Integer, ByVal ti As Double, ByVal te As Double, ByVal acf As Double Ptr, ByVal length As Integer) As  Integer
-Declare Function fortran_library_list_get_conv  Alias "fortran_library_list_get_conv" (ByVal he_percent_int As Integer, ByVal list As ZString Ptr ) As  Integer
-Declare Function prz_acf_fortran_conv  Alias "prz_acf_fortran_conv" (ByVal f As FILE Ptr, ByVal temperatures As Integer Ptr, ByVal temperatures_len As Integer, ByVal ti As Double, ByVal te As Double, ByVal acf As Double Ptr, ByVal length As Integer) As  Integer
-
-Declare Function prz_m_library_make Alias "prz_M_library_make" (ByVal filename As ZString Ptr, ByVal O As Integer) As Integer
-Declare Function prz_m_library_list_of_temperatures_get  Alias "prz_M_library_list_of_temperatures_get" (ByVal list As Integer Ptr ) As Integer
-Declare Function prz_m_acf Alias "prz_M_acf" (ByVal f As FILE Ptr, ByVal temperatures As Integer Ptr, ByVal temperatures_len As Integer, ByVal ti As Double, ByVal te As Double, ByVal acf As Double Ptr, ByVal length As Integer) As Integer
-
-Declare Function fortran_library_list_of_temperatures_get_5  Alias "fortran_library_list_of_temperatures_get_5" (ByVal list As Integer Ptr ) As  Integer
-Declare Function prz_acf_fortran_5  Alias "prz_acf_fortran_5" (ByVal f As FILE Ptr, ByVal temperatures As Integer Ptr, ByVal temperatures_len As Integer, ByVal ti As Double, ByVal te As Double, ByVal acf As Double Ptr, ByVal length As Integer) As  Integer
-
-Declare Function fortran_library_list_get_conv_short_663  Alias "fortran_library_list_get_conv_short_663" (ByVal he_percent_int As Integer, ByVal list As ZString Ptr ) As  Integer
-Declare Function fortran_library_list_get_conv_short_795  Alias "fortran_library_list_get_conv_short_795" (ByVal he_percent_int As Integer, ByVal list As ZString Ptr ) As  Integer
-Declare Function fortran_library_list_of_temperatures_get_short_663_795  Alias "fortran_library_list_of_temperatures_get_short_663_795" (ByVal list As Integer Ptr ) As  Integer
-Declare Function prz_acf_fortran_conv_short_663_795  Alias "prz_acf_fortran_conv_short_663_795" (ByVal f As FILE Ptr, ByVal temperatures As Integer Ptr, ByVal temperatures_len As Integer, ByVal ti As Double, ByVal te As Double, ByVal acf As Double Ptr, ByVal length As Integer) As  Integer
-
+Declare Function acf_library_light_short       Alias "acf_library_light_short"      (ByVal f As FILE Ptr, ByVal temperatures As Integer Ptr, ByVal temperatures_len As Integer, ByVal ti As Double, ByVal te As Double, ByVal acf As Double Ptr, ByVal length As Integer) As  Integer
+Declare Function acf_library_light_short_conv  Alias "acf_library_light_short_conv" (ByVal f As FILE Ptr, ByVal temperatures As Integer Ptr, ByVal temperatures_len As Integer, ByVal ti As Double, ByVal te As Double, ByVal acf As Double Ptr, ByVal length As Integer) As  Integer
+Declare Function library_light_list_of_temperatures_get  Alias "library_light_list_of_temperatures_get" (ByVal list As Integer Ptr ) As Integer
+Declare Function library_light_list_get  Alias "library_light_list_get" (ByVal prefix As ZString Ptr, ByVal he_percent_int As Integer, ByVal list As ZString Ptr ) As  Integer
+Declare Function library_light_list_get_filename  Alias "library_light_list_get_filename" (ByVal filename As ZString Ptr, ByVal filelist As ZString Ptr, ByVal num As Integer) As  Integer
 
 End Extern
 
