@@ -26,7 +26,7 @@ Const DELTA_TAU_INTERPOLATED = 1e-6
 
 '''==============================================
 
-Dim As Integer file, fileRcos, fileRsin
+Dim As Integer file, fileSpectrumBefore, fileSpectrumAfter, fileRcosBefore, fileRsinBefore, fileRcosAfter, fileRsinAfter
 
 Dim As Integer num_points
 Dim As Integer nh
@@ -316,35 +316,81 @@ For t = 0 To seans_num_in-1 ' по времени
 	Close #file
 
 	If isSpectrum <> 0 Then
-		file = FreeFile()
-		Open SEANS_DIR_OUT+DirectoryOutput+"/step4/SP."+ext+".txt" For Output As #file
-		Print #file, Using "########  "; 0;
+		fileSpectrumBefore = FreeFile()
+		Open SEANS_DIR_OUT+DirectoryOutput+"/step4/SP.BEFORE."+ext+".txt" For Output As #fileSpectrumBefore
+		Print #fileSpectrumBefore, Using "########  "; 0;
 		For i = 0 To 10001-1
-			Print #file, Using "###### "; i-5000;
+			Print #fileSpectrumBefore, Using "###### "; i-5000;
 		Next
-		Print #file,
+		Print #fileSpectrumBefore,
+	EndIf
+
+	If (isSpectrum <> 0) And (isSpectrumMod <> 0) Then
+		fileSpectrumAfter = FreeFile()
+		Open SEANS_DIR_OUT+DirectoryOutput+"/step4/SP.AFTER."+ext+".txt" For Output As #fileSpectrumAfter
+		Print #fileSpectrumAfter, Using "########  "; 0;
+		For i = 0 To 10001-1
+			Print #fileSpectrumAfter, Using "###### "; i-5000;
+		Next
+		Print #fileSpectrumAfter,
 	EndIf
 
 	If isAcf <> 0 Then
-		fileRcos = FreeFile()
-		Open SEANS_DIR_OUT+DirectoryOutput+"/step4/Rcos."+ext+".txt" For Output As #fileRcos
-		Print #fileRcos, Using "########  "; 0;
+		fileRcosBefore = FreeFile()
+		Open SEANS_DIR_OUT+DirectoryOutput+"/step4/Rcos.BEFORE."+ext+".txt" For Output As #fileRcosBefore
+		Print #fileRcosBefore, Using "########  "; 0;
 		For i = 0 To 18
-			Print #fileRcos, Using "####.### "; i*DELTA_TAU*1e6;
+			Print #fileRcosBefore, Using "####.### "; i*DELTA_TAU*1e6;
 		Next
-		Print #fileRcos,
+		Print #fileRcosBefore,
 
-		fileRsin = FreeFile()
-		Open SEANS_DIR_OUT+DirectoryOutput+"/step4/Rsin."+ext+".txt" For Output As #fileRsin
-		Print #fileRsin, Using "########  "; 0;
+		fileRsinBefore = FreeFile()
+		Open SEANS_DIR_OUT+DirectoryOutput+"/step4/Rsin.BEFORE."+ext+".txt" For Output As #fileRsinBefore
+		Print #fileRsinBefore, Using "########  "; 0;
 		For i = 0 To 18
-			Print #fileRsin, Using "####.### "; i*DELTA_TAU*1e6;
+			Print #fileRsinBefore, Using "####.### "; i*DELTA_TAU*1e6;
 		Next
-		Print #fileRsin,
-
+		Print #fileRsinBefore,
 	EndIf
 
+
+	If ( isAcf <> 0 ) And (isSpectrumMod <> 0) And (isSpectrum <> 0) Then
+		fileRcosAfter = FreeFile()
+		Open SEANS_DIR_OUT+DirectoryOutput+"/step4/Rcos.AFTER."+ext+".txt" For Output As #fileRcosAfter
+		Print #fileRcosAfter, Using "########  "; 0;
+		For i = 0 To 18
+			Print #fileRcosAfter, Using "####.### "; i*DELTA_TAU*1e6;
+		Next
+		Print #fileRcosAfter,
+
+		fileRsinAfter = FreeFile()
+		Open SEANS_DIR_OUT+DirectoryOutput+"/step4/Rsin.BEFORE."+ext+".txt" For Output As #fileRsinAfter
+		Print #fileRsinAfter, Using "########  "; 0;
+		For i = 0 To 18
+			Print #fileRsinAfter, Using "####.### "; i*DELTA_TAU*1e6;
+		Next
+		Print #fileRsinAfter,
+	EndIf
+
+
 	For h = Hmin To Hmax Step Hstep ' по высоте
+
+
+		If isAcf <> 0 Then
+
+			Print #fileRcosBefore, Using "########  "; CInt(Hkm(h));
+			For i = 0 To 18
+				Print #fileRcosBefore, Using "##.##### "; as_file_in.acf[h].rc(i)/as_file_in.acf[h].rc(0);
+			Next
+			Print #fileRcosBefore,
+
+			Print #fileRsinBefore, Using "########  "; CInt(Hkm(h));
+			For i = 0 To 18
+				Print #fileRsinBefore, Using "##.##### "; as_file_in.acf[h].rs(i)/as_file_in.acf[h].rc(0);
+			Next
+			Print #fileRsinBefore,
+
+		EndIf
 
 		If isSpectrum <> 0 Then
 
@@ -354,6 +400,13 @@ For t = 0 To seans_num_in-1 ' по времени
 			Next i
 
 			fourier_get_spectrum_from_acf(@r_cos(0), @r_sin(0), 550, DELTA_TAU_INTERPOLATED, @sp(0), 10001)
+
+			Print #fileSpectrumBefore, Using "########  "; CInt(Hkm(h));
+			For i = 0 To 10001-1
+				Print #fileSpectrumBefore, Using "##.### "; sp(i);
+			Next
+			Print #fileSpectrumBefore,
+
 
 			If isSpectrumMod <> 0 Then
 
@@ -366,6 +419,12 @@ For t = 0 To seans_num_in-1 ' по времени
 						sp(f) = 0
 					EndIf
 				Next
+
+				Print #fileSpectrumAfter, Using "########  "; CInt(Hkm(h));
+				For i = 0 To 10001-1
+					Print #fileSpectrumAfter, Using "##.### "; sp(i);
+				Next
+				Print #fileSpectrumAfter,
 
 				If isVelocityTrap <> 0 Then
 
@@ -395,7 +454,7 @@ For t = 0 To seans_num_in-1 ' по времени
 						EndIf
 					Next
 
-					drift_d_trap(h, t) = ((fMaxBottom+fMinBottom)/2-5000 + (fMaxTop+fMinTop)/2-5000 ) /2
+					drift_d_trap(h, t) = ((fMaxBottom+fMinBottom)/2-5000 + (fMaxTop+fMinTop)/2-5000 ) /2 * LAMBDA /2
 
 				EndIf
 
@@ -403,27 +462,21 @@ For t = 0 To seans_num_in-1 ' по времени
 
 			EndIf
 
-			Print #file, Using "########  "; CInt(Hkm(h));
-			For i = 0 To 10001-1
-				Print #file, Using "##.### "; sp(i);
-			Next
-			Print #file,
-
 		EndIf
 
-		If isAcf <> 0 Then
+		If ( isAcf <> 0 ) And (isSpectrumMod <> 0) And (isSpectrum <> 0) Then
 
-			Print #fileRcos, Using "########  "; CInt(Hkm(h));
+			Print #fileRcosAfter, Using "########  "; CInt(Hkm(h));
 			For i = 0 To 18
-				Print #fileRcos, Using "##.##### "; as_file_in.acf[h].rc(i)/as_file_in.acf[h].rc(0);
+				Print #fileRcosAfter, Using "##.##### "; as_file_in.acf[h].rc(i)/as_file_in.acf[h].rc(0);
 			Next
-			Print #fileRcos,
+			Print #fileRcosAfter,
 
-			Print #fileRsin, Using "########  "; CInt(Hkm(h));
+			Print #fileRsinAfter, Using "########  "; CInt(Hkm(h));
 			For i = 0 To 18
-				Print #fileRsin, Using "##.##### "; as_file_in.acf[h].rs(i)/as_file_in.acf[h].rc(0);
+				Print #fileRsinAfter, Using "##.##### "; as_file_in.acf[h].rs(i)/as_file_in.acf[h].rc(0);
 			Next
-			Print #fileRsin,
+			Print #fileRsinAfter,
 
 		EndIf
 
@@ -474,14 +527,22 @@ For t = 0 To seans_num_in-1 ' по времени
 	Next h
 
 	If isSpectrum <> 0 Then
-		Close #file
+		Close #fileSpectrumBefore
+	EndIf
+
+	If (isSpectrum <> 0) And (isSpectrumMod <> 0) Then
+		Close #fileSpectrumAfter
 	EndIf
 
 	If isAcf <> 0 Then
-		Close #fileRcos
-		Close #fileRsin
+		Close #fileRcosBefore
+		Close #fileRsinBefore
 	EndIf
 
+	If ( isAcf <> 0 ) And (isSpectrumMod <> 0) And (isSpectrum <> 0) Then
+		Close #fileRcosAfter
+		Close #fileRsinAfter
+	EndIf
 
 	as_file_close(@as_file_in)
 
@@ -547,8 +608,8 @@ Close #file
 
 
 
-If isVelocityTrap <> 0 Then
-	
+If (isVelocityTrap <> 0) And (isSpectrumMod <> 0) And (isSpectrum <> 0)  Then
+
 	file = FreeFile()
 	Open SEANS_DIR_OUT + DirectoryOutput+"/step4/"+"V.Trap.txt"  For Output As #file
 	If Err() <> 0 Then
@@ -570,7 +631,7 @@ If isVelocityTrap <> 0 Then
 	Next t
 
 	Close #file
-	
+
 EndIf
 
 

@@ -605,6 +605,8 @@ Declare Function buffer_add_i Alias "buffer_add_i"  (ByVal buf As ZString Ptr, B
 
 Declare Function buffer_add_s Alias "buffer_add_s"  (ByVal buf As ZString Ptr, ByVal array As ZString Ptr, ByVal out_format As ZString Ptr) As Integer
 
+Declare Function file_table_load Alias "file_table_load"  (ByVal fname As ZString Ptr, ByVal c As Integer Ptr, ByVal r As Integer Ptr, ByVal arr As Double Ptr) As Integer
+
 End Extern
 
 ''' ===================================================================================================
