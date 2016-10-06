@@ -14,7 +14,7 @@ Using FB 'для перехода в полноэкранный режим монитора
 Type seans_struct
 	Dim filename_full As ZString*256
 	Dim filename As ZString*64
-	Dim seans As seans1s_data
+	Dim seans As seans1c_data
 	Dim isM As Integer
 	Dim time_decimal As Double
 	Dim time_computer As Integer
@@ -37,18 +37,16 @@ Dim As Integer VISIBLE = 0 ' видны ли вырезанные участки?
 Dim Shared As Integer CUR = 0 ' текущая позиция (текущий сеанс)
 Dim Shared As Integer H, HMIN, HMAX ' текущая, минимальная и максимальная высота
 Dim As Integer DX = 1 ' масштаб по оси x
-Dim As Integer DY = 200 ' масштаб по оси y
-Dim As Integer Y0 = 250 ' начальное значение по оси y
+Dim As Integer DY = 300 ' масштаб по оси y
+Dim As Integer Y0 = 300 ' начальное значение по оси y
 Dim As Integer START_X = 0
 Dim As Integer POINTS_START = 0
-Dim As Integer POINTS_END = 13
-ReDim Shared vis_array(0 To 18, 0 To 10) As Double ' буфер для отображения графиков
+Dim As Integer POINTS_END = 6
+ReDim Shared vis_array(0 To 6, 0 To 10) As Double ' буфер для отображения графиков
 Dim Shared As Integer MAX_Y = 0
 Dim Shared As Integer is_noise = 1 ' вычитать шум? (1 - нет, -1 - да)
 Dim Shared As Integer CHANNEL = 1' текущий канал
 
-Dim Shared As Double  acf_filter(0 To 100) ' АКФ ИХ фильтра
-Dim Shared As Integer tau
 
 Dim key As Integer
 
@@ -74,9 +72,9 @@ Open Err For Output As #1
 
 Dim As Integer file
 Dim As String  tmp
-Dim Shared As Integer pulseLength
+'Dim Shared As Integer pulseLength
 file = FreeFile()
-
+/'
 Open "config.dat" For Input As #file
 Input #file, tmp
 Input #file, tmp
@@ -89,21 +87,7 @@ If (pulseLength <> 663) And (pulseLength <> 795) Then
 	PrintErrorToLog(ErrorInputData, __FILE__, __LINE__)
 	End
 EndIf
-
-
-
-' Загрузка АКФ ИХ фильтра
-file = FreeFile()
-Open "filter.dat" For Input As #file
-If Err <> 0 Then
-	PrintErrorToLog(ErrorFilter, __FILE__, __LINE__)
-	End
-EndIf
-For tau = 0 To 18
-	Input #file, acf_filter(tau)
-Next tau
-Close #file
-
+'/
 
 Cls
 Color 11
@@ -111,7 +95,7 @@ Print "UPRISE version " + UPRISE_VERSION
 Print "(Unified Processing of the Results of Incoherent Scatter Experiments)"
 Print
 Color 7
-Print "View - программа просмотра S-файлов системы К1"
+Print "View - программа просмотра C-файлов системы К1"
 Print "(c) Богомаз А.В., Котов Д.В. (Институт ионосферы)"
 Print
 
@@ -166,23 +150,23 @@ Print #1, Str(seans_loaded)+" files loaded"
 Print "Сортировка по времени... ";
 qsort(@seans_str(0), seans_loaded, SizeOf(seans_struct), @seans_struct_time_compare)
 Print "OK"
-Sleep 300
 
 HMIN = 11
-HMAX = 160
+HMAX = 350
 H = HMIN
 
-ReDim vis_array(0 To 18, 0 To seans_loaded) As Double ' буфер для отображения графиков
+
+ReDim vis_array(0 To 6, 0 To seans_loaded) As Double ' буфер для отображения графиков
 
 Vis_array_load() ' загрузить данные для отображения
 
 Do
 
-	ScreenLock() 'начинаем вывод на экран
+	ScreenLock 'начинаем вывод на экран
 
-	Cls
+	Cls()
 
-	If seans_str(CUR).seans.m(H*4) = 0 Then
+	If seans_str(CUR).seans.m(H) = 0 Then
 		Line (5+(CUR-START_X)*DX, 25)-(5+(CUR-START_X)*DX, 768-25), 7
 	Else
 		Line (5+(CUR-START_X)*DX, 25)-(5+(CUR-START_X)*DX, 768-25), 7, , &b0000000011110000
@@ -191,10 +175,10 @@ Do
 	For j = POINTS_START To POINTS_END
 		Line  (0, Y0+DY*j/6)-(1024, Y0+DY*j/6), 15-j, , &b0000000011110000
 		For i = START_X To (seans_loaded-2)
-			If seans_str(i).seans.m(H*4) <> 0 Then
+			If seans_str(i).seans.m(H) <> 0 Then
 				If VISIBLE = 1 Then Line(5+(i-START_X)*DX, Y0-DY*(vis_array(j, i))+DY*j/6)-(5+(i+1-START_X)*DX, Y0-DY*(vis_array(j, i+1))+DY*j/6),  15, , &b0001000100010001 End If
 			Else
-				If seans_str(i+1).seans.m(H*4) <> 0 Then
+				If seans_str(i+1).seans.m(H) <> 0 Then
 					If VISIBLE = 1 Then Line(5+(i-START_X)*DX, Y0-DY*(vis_array(j, i))+DY*j/6)-(5+(i+1-START_X)*DX, Y0-DY*(vis_array(j, i+1))+DY*j/6), 15, , &b0001000100010001 End If
 				Else
 					Line(5+(i-START_X)*DX, Y0-DY*(vis_array(j, i))+DY*j/6)-(5+(i+1-START_X)*DX, Y0-DY*(vis_array(j, i+1))+DY*j/6),  15-j'+1
@@ -206,15 +190,13 @@ Do
 
 	' рисование карты вырезанных сеансов
 	For i = START_X To (seans_loaded-2)
-		If seans_str(i).seans.m(H*4) <> 0 Then
+		If seans_str(i).seans.m(H) <> 0 Then
 			Line(5+(i-START_X)*DX, 768-24)-(5+(i+1-START_X)*DX, 768-21),  15, bf
 		End If
 	Next i
 
 	' метка максимального значения, на которое нормируются значения АКФ
 	Line(5+(MAX_Y-START_X)*DX, 768-24)-(5+(1+MAX_Y-START_X)*DX, 768-21),  12, bf
-
-
 
 	Color 10
 	Print seans_str(CUR).filename;
@@ -236,11 +218,11 @@ Do
 		Print " ";
 	End If
 
-	If pulseLength = 663 Then
-		Print Using "  #### км"; seans1s_alt(4*H);
-	Else
-		Print Using "  #### км"; seans1s_alt_795(4*H);
-	EndIf
+'	If pulseLength = 663 Then
+		Print Using "  #### км"; seans1c_alt(H);
+'	Else
+'		Print Using "  #### км"; seans1c_alt(H);
+'	EndIf
 
 	Color 10
 	Print ,CHANNEL;
@@ -252,7 +234,6 @@ Do
 
 	ScreenUnLock 'завершаем вывод на экран
 
-
 	key = GetKey()
 
 	'	Cls
@@ -260,7 +241,7 @@ Do
 	'	Sleep 1000
 
 	Select Case key
-
+		
 		Case KEY_CTRL_P
 			BSave ("screen.bmp", 0)
 
@@ -287,6 +268,7 @@ Do
 
 		Case KEY_CTRL_UP
 			If START_X > 10  Then START_X -= 10  End If
+
 
 		Case KEY_H
 			Color 15
@@ -315,13 +297,13 @@ Do
 			Vis_array_load ' загрузить данные для отображения
 
 		Case KEY_SPACE
-			If seans_str(CUR).seans.m(H*4) = 0 Then
-				seans_str(CUR).seans.m(H*4) = 1
+			If seans_str(CUR).seans.m(H) = 0 Then
+				seans_str(CUR).seans.m(H) = 1
 			Else
-				seans_str(CUR).seans.m(H*4) = 0
+				seans_str(CUR).seans.m(H) = 0
 			End If
 			seans_str(CUR).isM = 2
-			seans1s_saveM3(seans_str(CUR).filename_full, @(seans_str(CUR).seans))
+			seans1c_saveM3(seans_str(CUR).filename_full, @(seans_str(CUR).seans))
 			Vis_array_load ' загрузить данные для отображения
 
 		Case KEY_V
@@ -363,26 +345,26 @@ Do
 			Vis_array_load ' загрузить данные для отображения
 
 		Case KEY_DEL
-			seans_str(CUR).seans.m(H*4) = 1
+			seans_str(CUR).seans.m(H) = 1
 			seans_str(CUR).isM = 2
-			seans1s_saveM3(seans_str(CUR).filename_full, @(seans_str(CUR).seans))
+			seans1c_saveM3(seans_str(CUR).filename_full, @(seans_str(CUR).seans))
 			If CUR < seans_loaded-1 Then CUR = CUR + 1 End If
 			Vis_array_load ' загрузить данные для отображения
 
 
 		Case KEY_CTRL_DEL
-			For i = 0 To 170-1
-				seans_str(CUR).seans.m(i*4) = 1
+			For i = 0 To 359
+				seans_str(CUR).seans.m(i) = 1
 			Next i
 			seans_str(CUR).isM = 2
-			seans1s_saveM3(seans_str(CUR).filename_full, @(seans_str(CUR).seans))
+			seans1c_saveM3(seans_str(CUR).filename_full, @(seans_str(CUR).seans))
 			Vis_array_load
 
 
 		Case KEY_BACKSPACE
-			seans_str(CUR).seans.m(H*4) = 1
+			seans_str(CUR).seans.m(H) = 1
 			seans_str(CUR).isM = 2
-			seans1s_saveM3(seans_str(CUR).filename_full, @(seans_str(CUR).seans))
+			seans1c_saveM3(seans_str(CUR).filename_full, @(seans_str(CUR).seans))
 			If CUR > 0 Then CUR = CUR - 1  End If
 			Vis_array_load ' загрузить данные для отображения
 
@@ -428,7 +410,7 @@ Sub HelpPrint
 	Print "(Unified Processing of the Results of Incoherent Scatter Experiments)"
 	Print
 	Color 7
-	Print "View - программа просмотра S-файлов системы К1"
+	Print "View - программа просмотра C-файлов системы К1"
 	Print "(c) Богомаз А.В., Котов Д.В. (Институт ионосферы)"
 	Color 8
 	Print
@@ -481,63 +463,45 @@ Sub Vis_array_load()
 
 	Dim As Integer i, j
 	Dim As Double d
-	Dim As Integer NUM = 15
+	Dim As Integer NUM = 6
 
 	ReDim As Double max_a(0 To seans_loaded-1) ' массив для поиска max (с учётом меток)
-	ReDim As Double noise(0 To seans_loaded-1, 0 To 18) ' массив АКФ шума
+	'	ReDim As Double noise(0 To seans_loaded-1, 0 To 6) ' массив АКФ шума
 
+	/'
 	If is_noise < 0 Then
 		For i = 0 To seans_loaded-1
-			seans1s_noise(@seans_str(i).seans, @noise(i, 0), 19, HMAX-100, HMAX-10)
+			seans1c_noise(@seans_str(i).seans, @noise(i, 0), 19, 500, 600)
 		Next i
 	Else
 		For i = 0 To seans_loaded-1
-			For j = 0 To 18
+			For j = 0 To 6
 				noise(i, j) = 0
 			Next
 		Next
 	EndIf
+'/
 
-
-	For i = 0 To seans_loaded-1
-		vis_array(0, i) = seans_str(i).seans.datp(H*4) - noise(i, 0)
-	Next i
-
-	For j = 1 To NUM ' Загружаем ординаты для отображения
+	For j = 0 To NUM ' Загружаем ординаты для отображения
 		For i = 0 To seans_loaded-1
-			vis_array(j, i) = seans_str(i).seans.dat(H, j+1) - noise(i, j)
+			vis_array(j, i) = seans_str(i).seans.dat1(H, j) '- noise(i, j)
 		Next i
 	Next j
 
-
-	If is_noise < 0 Then
-		For i = 0 To seans_loaded-1
-			For j = 18 To 0 Step -1
-				If vis_array(0, i) <> 0 Then
-					vis_array(j, i) /= vis_array(0, i)
-				Else
-					vis_array(j, i) = 1
-				EndIf
-			Next
-		Next
-	EndIf
-
-
 	d = -1e200
 	For i = 0 To seans_loaded-1
-		If vis_array(0, i) > d And seans_str(i).seans.m(H*4) = 0 Then
+		If vis_array(0, i) > d And seans_str(i).seans.m(H) = 0 Then
 			d = vis_array(0, i)
 			MAX_Y = i
 		EndIf
 	Next i
-
-
 
 	For j = 0 To NUM
 		For i = 0 To seans_loaded-1
 			vis_array(j, i) = vis_array(j, i) / d
 		Next i
 	Next j
+
 
 End Sub
 
@@ -577,9 +541,9 @@ Sub AutomaticClear()
 		Case 1
 			For t = 0 To seans_loaded-1 ' по времени
 				seans_str(t).isM = 1
-				seans1s_saveM0(seans_str(t).filename_full)
+				seans1c_saveM0(seans_str(t).filename_full)
 				symbol = Print_process(symbol)
-				For h1 As Integer = 0 To 679
+				For h1 As Integer = 0 To 359
 					seans_str(t).seans.m(h1) = 0
 				Next h1
 			Next t
@@ -588,48 +552,15 @@ Sub AutomaticClear()
 			Input "Ширина окна: ", wnd_width
 			Input "Уровень: ", lev
 
-			For h1 As Integer = 0 To 679
-				For t = seans_loaded-1-wnd_width-1 To 1 Step -1 ' по времени
-
-					num = 0
-					mean = 0
-					For sm = 0 To wnd_width-1
-						If seans_str(t+sm).seans.m(h1) = 0 Then
-							mean += seans_str(t+sm).seans.datp(h1)
-							num += 1
-						EndIf
-					Next sm
-
-					If num > 9 Then
-						mean /= num
-
-						dev = 0
-						For sm = 0 To wnd_width-1
-							If seans_str(t+sm).seans.m(h1) = 0 Then
-								dev += ( seans_str(t+sm).seans.datp(h1) - mean )^2
-							EndIf
-						Next sm
-
-						dev = Sqr(dev/(num-1))
-
-						If Abs(seans_str(t-1).seans.datp(h1)-mean) > lev*dev Then
-							seans_str(t-1).seans.m(h1) = 1
-						EndIf
-
-					EndIf
-
-				Next t
-			Next h1
-
-			For ord = 0 To 14 ' по ординатам
-				For h1 As Integer = 0 To 169
+			For ord = 0 To 6 ' по ординатам
+				For h1 As Integer = 0 To 359
 					For t = seans_loaded-1-wnd_width To 1 Step -1 ' по времени
 
 						num = 0
 						mean = 0
 						For sm = 0 To wnd_width-1
-							If seans_str(t+sm).seans.m(h1*4) = 0 Then
-								mean += seans_str(t+sm).seans.dat(h1, ord)
+							If seans_str(t+sm).seans.m(h1) = 0 Then
+								mean += seans_str(t+sm).seans.dat1(h1, ord)
 								num += 1
 							EndIf
 						Next sm
@@ -639,15 +570,15 @@ Sub AutomaticClear()
 
 							dev = 0
 							For sm = 0 To wnd_width-1
-								If seans_str(t+sm).seans.m(h1*4) = 0 Then
-									dev += ( seans_str(t+sm).seans.dat(h1, ord) - mean )^2
+								If seans_str(t+sm).seans.m(h1) = 0 Then
+									dev += ( seans_str(t+sm).seans.dat1(h1, ord) - mean )^2
 								EndIf
 							Next sm
 
 							dev = Sqr(dev/(num-1))
 
-							If Abs(seans_str(t-1).seans.dat(h1, ord)-mean) > lev*dev Then
-								seans_str(t-1).seans.m(h1*4) = 1
+							If Abs(seans_str(t-1).seans.dat1(h1, ord)-mean) > lev*dev Then
+								seans_str(t-1).seans.m(h1) = 1
 							EndIf
 
 						EndIf
@@ -658,7 +589,7 @@ Sub AutomaticClear()
 
 			For t = 0 To seans_loaded-1
 				seans_str(t).isM = 2
-				seans1s_saveM3(seans_str(t).filename_full, @(seans_str(t).seans))
+				seans1c_saveM3(seans_str(t).filename_full, @(seans_str(t).seans))
 				symbol = Print_process(symbol)
 			Next t
 
@@ -666,48 +597,15 @@ Sub AutomaticClear()
 			Input "Ширина окна: ", wnd_width
 			Input "Уровень: ", lev
 
-			For h1 As Integer = 0 To 679
-				For t = 0 To seans_loaded-1-wnd_width ' по времени
-
-					num = 0
-					mean = 0
-					For sm = 0 To wnd_width-1
-						If seans_str(t+sm).seans.m(h1) = 0 Then
-							mean += seans_str(t+sm).seans.datp(h1)
-							num += 1
-						EndIf
-					Next sm
-
-					If num > 9 Then
-						mean /= num
-
-						dev = 0
-						For sm = 0 To wnd_width-1
-							If seans_str(t+sm).seans.m(h1) = 0 Then
-								dev += ( seans_str(t+sm).seans.datp(h1) - mean )^2
-							EndIf
-						Next sm
-
-						dev = Sqr(dev/(num-1))
-
-						If Abs(seans_str(t+wnd_width).seans.datp(h1)-mean) > lev*dev Then
-							seans_str(t+wnd_width).seans.m(h1) = 1
-						EndIf
-
-					EndIf
-
-				Next t
-			Next h1
-
-			For ord = 0 To 14 ' по ординатам
-				For h1 As Integer = 0 To 169
+			For ord = 0 To 6 ' по ординатам
+				For h1 As Integer = 0 To 359
 					For t = 0 To seans_loaded-1-wnd_width ' по времени
 
 						num = 0
 						mean = 0
 						For sm = 0 To wnd_width-1
-							If seans_str(t+sm).seans.m(h1*4) = 0 Then
-								mean += seans_str(t+sm).seans.dat(h1, ord)
+							If seans_str(t+sm).seans.m(h1) = 0 Then
+								mean += seans_str(t+sm).seans.dat1(h1, ord)
 								num += 1
 							EndIf
 						Next sm
@@ -717,15 +615,15 @@ Sub AutomaticClear()
 
 							dev = 0
 							For sm = 0 To wnd_width-1
-								If seans_str(t+sm).seans.m(h1*4) = 0 Then
-									dev += ( seans_str(t+sm).seans.dat(h1, ord) - mean )^2
+								If seans_str(t+sm).seans.m(h1) = 0 Then
+									dev += ( seans_str(t+sm).seans.dat1(h1, ord) - mean )^2
 								EndIf
 							Next sm
 
 							dev = Sqr(dev/(num-1))
 
-							If Abs(seans_str(t+wnd_width).seans.dat(h1, ord)-mean) > lev*dev Then
-								seans_str(t+wnd_width).seans.m(h1*4) = 1
+							If Abs(seans_str(t+wnd_width).seans.dat1(h1, ord)-mean) > lev*dev Then
+								seans_str(t+wnd_width).seans.m(h1) = 1
 							EndIf
 
 						EndIf
@@ -736,7 +634,7 @@ Sub AutomaticClear()
 
 			For t = 0 To seans_loaded-1
 				seans_str(t).isM = 2
-				seans1s_saveM3(seans_str(t).filename_full, @(seans_str(t).seans))
+				seans1c_saveM3(seans_str(t).filename_full, @(seans_str(t).seans))
 				symbol = Print_process(symbol)
 			Next t
 
@@ -761,14 +659,7 @@ Sub ACFPrint()
 	Dim As Double n(0 To 18)'АКФ шума
 	Dim As Double sn
 	Dim As Integer is_noise_ACF = 1
-	Dim As Integer is_R0_ACF = 1
 
-	Dim As Double R0DAC_1(0 To 18) ' 0 АЦП 1-го косинусного канала
-	Dim As Double R0DAC_2(0 To 18) ' 0 АЦП 1-го синусного канала
-	Dim As Double R0DAC_3(0 To 18) ' 0 АЦП 2-го косинусного канала
-	Dim As Double R0DAC_4(0 To 18) ' 0 АЦП 2-го синусного канала
-
-	Dim As Integer curVariancePoint = 0 ' Текущая точка дисперсии (от 0 до 18)
 
 	Do
 
@@ -777,62 +668,24 @@ Sub ACFPrint()
 		Next i
 
 		k = 0
-		For j = HMAX-100 To HMAX-10
+		For j = 140 To 180
 			If seans_str(CUR).seans.m(j) = 0 Then
-				If is_R0_ACF > 0 Then ' учитывать ноль АЦП?
-
-					If h < 679-19 Then
-						For tau = 0 To 18
-							R0DAC_1(tau) = CDbl(seans_str(CUR).seans.datm(4*j))*CDbl(seans_str(CUR).seans.datm(4*j+tau))/1463.0
-						Next tau
-					Else
-						For tau = 0 To 18
-							R0DAC_1(tau) = 0
-						Next tau
-					EndIf
-
-					n(0) += seans_str(CUR).seans.datp(j*4) - R0DAC_1(0)
-					For i = 1 To 18
-						n(i) += seans_str(CUR).seans.dat(j, i-1) - R0DAC_1(i)
-					Next i
-				Else
-					n(0) += seans_str(CUR).seans.datp(j*4)
-					For i = 1 To 18
-						n(i) += seans_str(CUR).seans.dat(j, i-1)
-					Next i
-				EndIf
+				For i = 0 To 6
+					n(i) += seans_str(CUR).seans.dat1(j, i)
+				Next i
 				k += 1
 			EndIf
 		Next j
 
-		array_norm_d(@n(0), @n(0), k, 19) ' нормировать на количество хороших точек k в шумовом участке
+		array_norm_d(@n(0), @n(0), k, 7) ' нормировать на количество хороших точек k в шумовом участке
 
 		If is_noise_ACF > 0 Then ' вычитать шум или нет?
-			r(0) = seans_str(CUR).seans.datp(H*4) - n(0)
-			For i = 1 To 18
-				r(i) = seans_str(CUR).seans.dat(H, i-1) - n(i)
+			For i = 0 To 6
+				r(i) = seans_str(CUR).seans.dat1(H, i) - n(i)
 			Next i
 		Else
-			r(0) = seans_str(CUR).seans.datp(H*4)
-			For i = 1 To 18
-				r(i) = seans_str(CUR).seans.dat(H, i-1)
-			Next i
-		EndIf
-
-
-		If 4*h < 679-19 Then
-			For tau = 0 To 18
-				R0DAC_1(tau) = CDbl(seans_str(CUR).seans.datm(4*h))*CDbl(seans_str(CUR).seans.datm(4*h+tau))/1463.0
-			Next tau
-		Else
-			For tau = 0 To 18
-				R0DAC_1(tau) = 0
-			Next tau
-		EndIf
-
-		If is_R0_ACF > 0 Then ' учитывать ноль АЦП?
-			For i = 0 To 18
-				r(i) -= R0DAC_1(i)
+			For i = 0 To 6
+				r(i) = seans_str(CUR).seans.dat1(H, i)
 			Next i
 		EndIf
 
@@ -842,86 +695,9 @@ Sub ACFPrint()
 			sn = 0
 		EndIf
 
-		array_norm0_d(@r(0), @r(0), 19)
-		array_norm0_d(@n(0), @n(0), 19)
+		array_norm0_d(@r(0), @r(0), 7)
+		array_norm0_d(@n(0), @n(0), 7)
 
-
-		' Расчёт дисперсии каждой точки АКФ
-
-		ReDim As Double r15(0 To 18, -7 To 7)
-		ReDim As Double n15(0 To 18, -7 To 7)
-		ReDim As Double m15(0 To 18) ' мат. ожидание (mean)
-		ReDim As Double v15(0 To 18) ' дисперсия (variance)
-		ReDim As Double vn15(0 To 18) ' нормированная дисперсия
-
-		If CUR > 7 And CUR < seans_loaded-7 Then
-
-			For t As Integer = -7 To 7
-
-				For tau = 0 To 18
-					n15(tau, t) = 0
-					k = 0
-					For z As Integer = HMAX-100 To HMAX-10
-						If seans_str(CUR+t).seans.m(z) = 0 Then
-							n15(tau, t) += seans_str(CUR+t).seans.dat(z, tau)
-							k += 1
-						EndIf
-					Next z
-					If k <> 0 Then
-						n15(tau, t) /= k
-					Else
-						n15(tau, t) = 0
-					EndIf
-
-					r15(tau, t) = seans_str(CUR+t).seans.dat(H, tau) - n15(tau, t)
-
-				Next tau
-
-			Next t
-
-			For tau = 0 To 18
-				m15(tau) = 0
-				k = 0
-				For t As Integer = -7 To 7
-					If seans_str(CUR+t).seans.m(H*4) = 0 Then
-						m15(tau) += r15(tau, t)
-						k += 1
-					EndIf
-				Next t
-				If k > 9 Then
-					m15(tau) /= k
-				Else
-					m15(tau) = 0
-				EndIf
-
-			Next tau
-
-			For tau = 0 To 18
-				v15(tau) = 0
-				k = 0
-				For t As Integer = -7 To 7
-					If seans_str(CUR+t).seans.m(H*4) = 0 Then
-						v15(tau) += ( r15(tau, t)-m15(tau) )^2
-						k += 1
-					EndIf
-				Next t
-				If k > 9 Then
-					v15(tau) /= k
-				Else
-					v15(tau) = 0
-				EndIf
-			Next tau
-
-			For tau = 0 To 18
-				v15(tau) /= 1-30.555*tau/663.0
-			Next
-
-
-			For tau = 0 To 18
-				vn15(tau) = v15(tau)/v15(0)
-			Next
-
-		EndIf
 
 
 
@@ -945,28 +721,12 @@ Sub ACFPrint()
 
 		Color 11
 		Print Using "Высота: № ###"; H+1;
-		If pulseLength = 663 Then
-			Print Using "  #### км  "; seans1s_alt(4*H);
-		Else
-			Print Using "  #### км  "; seans1s_alt_795(4*H);
-		EndIf
-
-
-		Color 14
-		If is_R0_ACF > 0 Then
-			Print "-0";
-		Else
-			Print "+0";
-		EndIf
-
-		Color 10
-		Print "   Дисперсия в"; curVariancePoint; " точке:"; CInt(v15(curVariancePoint)/10000)
-
+		Print Using "  #### км  "; seans1c_alt(H);
 
 		Color 7
 		Print
 		Print "Перемещение по времени: Влево/Вправо     Перемещение по точке АКФ: Вверх/Вниз     Перемещение по высоте: PageDown/PageUp"
-		Print "С / С+Ш: N                               '0' АЦП: A"
+		Print "С / С+Ш: N"                               
 		Color 12
 		Print
 		Print "Для выхода нажмите Enter"
@@ -983,24 +743,22 @@ Sub ACFPrint()
 		Line (x0, 400+dxdy*1)-(x0+18*dxdy, 400+dxdy*1), 7, , &b0000000011110000
 		Line (x0, 400+dxdy*2)-(x0+18*dxdy, 400+dxdy*2), 7, , &b0000000011110000
 
-		For i = 0 To 16
+		For i = 0 To 6
 			Line(x0+i*dxdy, 400-dxdy*5)-(x0+i*dxdy, 400+dxdy*2), 7, , &b0000000011110000
 		Next i
 
-		For i = 0 To 16
-			Line (x0+i*dxdy, 400-5*dxdy*acf_filter(i))-(x0+(i+1)*dxdy, 400-5*dxdy*acf_filter(i+1)), 14  ' вывод АКФ ИХ фильтра
-			Line (x0+i*dxdy, 400-5*dxdy*n(i))-(x0+(i+1)*dxdy, 400-5*dxdy*n(i+1)), 9  ' вывод АКФ шума
-			Line (x0+i*dxdy, 400-5*dxdy*r(i))-(x0+(i+1)*dxdy, 400-5*dxdy*r(i+1)), 10 ' вывод АКФ НР сигнала
+		For i = 0 To 5
+			Line (x0+i*dxdy, 400-5*dxdy*r(i))-(x0+(i+1)*dxdy, 400-5*dxdy*r(i+1)), 14
+			Line (x0+i*dxdy, 400-5*dxdy*n(i))-(x0+(i+1)*dxdy, 400-5*dxdy*n(i+1)), 9
 		Next i
 
-		For i = 0 To 16
-			Circle (x0+i*dxdy, 400-5*dxdy*acf_filter(i)), 3, 14
-			Circle (x0+i*dxdy, 400-5*dxdy*n(i)), 3, 9
+		For i = 0 To 6
 			Circle (x0+i*dxdy, 400-5*dxdy*r(i)), 3, 10
+			Circle (x0+i*dxdy, 400-5*dxdy*n(i)), 3, 9
 		Next i
 
-		For i = 1 To 9
-			Draw String (x0+i*dxdy*2+2-12, 400+2*dxdy+2), Str(CInt(i*30.555*2)) /'Left(Str(i*30.555*2), 5)'/, 15
+		For i = 1 To 3
+			Draw String (x0+i*dxdy*2+2-12, 400+2*dxdy+2), Str(CInt((i+3)*39.285)*2) /'Left(Str(i*30.555*2), 5)'/, 15
 		Next i
 
 		For i = 0 To 4 ' выводим надписи от 1 до 0.2
@@ -1014,48 +772,12 @@ Sub ACFPrint()
 			Draw String (x0-40, 400-5*dxdy+i*dxdy), Left(Str( (100-20*i)/100 ), 5), 15
 		Next i
 
-		' вывод дисперсии
-
-		Line (x0, 700-dxdy*3)-(x0+18*dxdy, 700-dxdy*3), 7, , &b0000000011110000
-		Line (x0, 700-dxdy*2)-(x0+18*dxdy, 700-dxdy*2), 7, , &b0000000011110000
-		Line (x0, 700-dxdy*1)-(x0+18*dxdy, 700-dxdy*1), 7, , &b0000000011110000
-		Line (x0, 700)-(x0+18*dxdy, 700), 7
-		Line (x0, 700+dxdy*1)-(x0+18*dxdy, 700+dxdy*1), 7, , &b0000000011110000
-
-		For i = 0 To 16
-			Line(x0+i*dxdy, 700-dxdy*3)-(x0+i*dxdy, 700+dxdy*1), 7, , &b0000000011110000
-		Next i
-
-		For i = 0 To 4 ' выводим надписи от 3 до -2
-			Draw String (x0-32, 700-2*dxdy+i*dxdy), Left(Str( 3-i ), 5), 15
-		Next i
-
-		If CUR > 7 And CUR < seans_loaded-7 Then
-
-			For i = 0 To 16
-				Line (x0+i*dxdy, 700+dxdy-dxdy*vn15(i))-(x0+(i+1)*dxdy, 700+dxdy-dxdy*vn15(i+1)), 12
-			Next i
-
-			For i = 0 To 16
-				Circle (x0+i*dxdy, 700+dxdy-dxdy*vn15(i)), 3, 12
-			Next i
-
-		EndIf
 
 
 		key = GetKey
 
 		Select Case key
 
-			Case KEY_UP
-				If curVariancePoint < 18 Then
-					curVariancePoint += 1
-				EndIf
-
-			Case KEY_DOWN
-				If curVariancePoint > 0 Then
-					curVariancePoint -= 1
-				EndIf
 
 			Case KEY_RIGHT
 				If CUR < seans_loaded-1 Then CUR = CUR + 1 End If
@@ -1065,9 +787,6 @@ Sub ACFPrint()
 
 			Case KEY_N
 				is_noise_ACF *= -1
-
-			Case KEY_A
-				is_R0_ACF *= -1
 
 			Case KEY_PAGE_UP
 				If H < HMAX-1 Then H += 1 End If
@@ -1084,6 +803,9 @@ Sub ACFPrint()
 
 	Color 15, 0
 	Cls
+
+
+
 End Sub
 
 
@@ -1116,7 +838,7 @@ Sub LoadFiles(ByVal Directory As String)
 	seans_num = 0
 	For i = 0 To lst_len-1
 		filelist_get_filename(lst, @filename, i) 'получить имя файла из списка
-		If seans1s_test(Directory+"/"+filename) > 0 Then
+		If seans1c_test(Directory+"/"+filename) > 0 Then
 			seans_num += 1
 		EndIf
 	Next i
@@ -1136,11 +858,26 @@ Sub LoadFiles(ByVal Directory As String)
 
 		filelist_get_filename(lst, @filename, i)
 
-		isM = seans1s_test(directory + "/" + filename)
+		isM = seans1c_test(directory + "/" + filename)
 
 		If (isM <> 0) Then
-			seans1s_load ( directory + "/" + filename, @(seans_str(seans_loaded).seans) )
 
+			seans1c_load ( directory + "/" + filename, @(seans_str(seans_loaded).seans) )
+
+/'
+Open "1.csv" For Output As #4
+
+For hx As Integer = 0 To 359
+	For tau As Integer = 0 To 6
+		Print #4, seans_str(seans_loaded).seans.dat1(hx, tau); "; ";
+	Next tau
+	Print #4,
+Next hx
+
+Close #4
+Print "OK"
+break
+'/
 			Print #1, filename
 
 			seans_str(seans_loaded).filename = filename

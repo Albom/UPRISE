@@ -9,20 +9,16 @@
 '''==============================================
 
 Type seans_struct_in
-	Dim seans_header	As seans_header Ptr
+	Dim seans 			As seans1c_data
 	Dim time_computer	As Integer
-	Dim filename As ZString*256
 End Type
 
 
 
 Type seans_struct_out
-	Dim datCos(0 To 18)		As Double  Ptr
-	Dim datSin(0 To 18)		As Double  Ptr
-	Dim datCosTrap(0 To 18)	As Double  Ptr
-	Dim datSinTrap(0 To 18)	As Double  Ptr
-	Dim m							As Integer Ptr
-	Dim pShort					As Double  Ptr
+	Dim dat1(0 To 18)		As Double  Ptr
+	Dim dat2(0 To 18)		As Double  Ptr
+	Dim m						As Integer Ptr
 End Type
 
 
@@ -48,7 +44,7 @@ Dim Shared As Integer seans_loaded   ' сеансов загружено
 
 Dim Shared As Integer seans_out_num   ' количество выходных сеансов
 
-Dim Shared As seans_struct_out seans_str_out (0 To 679) 'массив структур данных из сеансов
+Dim Shared As seans_struct_out seans_str_out(0 To 359) 'массив структур данных из сеансов
 Dim Shared As seans_struct_time seans_str_time 'структур данных для времени (которое хранится отдельно от seans_str_out для экономии места)
 
 Dim As Integer i, j
@@ -74,25 +70,16 @@ Dim As Integer tNak
 Dim As Integer tStep
 Dim As Integer n2
 
-Dim Shared As Double razr(0 To 350)
+Dim Shared As Double razr(0 To 359, 0 To 6)
 Dim As String razr_filename
 
 Dim Shared As Double R0DAC_1(0 To 18) ' 0 АЦП 1-го косинусного канала
-Dim Shared As Double R0DAC_2(0 To 18) ' 0 АЦП 1-го синусного канала
-Dim Shared As Double R0DAC_3(0 To 18) ' 0 АЦП 2-го косинусного канала
-Dim Shared As Double R0DAC_4(0 To 18) ' 0 АЦП 2-го синусного канала
+
 
 Dim As as_file_struct as_file_str ' буфер для выходного файла
 
-Dim Shared noiseAcfCos(0 To 18)	As Double  Ptr
-Dim Shared noiseAcfSin(0 To 18)	As Double  Ptr
-Dim Shared noisePShort As Double  Ptr
-'Dim Shared signalToNoiseRatio(0 To 679) As Double  Ptr
-Dim Shared signalToNoiseRatioShort(0 To 679) As Double  Ptr
-
-Dim As Integer partrap = 0
-
-Dim As Integer is_divide=1
+Dim Shared noiseAcf1(0 To 18)	As Double  Ptr
+Dim Shared noiseAcf2(0 To 18)	As Double  Ptr
 
 '''==============================================
 
@@ -103,14 +90,17 @@ Screen 20
 
 
 file = FreeFile()
-Open "config.dat" For Input As #file
+Open "config_COld.dat" For Input As #file
 Input #file, razr_filename
 Close #file
 
-If razr_load(razr_filename, @razr(0), 330) = 0 Then ' загрузка разрядника
-	PrintErrorToLog(ErrorRazrNotLoaded, __FILE__, __LINE__)
-	End
-EndIf
+Open razr_filename For Input As #file
+For h = 0 To 359
+	For tau = 0 To 6
+		Input #file, razr(h, tau)
+	Next tau
+Next h
+Close #file
 
 Open Err For Output As #1
 
@@ -121,7 +111,7 @@ Print "UPRISE version " + UPRISE_VERSION
 Print "(Unified Processing of the Results of Incoherent Scatter Experiments)"
 Print
 Color 7
-Print "Processing - программа подготовки данных (S-файлов системы К3) к решению обратной задачи"
+Print "Integrate - программа подготовки данных (C-файлов системы К1) к решению обратной задачи"
 Print "(c) Богомаз А.В., Котов Д.В. (Институт ионосферы)"
 Print
 
@@ -133,15 +123,13 @@ Print
 Input "Введите время накопления (в мин): ", Tnak
 Input "Введите шаг перемещения окна (в мин): ", Tstep
 Input "Введите количество точек для интерполяции: ", n2
-Print
-Input "Введите параметр трапецеидального суммирования: ", partrap
 
 
 
 
 ' загрузка сеансов
 Print
-Print "Сканирование директорий... ";
+Print "Загрузка сеансов... ";
 
 seans_loaded = 0
 seans_str_in = NULL
@@ -196,7 +184,7 @@ EndIf
 
 Print "OK"
 
-Print #1, Str(seans_loaded)+" files found"
+Print #1, Str(seans_loaded)+" files loaded"
 
 
 MkDir(SEANS_DIR_OUT)
@@ -210,7 +198,6 @@ Open SEANS_DIR_OUT +DirectoryOutput+"/step2/input.txt" For Output As #file
 Print #file, "Время накопления (в мин): "; Tnak
 Print #file, "Шаг перемещения окна (в мин): "; Tstep
 Print #file, "Количество точек для интерполяции: "; n2
-Print #file, "Параметр трапецеидального суммирования: "; partrap
 Close #file
 
 
@@ -219,7 +206,9 @@ Print "Сортировка по времени... ";
 qsort(seans_str_in, seans_loaded, SizeOf(seans_struct_in), @seans_struct_time_compare)
 Print "OK"
 
-Print "Загрузка данных... ";
+Print "Подготовка данных... ";
+
+
 
 
 ' расчёт количества выходных файлов
@@ -235,32 +224,23 @@ For t = 0 To seans_loaded-1-1 ' по времени
 Next t
 
 
+
+
 'выделяем память на выходные сеансы
 
-For h = 0 To 679 ' по высоте
+For h = 0 To 359 ' по высоте
 
 	For tau = 0 To 18
 
-		seans_str_out(h).datCos(tau) = Callocate( seans_out_num, SizeOf(Double) )
-		If seans_str_out(h).datCos(tau) = NULL Then
+		seans_str_out(h).dat1(tau) = Callocate( seans_out_num, SizeOf(Double) )
+		If seans_str_out(h).dat1(tau) = NULL Then
 			PrintErrorToLog(ErrorNotEnoughMemory, __FILE__, __LINE__)
 			End
 		EndIf
 
-		seans_str_out(h).datSin(tau) = Callocate( seans_out_num, SizeOf(Double) )
-		If seans_str_out(h).datSin(tau) = NULL Then
-			PrintErrorToLog(ErrorNotEnoughMemory, __FILE__, __LINE__)
-			End
-		EndIf
 
-		seans_str_out(h).datCosTrap(tau) = Callocate( seans_out_num, SizeOf(Double) )
-		If seans_str_out(h).datCosTrap(tau) = NULL Then
-			PrintErrorToLog(ErrorNotEnoughMemory, __FILE__, __LINE__)
-			End
-		EndIf
-
-		seans_str_out(h).datSinTrap(tau) = Callocate( seans_out_num, SizeOf(Double) )
-		If seans_str_out(h).datSinTrap(tau) = NULL Then
+		seans_str_out(h).dat2(tau) = Callocate( seans_out_num, SizeOf(Double) )
+		If seans_str_out(h).dat2(tau) = NULL Then
 			PrintErrorToLog(ErrorNotEnoughMemory, __FILE__, __LINE__)
 			End
 		EndIf
@@ -273,15 +253,7 @@ For h = 0 To 679 ' по высоте
 		End
 	EndIf
 
-	seans_str_out(h).pShort = Callocate( seans_out_num, SizeOf(Double) )
-	If seans_str_out(h).pShort = NULL Then
-		PrintErrorToLog(ErrorNotEnoughMemory, __FILE__, __LINE__)
-		End
-	EndIf
-
 Next h
-
-
 
 
 'выделяем память на время
@@ -320,57 +292,49 @@ Next i
 
 
 
+
+
 ' формирование АКФ сигнала НР + шума
 
 ' разбрасываем имеющиеся сеансы в выходные массивы
 i = 0 ' позиция в выходном массиве
 For t = 0 To seans_loaded-1-1 ' по времени
 
-	Print_process_percent((t*100)/seans_loaded)
-
-	date_2str(  seans_str_in[t].seans_header->day1,_
-	seans_str_in[t].seans_header->month1, _
-	seans_str_in[t].seans_header->year1, _
+	date_2str(  seans_str_in[t].seans.day1,_
+	seans_str_in[t].seans.month1, _
+	seans_str_in[t].seans.year1, _
 	seans_str_time.date_[i] )
 
-	time_2str(  seans_str_in[t].seans_header->hour1, _
-	seans_str_in[t].seans_header->minute1, _
-	seans_str_in[t].seans_header->second1, _
+	time_2str(  seans_str_in[t].seans.hour1, _
+	seans_str_in[t].seans.minute1, _
+	seans_str_in[t].seans.second1, _
 	seans_str_time.time_[i] )
 
 	seans_str_time.time_computer[i] = seans_str_in[t].time_computer
 
-	Dim As seans2_data seans
-	seans2_load(seans_str_in[t].filename, @seans)
-
-
-	For h = 0 To 679 ' по высотам
-		If seans.m(h) = 0 Then
+	For h = 0 To 359 ' по высотам
+		If seans_str_in[t].seans.m(h) = 0 Then
 			seans_str_out(h).m[i] = 1
 
-			If h < 679-19 Then
+			
+			If h >= 18 Then
 				For tau = 0 To 18
-					R0DAC_1(tau) = CDbl(seans.dat01(h))*CDbl(seans.dat01(h+tau))/1463.0
-					R0DAC_3(tau) = CDbl(seans.dat02(h))*CDbl(seans.dat02(h+tau))/1463.0
-					R0DAC_2(tau) = CDbl(seans.dat01(h))*CDbl(seans.dat02(h+tau))/1463.0
-					R0DAC_4(tau) = CDbl(seans.dat02(h))*CDbl(seans.dat01(h+tau))/1463.0
+					R0DAC_1(tau) = CDbl(seans_str_in[t].seans.dat0(h))*CDbl(seans_str_in[t].seans.dat0(h-tau))/313.0
 				Next tau
 			Else
 				For tau = 0 To 18
 					R0DAC_1(tau) = 0
-					R0DAC_3(tau) = 0
-					R0DAC_2(tau) = 0
-					R0DAC_4(tau) = 0
 				Next tau
 			EndIf
 
-			For tau = 0 To 18 ' по задержке
-				seans_str_out(h).datCos(tau)[i] = ( CDbl(seans.dat1(h, tau)) - R0DAC_1(tau) ) + ( CDbl(seans.dat3(h, tau)) - R0DAC_3(tau) )
-				seans_str_out(h).datSin(tau)[i] = ( CDbl(seans.dat4(h, tau)) - R0DAC_4(tau) ) - ( CDbl(seans.dat2(h, tau)) - R0DAC_2(tau) )
-			Next tau
 
-			' мощность по короткому импульсу
-			seans_str_out(h).pShort[i] = CDbl(seans.Datps1(h)) + CDbl(seans.Datps2(h)) - CDbl(seans.Dat03(h))*CDbl(seans.Dat03(h))/1463.0 - CDbl(seans.Dat04(h))*CDbl(seans.Dat04(h))/1463.0
+			seans_str_out(h).dat1(0)[i] =  CDbl(seans_str_in[t].seans.dat1(h, 0))'-R0DAC_1(0)
+			seans_str_out(h).dat2(0)[i] =  CDbl(seans_str_in[t].seans.dat2(h, 0))'-R0DAC_1(0)
+
+			For tau = 1 To 6 ' по задержке
+				seans_str_out(h).dat1(tau+6)[i] =  CDbl(seans_str_in[t].seans.dat1(h, tau))'-R0DAC_1(tau+6)
+				seans_str_out(h).dat2(tau+6)[i] =  CDbl(seans_str_in[t].seans.dat2(h, tau))'-R0DAC_1(tau+6)
+			Next tau
 
 		EndIf
 	Next h
@@ -383,13 +347,7 @@ For t = 0 To seans_loaded-1-1 ' по времени
 
 Next t
 
-Print_process_percent(1000)
-
 'освобождение памяти, занятой входными сеансами
-
-For t = 0 To seans_loaded-1
-	DeAllocate(seans_str_in[t].seans_header)
-Next t
 
 DeAllocate(seans_str_in)
 
@@ -421,11 +379,11 @@ Print "OK"
 Print "Интерполяция... ";
 
 
-For h = 0 To 679 ' по всем высотам
+For h = 0 To 359 ' по всем высотам
 
-	Print_process_percent((h*100)/680)
+	tau = 0
 
-	' Для короткого импульса
+	' 1) Для первого канала
 
 	For t = 0 To seans_out_num-1 ' по времени
 
@@ -445,7 +403,7 @@ For h = 0 To 679 ' по всем высотам
 
 				If seans_str_out(h).m[t-i] = 1 Then
 					c += 1
-					d += seans_str_out(h).pShort[t-i]
+					d += seans_str_out(h).dat1(tau)[t-i]
 				EndIf
 
 				i += 1
@@ -462,7 +420,7 @@ For h = 0 To 679 ' по всем высотам
 
 				If seans_str_out(h).m[t+i] = 1 Then
 					c += 1
-					d += seans_str_out(h).pShort[t+i]
+					d += seans_str_out(h).dat1(tau)[t+i]
 				EndIf
 
 				i += 1
@@ -470,9 +428,63 @@ For h = 0 To 679 ' по всем высотам
 			Loop
 
 			If c <> 0 Then
-				seans_str_out(h).pShort[t] = d/c
+				seans_str_out(h).dat1(tau)[t] = d/c
 			Else
-				seans_str_out(h).pShort[t] = 0
+				seans_str_out(h).dat1(tau)[t] = 0
+			EndIf
+
+		EndIf
+
+	Next t
+
+	' 2) Для второго канала
+
+	For t = 0 To seans_out_num-1 ' по времени
+
+		' если есть пропуск
+		If seans_str_out(h).m[t] <> 1 Then
+
+			Dim As Integer c = 0
+			Dim As Double d = 0
+
+			' влево
+			i = 0
+			Do While (c < n2\2)
+
+				If t-i < 0 Then
+					Exit Do
+				EndIf
+
+				If seans_str_out(h).m[t-i] = 1 Then
+					c += 1
+					d += seans_str_out(h).dat2(tau)[t-i]
+				EndIf
+
+				i += 1
+
+			Loop
+
+			' вправо
+			i = 0
+			Do While (c < n2\2)
+
+				If t+i > seans_out_num-1 Then
+					Exit Do
+				EndIf
+
+				If seans_str_out(h).m[t+i] = 1 Then
+					c += 1
+					d += seans_str_out(h).dat2(tau)[t+i]
+				EndIf
+
+				i += 1
+
+			Loop
+
+			If c <> 0 Then
+				seans_str_out(h).dat2(tau)[t] = d/c
+			Else
+				seans_str_out(h).dat2(tau)[t] = 0
 			EndIf
 
 		EndIf
@@ -480,10 +492,9 @@ For h = 0 To 679 ' по всем высотам
 	Next t
 
 
-	For tau = 0 To 18 ' по всем задержкам
+	For tau = 7 To 12 ' по всем задержкам
 
-
-		' 1) Для косинусного канала
+		' 1) Для первого канала
 
 		For t = 0 To seans_out_num-1 ' по времени
 
@@ -503,7 +514,7 @@ For h = 0 To 679 ' по всем высотам
 
 					If seans_str_out(h).m[t-i] = 1 Then
 						c += 1
-						d += seans_str_out(h).datCos(tau)[t-i]
+						d += seans_str_out(h).dat1(tau)[t-i]
 					EndIf
 
 					i += 1
@@ -520,7 +531,7 @@ For h = 0 To 679 ' по всем высотам
 
 					If seans_str_out(h).m[t+i] = 1 Then
 						c += 1
-						d += seans_str_out(h).datCos(tau)[t+i]
+						d += seans_str_out(h).dat1(tau)[t+i]
 					EndIf
 
 					i += 1
@@ -528,9 +539,9 @@ For h = 0 To 679 ' по всем высотам
 				Loop
 
 				If c <> 0 Then
-					seans_str_out(h).datCos(tau)[t] = d/c
+					seans_str_out(h).dat1(tau)[t] = d/c
 				Else
-					seans_str_out(h).datCos(tau)[t] = 0
+					seans_str_out(h).dat1(tau)[t] = 0
 				EndIf
 
 			EndIf
@@ -539,7 +550,7 @@ For h = 0 To 679 ' по всем высотам
 
 
 
-		' 2) Для синусного канала
+		' 2) Для второго канала
 
 		For t = 0 To seans_out_num-1 ' по времени
 
@@ -559,7 +570,7 @@ For h = 0 To 679 ' по всем высотам
 
 					If seans_str_out(h).m[t-i] = 1 Then
 						c += 1
-						d += seans_str_out(h).datSin(tau)[t-i]
+						d += seans_str_out(h).dat2(tau)[t-i]
 					EndIf
 
 					i += 1
@@ -576,7 +587,7 @@ For h = 0 To 679 ' по всем высотам
 
 					If seans_str_out(h).m[t+i] = 1 Then
 						c += 1
-						d += seans_str_out(h).datSin(tau)[t+i]
+						d += seans_str_out(h).dat2(tau)[t+i]
 					EndIf
 
 					i += 1
@@ -584,9 +595,9 @@ For h = 0 To 679 ' по всем высотам
 				Loop
 
 				If c <> 0 Then
-					seans_str_out(h).datSin(tau)[t] = d/c
+					seans_str_out(h).dat2(tau)[t] = d/c
 				Else
-					seans_str_out(h).datSin(tau)[t] = 0
+					seans_str_out(h).dat2(tau)[t] = 0
 				EndIf
 
 			EndIf
@@ -599,8 +610,10 @@ For h = 0 To 679 ' по всем высотам
 
 Next h
 
-Print_process_percent(1000)
 Print "OK"
+
+
+
 
 
 Print "Вычитание шума... ";
@@ -608,83 +621,52 @@ Print "Вычитание шума... ";
 
 'выделяем память на АКФ шума для каждого сеанса
 For tau = 0 To 18
-	noiseAcfCos(tau) = Callocate( seans_out_num, SizeOf(Double) )
-	If noiseAcfCos(tau) = NULL Then
+	noiseAcf1(tau) = Callocate( seans_out_num, SizeOf(Double) )
+	If noiseAcf1(tau) = NULL Then
 		PrintErrorToLog(ErrorNotEnoughMemory, __FILE__, __LINE__)
 		End
 	EndIf
 Next tau
 
 For tau = 0 To 18
-	noiseAcfSin(tau) = Callocate( seans_out_num, SizeOf(Double) )
-	If noiseAcfSin(tau) = NULL Then
+	noiseAcf2(tau) = Callocate( seans_out_num, SizeOf(Double) )
+	If noiseAcf2(tau) = NULL Then
 		PrintErrorToLog(ErrorNotEnoughMemory, __FILE__, __LINE__)
 		End
 	EndIf
 Next tau
 
-noisePShort = Callocate( seans_out_num, SizeOf(Double) )
-If noisePShort = NULL Then
-	PrintErrorToLog(ErrorNotEnoughMemory, __FILE__, __LINE__)
-	End
-EndIf
 
-/'
-For h = 0 To 679
-	signalToNoiseRatio(h) = Callocate( seans_out_num, SizeOf(Double) )
-	If signalToNoiseRatio(h) = NULL Then
-		PrintErrorToLog(ErrorNotEnoughMemory, __FILE__, __LINE__)
-		End
-	EndIf
-Next h
-'/
-For h = 0 To 679
-	signalToNoiseRatioShort(h) = Callocate( seans_out_num, SizeOf(Double) )
-	If signalToNoiseRatioShort(h) = NULL Then
-		PrintErrorToLog(ErrorNotEnoughMemory, __FILE__, __LINE__)
-		End
-	EndIf
-Next h
 
 
 For t = 0 To seans_out_num-1
 
 	' определяем АКФ шума
 	For tau = 0 To 18 ' по задержке
-		noiseAcfCos(tau)[t] = 0
-		noiseAcfSin(tau)[t] = 0
-		For h = 500 To 599 ' по высоте
-			noiseAcfCos(tau)[t] += seans_str_out(h).datCos(tau)[t]
-			noiseAcfSin(tau)[t] += seans_str_out(h).datSin(tau)[t]
+		noiseAcf1(tau)[t] = 0
+		noiseAcf2(tau)[t] = 0
+		For h = 250 To 299 ' по высоте
+			noiseAcf1(tau)[t] += seans_str_out(h).dat1(tau)[t]
+			noiseAcf2(tau)[t] += seans_str_out(h).dat2(tau)[t]
 		Next h
-		noiseAcfCos(tau)[t] /= 100
-		noiseAcfSin(tau)[t] /= 100
+		noiseAcf1(tau)[t] /= 50
+		noiseAcf2(tau)[t] /= 50
 	Next tau
 
 
 	' Вычитание шума
-	For h = 0 To 679
+	For h = 0 To 359
 		For tau = 0 To 18
-			seans_str_out(h).datCos(tau)[t] -= noiseAcfCos(tau)[t]
-			seans_str_out(h).datSin(tau)[t] -= noiseAcfSin(tau)[t]
+			seans_str_out(h).dat1(tau)[t] -= noiseAcf1(tau)[t]
+			seans_str_out(h).dat2(tau)[t] -= noiseAcf2(tau)[t]
 		Next tau
-	Next h
-
-
-	noisePShort[t] = 0
-	For h = 500 To 599
-		noisePShort[t] += seans_str_out(h).pShort[t]
-	Next h
-	noisePShort[t] /= 100
-
-	For h = 0 To 679
-		seans_str_out(h).pShort[t] -= noisePShort[t]
 	Next h
 
 
 Next t
 
 Print "OK"
+
 
 
 
@@ -692,155 +674,39 @@ Print "Учёт характеристики разрядника... ";
 
 For t = 0 To seans_out_num-1
 
+	For h = 19 To 359
 
-	' учёт разрядника
-	For h = 0 To 679 ' по высоте
-		' вспомогательные локальные переменные (видны только в цикле)
-		Dim As Integer l1, l2 ' индексы
-		Dim As Double  r1, r2 ' значения коэффициента передачи
+		If razr(h, 0) > 1e-3 Then
+			seans_str_out(h).dat1(0)[t] /= razr(h, 0)
+			seans_str_out(h).dat2(0)[t] /= razr(h, 0)
+		Else
+			seans_str_out(h).dat1(0)[t] = 0
+			seans_str_out(h).dat2(0)[t] = 0
+		EndIf
 
-		l1 = h
-		For tau = 0 To 18 ' по задержке
+		For tau = 7 To 12
 
-			l2 = h+tau
-
-			If l1 < 300 Then
-				r1 = razr(l1)
+			If razr(h, tau) > 1e-3 Then
+				seans_str_out(h).dat1(tau)[t] /= razr(h, tau)
+				seans_str_out(h).dat2(tau)[t] /= razr(h, tau)
 			Else
-				r1 = 1.0
-			EndIf
-
-			If l2 < 300 Then
-				r2 = razr(l2)
-			Else
-				r2 = 1.0
-			EndIf
-
-			If r1*r2 > 1e-6 Then
-				seans_str_out(h).datCos(tau)[t] /= Sqr( r1*r2 )
-				seans_str_out(h).datSin(tau)[t] /= Sqr( r1*r2 )
-			Else
-				seans_str_out(h).datCos(tau)[t] = 0
-				seans_str_out(h).datSin(tau)[t] = 0
+				seans_str_out(h).dat1(tau)[t] = 0
+				seans_str_out(h).dat2(tau)[t] = 0
 			EndIf
 
 		Next tau
 
 	Next h
 
-
-	' учёт разрядника для профиля мощности по короткому импульсу
-	For h = 0 To 679-12 ' по высоте
-
-		Dim As Double r ' значение коэффициента передачи
-
-		If h < 300-12 Then
-			r = razr(h+12)
-		Else
-			r = 1.0
-		EndIf
-
-		If r > 1e-6 Then
-			seans_str_out(h).pShort[t] /= r
-		Else
-			seans_str_out(h).pShort[t] = 0
-		EndIf
-
-	Next h
-
 Next t
-
-
 
 Print "OK"
 
-
-
-
-
-Print "Трапецеидальное суммирование... ";
-
-
-For t = 0 To seans_out_num-1
-
-	Print_process_percent((t*100)/seans_out_num)
-
-	' 1) для косинусной составляющей
-
-	For h = 0 To 679
-
-		If h >= 18+partrap And h <= 679-partrap Then
-
-			For tau = 0 To 18
-
-				seans_str_out(h).datCosTrap(tau)[t] = 0
-				For z As Integer = h-tau-partrap To h+partrap ' по высоте
-					seans_str_out(h).datCosTrap(tau)[t] += seans_str_out(z).datCos(tau)[t]
-				Next z
-
-				If is_divide = 1 Then
-					seans_str_out(h).datCosTrap(tau)[t]  /= tau+2*partrap+1 ' делить на количество слагаемых
-				EndIf
-
-			Next tau
-
-		Else
-
-			For tau = 0 To 18
-				seans_str_out(h).datCosTrap(tau)[t]  = 0
-			Next tau
-
-		EndIf
-
-	Next h
-
-	' 2) для синусной составляющей
-
-	For h = 0 To 679
-
-		If h >= 18+partrap And h <= 679-partrap Then
-
-			For tau = 0 To 18
-
-				seans_str_out(h).datSinTrap(tau)[t] = 0
-				For z As Integer = h-tau-partrap To h+partrap ' по высоте
-					seans_str_out(h).datSinTrap(tau)[t]  += seans_str_out(z).datSin(tau)[t]
-				Next z
-
-				If is_divide = 1 Then
-					seans_str_out(h).datSinTrap(tau)[t] /= tau+2*partrap+1 ' делить на количество слагаемых
-				EndIf
-
-			Next tau
-
-		Else
-
-			For tau = 0 To 18
-				seans_str_out(h).datSinTrap(tau)[t] = 0
-			Next tau
-
-		EndIf
-
-	Next h
-
-Next t
-
-Print_process_percent(1000)
-Print "OK"
 
 
 
 
 Print "Накопление по времени... ";
-
-
-
-as_file_str.acf = Callocate( 680, SizeOf(acf_struct) )   ' резервируем память для АКФ
-If as_file_str.acf = NULL Then
-	PrintErrorToLog(ErrorNotEnoughMemory, __FILE__, __LINE__)
-	End
-EndIf
-
 
 Dim As Integer seans_current = 0
 t = 0
@@ -863,21 +729,38 @@ Do Until t + tNak > seans_out_num-1
 
 	as_file_str.fkr = 0.0
 
-	as_file_str.nh = 680
+	as_file_str.nh = 360
+
+	as_file_str.acf = Callocate( as_file_str.nh, SizeOf(acf_struct) )   ' резервируем память для АКФ
+	If as_file_str.acf = NULL Then
+		PrintErrorToLog(ErrorNotEnoughMemory, __FILE__, __LINE__)
+		End
+	EndIf
 
 
 
 	' размещаем данные по высотам
-	For h = 0 To 679 ' по высоте
+	For h = 0 To as_file_str.nh - 1 ' по высоте
 		as_file_str.acf[h].n = h
-		as_file_str.acf[h].h = seans2_altL(h)
+		as_file_str.acf[h].h = seans1c_alt(h)
 
 		For tau = 0 To 18 ' по задержке
 			as_file_str.acf[h].rc(tau) = 0
 			as_file_str.acf[h].rs(tau) = 0
+		Next tau
+
+		tau = 0
+		For i = 0 To tNak-1
+			as_file_str.acf[h].rc(tau) += seans_str_out(h).dat1(tau)[t+i]
+			as_file_str.acf[h].rs(tau) += seans_str_out(h).dat2(tau)[t+i]
+		Next i
+		as_file_str.acf[h].rc(tau) /= tNak
+		as_file_str.acf[h].rs(tau) /= tNak
+
+		For tau = 7 To 12 ' по задержке
 			For i = 0 To tNak-1
-				as_file_str.acf[h].rc(tau) += seans_str_out(h).datCosTrap(tau)[t+i]
-				as_file_str.acf[h].rs(tau) += seans_str_out(h).datSinTrap(tau)[t+i]
+				as_file_str.acf[h].rc(tau) += seans_str_out(h).dat1(tau)[t+i]
+				as_file_str.acf[h].rs(tau) += seans_str_out(h).dat2(tau)[t+i]
 			Next i
 			as_file_str.acf[h].rc(tau) /= tNak
 			as_file_str.acf[h].rs(tau) /= tNak
@@ -886,14 +769,18 @@ Do Until t + tNak > seans_out_num-1
 	Next h
 
 
+	For h = 0 To as_file_str.nh - 1 ' по высоте
+		as_file_str.acf[h].pShort = 0
+	Next h
 
-	' усредняем АКФ шума
+
+
 	For tau = 0 To 18 ' по задержке
 		as_file_str.rnc(tau) = 0
 		as_file_str.rns(tau) = 0
 		For i = 0 To tNak-1
-			as_file_str.rnc(tau) += noiseAcfCos(tau)[t+i]
-			as_file_str.rns(tau) += noiseAcfSin(tau)[t+i]
+			as_file_str.rnc(tau) += noiseAcf1(tau)[t+i]
+			as_file_str.rns(tau) += noiseAcf2(tau)[t+i]
 		Next i
 		as_file_str.rnc(tau) /= tNak
 		as_file_str.rns(tau) /= tNak
@@ -901,8 +788,10 @@ Do Until t + tNak > seans_out_num-1
 
 
 
+
+
 	' отношение сигнал/шум
-	For h = 0 To 679 ' по высоте
+	For h = 0 To as_file_str.nh - 1 ' по высоте
 		If as_file_str.rnc(0) <> 0 Then
 			as_file_str.acf[h].q = as_file_str.acf[h].rc(0)/as_file_str.rnc(0)
 		Else
@@ -911,62 +800,63 @@ Do Until t + tNak > seans_out_num-1
 	Next h
 
 
-	For h = 12 To 679 ' по высоте
-		as_file_str.acf[h-12].pShort = 0
-		For i = 0 To tNak-1
-			as_file_str.acf[h-12].pShort += seans_str_out(h).pShort[t+i]
-		Next i
-		as_file_str.acf[h-12].pShort /= tNak
-	Next h
 
-	Dim As Double pShortMean = 0
-	For i = 0 To tNak-1
-		pShortMean += noisePShort[t+i]
-	Next i
-	pShortMean /= tNak
-
-	For h = 0 To 679 ' по высоте
-		If pShortMean <> 0 Then
-			as_file_str.acf[h].qShort = as_file_str.acf[h].pShort/pShortMean
-		Else
-			as_file_str.acf[h].qShort = 0
-		EndIf
-	Next h
-
-
-
-	' расчёт дисперсии точек АКФ
-
-	For h = 0 To 679
+	For h = 0 To as_file_str.nh - 1
 		For tau = 0 To 18 ' по задержке
-
 			as_file_str.acf[h].var(tau) = 0
-			For i = 0 To tNak-1
-				as_file_str.acf[h].var(tau) += (as_file_str.acf[h].rc(tau) - seans_str_out(h).datCosTrap(tau)[t+i])^2
-			Next i
-			as_file_str.acf[h].var(tau) /= tNak-1
-
 		Next tau
 	Next h
+	/'
+	If isVar <> 0 Then ' расчёт дисперсии
 
+		' расчёт мат. ожидания АКФ сигнала
+
+		ReDim As Double mean(0 To as_file_str.nh - 1, 0 To 18)
+
+		For tau = 0 To 18 ' по задержке
+			For h = 0 To as_file_str.nh - 1 ' по высоте
+				mean(h, tau) = as_file_str.acf[h].rc(tau) - as_file_str.rnc(tau)
+			Next h
+		Next tau
+
+		' расчёт дисперсии точек АКФ
+
+		For h = 0 To as_file_str.nh - 1
+			For tau = 0 To 18 ' по задержке
+
+				Dim As Double noise(0 To tNak-1)
+
+				For i = 0 To tNak-1
+					noise(i) = 0
+					For z As Integer = 500 To 599
+						noise(i) += seans_str_out(z).datCos(tau)[t+i]
+					Next z
+					noise(i) /= 100
+				Next i
+
+				as_file_str.acf[h].var(tau) = 0
+				For i = 0 To tNak-1
+					as_file_str.acf[h].var(tau) += (mean(h, tau) - seans_str_out(h).datCos(tau)[t+i] + noise(i))^2
+				Next i
+				as_file_str.acf[h].var(tau) /= tNak
+
+			Next tau
+		Next h
+
+	EndIf
+'/
 
 	as_file_save( SEANS_DIR_OUT + DirectoryOutput + "/step2/"+ "AS" + DirectoryOutput + "." + EXT,  @as_file_str) ' запись в файл
 
-
-
-
+	DeAllocate(as_file_str.acf)   ' освобождаем память с АКФ
 
 	t += tStep
 	seans_current += 1
 
 Loop
 
-DeAllocate(as_file_str.acf)   ' освобождаем память с АКФ
-
-
 Print_process_percent(1000)
 Print "OK"
-
 
 
 
@@ -999,7 +889,7 @@ Sub LoadFiles(ByVal Directory As String)
 	seans_num = 0
 	For i = 0 To lst_len-1
 		filelist_get_filename(lst, @filename, i) 'получить имя файла из списка
-		If seans2_test(Directory+"/"+filename) > 0 Then
+		If seans1c_test(Directory+"/"+filename) > 0 Then
 			seans_num += 1
 		EndIf
 	Next i
@@ -1014,27 +904,20 @@ Sub LoadFiles(ByVal Directory As String)
 
 		filelist_get_filename(lst, @filename, i)
 
-		is1s = seans2_test(directory + "/" + filename)
+		is1s = seans1c_test(directory + "/" + filename)
 
 		If (is1s <> 0) Then
+			seans1c_load ( directory + "/" + filename, @(seans_str_in[seans_loaded].seans) )
 
-			seans_str_in[seans_loaded].seans_header = Allocate(SizeOf(seans_header))
-			If seans_str_in[seans_loaded].seans_header = 0 Then
-				PrintErrorToLog(ErrorNotEnoughMemory, __FILE__, __LINE__)
-				End
-			EndIf
-
-			seans_str_in[seans_loaded].filename = directory + "/" + filename
-
-			seans2_load_header ( directory + "/" + filename, seans_str_in[seans_loaded].seans_header )
+			Print #1, filename
 
 			seans_str_in[seans_loaded].time_computer = date_2unixtime(_
-			seans_str_in[seans_loaded].seans_header->Day1, _
-			seans_str_in[seans_loaded].seans_header->Month1, _
-			seans_str_in[seans_loaded].seans_header->Year1, _
-			seans_str_in[seans_loaded].seans_header->Hour1, _
-			seans_str_in[seans_loaded].seans_header->Minute1, _
-			seans_str_in[seans_loaded].seans_header->Second1)
+			seans_str_in[seans_loaded].seans.Day1, _
+			seans_str_in[seans_loaded].seans.Month1, _
+			seans_str_in[seans_loaded].seans.Year1, _
+			seans_str_in[seans_loaded].seans.Hour1, _
+			seans_str_in[seans_loaded].seans.Minute1, _
+			seans_str_in[seans_loaded].seans.Second1)
 
 			seans_loaded += 1
 			symbol = Print_process(symbol)

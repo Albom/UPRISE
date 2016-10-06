@@ -401,6 +401,11 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 	recalc_num(h)
 
 
+	' очистка погрешностей
+	For t = 0 To seans_num-1
+		dat_all_str(h, t).d_c = 1e200
+	Next t
+
 
 	' 1 шаг
 	inverse_problem_v1(h, z, Config_step_te_1, Config_step_ti_1)
@@ -415,15 +420,6 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 
 
 	results_write(h, 2)
-
-
-
-	' очистка погрешностей
-	For t = 0 To seans_num-1
-		dat_all_str(h, t).d_c = 1e200
-	Next t
-
-
 
 
 	' запись значения обработанной высоты в файл
@@ -668,7 +664,6 @@ Sub save_all()
 	
 
 
-
 	' считываем время сеансов
 	file = FreeFile()
 	Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/T.txt" For Input As #file
@@ -763,7 +758,7 @@ Sub save_all()
 	' запись Ti 1
 
 	file = FreeFile()
-	Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/Ti.txt" For Output As #file
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/Ti1.txt" For Output As #file
 
 	Print #file, "      0 ";
 
@@ -805,11 +800,10 @@ Sub save_all()
 	Close #file
 	
 
-
 	' запись Te 1
 
 	file = FreeFile()
-	Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/Te.txt" For Output As #file
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/Te1.txt" For Output As #file
 
 
 	Print #file, "      0 ";
@@ -850,6 +844,7 @@ Sub save_all()
 	Next t
 
 	Close #file	
+
 
 
 
@@ -898,7 +893,7 @@ Sub save_all()
 
 
 	file = FreeFile()
-	Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/D.txt" For Output As #file
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/D1.txt" For Output As #file
 
 
 	Print #file, "      0 ";
@@ -939,6 +934,7 @@ Sub save_all()
 	Next t
 
 	Close #file	
+
 
 End Sub
 
