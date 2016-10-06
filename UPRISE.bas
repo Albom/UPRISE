@@ -36,19 +36,17 @@ Dim As Integer font
 #Define BTN_VIEW 			2
 #Define BTN_SPLINE		3
 #Define BTN_INTEGRATE	4
-#Define BTN_APPROX		5
-#Define BTN_ESTIMATE		6
-#Define BTN_HELP			7
-#Define BTN_IN			   8
-#Define BTN_OUT         9
-#Define BTN_SAVE		   10
-#Define BTN_OPTIONS     11
+#Define BTN_ESTIMATE		5
+#Define BTN_HELP			6
+#Define BTN_IN			   7
+#Define BTN_OUT         8
+#Define BTN_SAVE		   9
+#Define BTN_OPTIONS     10
 
-#Define COMBO_APPROX    12
-#Define COMBO_ESTIMATE  13
-#Define COMBO_TYPE	   14
+#Define COMBO_ESTIMATE  11
+#Define COMBO_TYPE	   12
 
-#Define TEXT_COPYRIGHT  15
+#Define TEXT_COPYRIGHT  13
 
 Const As String caption = "UPRISE v" + UPRISE_VERSION
 
@@ -69,7 +67,7 @@ IncludeBinary("images/search.png", SearchIcon)
 font = Cast(UINT, LoadFont("Verdana", 8))
 
 
-hwnd = Cast(UINT, OpenWindow(caption,0,0,530,330, WS_VISIBLE Or WS_CAPTION Or WS_MINIMIZEBOX Or WS_SYSMENU))
+hwnd = Cast(UINT, OpenWindow(caption,0,0,530,300, WS_VISIBLE Or WS_CAPTION Or WS_MINIMIZEBOX Or WS_SYSMENU))
 CenterWindow(CPtr(Any Ptr, hwnd))
 
 ImageGadget(IMG_NAME, 0, 0, 550, 80, Catch_Image(ImageLogo()) )
@@ -80,21 +78,29 @@ ButtonImageGadget(BTN_SAVE,    70,  100, 24, 24, Catch_Image(SaveIcon()))
 ButtonImageGadget(BTN_OPTIONS, 100, 100, 24, 24, Catch_Image(OptionsIcon()))
 ButtonImageGadget(BTN_HELP,    130, 100, 24, 24, Catch_Image(HelpIcon()))
 
+GadgetToolTip(BTN_IN, "Открыть папку с исходными данными")
+GadgetToolTip(BTN_OUT, "Открыть папку с результатами обработки")
+GadgetToolTip(BTN_SAVE, "Экспортировать данные")
+GadgetToolTip(BTN_OPTIONS, "Открыть конфигурационный файл в текстовом редакторе")
+GadgetToolTip(BTN_HELP, "Помощь")
+
 ButtonGadget(BTN_VIEW,      10, 140, 220, 28, "1. Просмотр данных")
-ButtonGadget(BTN_INTEGRATE, 10, 170, 220, 28, "2. Временное усреднение")
-ButtonGadget(BTN_APPROX,    10, 200, 220, 28, "3. Высотная коррекция")
-ButtonGadget(BTN_ESTIMATE,  10, 230, 220, 28, "4. Оценка параметров")
+ButtonGadget(BTN_INTEGRATE, 10, 170, 220, 28, "2. Обработка данных")
+ButtonGadget(BTN_ESTIMATE,  10, 200, 220, 28, "3. Оценка параметров")
 
-ComboBoxGadget(COMBO_APPROX,   240, 200, 270, 80)
-ComboBoxGadget(COMBO_ESTIMATE, 240, 230, 270, 80)
-ComboBoxGadget(COMBO_TYPE,     240, 155, 270, 80)
+GadgetToolTip(BTN_VIEW, "Запустить программу просмотра и фильтрации данных")
+GadgetToolTip(BTN_INTEGRATE, "Запустить программу обработки данных")
+GadgetToolTip(BTN_ESTIMATE, "Запустить программу оценки параметров ионосферы")
 
-AddComboBoxItem(COMBO_APPROX, "Трапецеидальное суммирование", -1)
-AddComboBoxItem(COMBO_APPROX, "Скользящее окно", -1)
-SetItemComboBox(COMBO_APPROX, 0)
+ComboBoxGadget(COMBO_TYPE,     240, 140, 270, 80)
+ComboBoxGadget(COMBO_ESTIMATE, 240, 200, 270, 80)
+
+GadgetToolTip(COMBO_TYPE, "Выбор типа данных")
+GadgetToolTip(COMBO_ESTIMATE, "Выбор типа параметров")
 
 AddComboBoxItem(COMBO_ESTIMATE, "Температуры и ионный состав", -1)
 AddComboBoxItem(COMBO_ESTIMATE, "Скорость движения плазмы", -1)
+AddComboBoxItem(COMBO_ESTIMATE, "Wave Edition", -1)
 SetItemComboBox(COMBO_ESTIMATE, 0)
 
 AddComboBoxItem(COMBO_TYPE, "Файлы SNew (коррелятор K3)", -1)
@@ -102,17 +108,15 @@ AddComboBoxItem(COMBO_TYPE, "Файлы SOld (коррелятор K1)", -1)
 AddComboBoxItem(COMBO_TYPE, "Файлы COld (4-й режим)", -1)
 SetItemComboBox(COMBO_TYPE, 0)
 
-TextGadget (TEXT_COPYRIGHT, 10, 270, 520, 24 ,"© 2013–2015 Богомаз А.В., Котов Д.В. (Институт ионосферы)")
+TextGadget (TEXT_COPYRIGHT, 10, 240, 520, 24 ,"© 2013–2015 Богомаз А.В., Котов Д.В. (Институт ионосферы)")
 
 
 SetGadgetFont(BTN_VIEW,      font)
 SetGadgetFont(BTN_SPLINE,    font)
 SetGadgetFont(BTN_INTEGRATE, font)
-SetGadgetFont(BTN_APPROX,    font)
 SetGadgetFont(BTN_ESTIMATE,  font)
 SetGadgetFont(BTN_HELP,      font)
 
-SetGadgetFont(COMBO_APPROX,  font)
 SetGadgetFont(COMBO_ESTIMATE,font)
 SetGadgetFont(COMBO_TYPE,font)
 
@@ -143,34 +147,26 @@ Do
 				Case BTN_INTEGRATE
 					Select Case GetItemComboBox(COMBO_TYPE)
 						Case 0
-							ShellExecute(CPtr(Any Ptr, hwnd), "open", "2_UPRISE_integrate_SNew.exe", NULL, NULL, SW_SHOWNORMAL)
+							ShellExecute(CPtr(Any Ptr, hwnd), "open", "2_UPRISE_processing_SNew.exe", NULL, NULL, SW_SHOWNORMAL)
 						Case 1
-							ShellExecute(CPtr(Any Ptr, hwnd), "open", "2_UPRISE_integrate_SOld.exe", NULL, NULL, SW_SHOWNORMAL)
+							ShellExecute(CPtr(Any Ptr, hwnd), "open", "2_UPRISE_processing_SOld.exe", NULL, NULL, SW_SHOWNORMAL)
 						Case 2
-							ShellExecute(CPtr(Any Ptr, hwnd), "open", "2_UPRISE_integrate_COld.exe", NULL, NULL, SW_SHOWNORMAL)
+							ShellExecute(CPtr(Any Ptr, hwnd), "open", "2_UPRISE_processing_COld.exe", NULL, NULL, SW_SHOWNORMAL)
 					End Select
-
-				Case BTN_APPROX
-					If GetItemComboBox(COMBO_TYPE) = 0 Or  GetItemComboBox(COMBO_TYPE) = 1  Then
-						If GetItemComboBox(COMBO_APPROX) = 0 Then
-							ShellExecute(CPtr(Any Ptr, hwnd), "open", "3_UPRISE_approximate_trapezoidal.exe", NULL, NULL, SW_SHOWNORMAL)
-						Else
-							ShellExecute(CPtr(Any Ptr, hwnd), "open", "3_UPRISE_approximate_polynomial.exe", NULL, NULL, SW_SHOWNORMAL)
-						EndIf
-					Else
-						ShellExecute(CPtr(Any Ptr, hwnd), "open", "3_UPRISE_approximate_COld.exe", NULL, NULL, SW_SHOWNORMAL)
-					EndIf
 
 
 				Case BTN_ESTIMATE
 					If GetItemComboBox(COMBO_TYPE) = 0 Or  GetItemComboBox(COMBO_TYPE) = 1  Then
-						If GetItemComboBox(COMBO_ESTIMATE) = 0 Then
-							ShellExecute(CPtr(Any Ptr, hwnd), "open", "4_UPRISE_estimate_grad.exe", NULL, NULL, SW_SHOWNORMAL)
-						Else
-							ShellExecute(CPtr(Any Ptr, hwnd), "open", "4_UPRISE_velocity.exe", NULL, NULL, SW_SHOWNORMAL)
-						EndIf
+						Select Case GetItemComboBox(COMBO_ESTIMATE)
+							Case 0
+								ShellExecute(CPtr(Any Ptr, hwnd), "open", "3_UPRISE_estimate.exe", NULL, NULL, SW_SHOWNORMAL)
+							Case 1
+								ShellExecute(CPtr(Any Ptr, hwnd), "open", "3_UPRISE_velocity.exe", NULL, NULL, SW_SHOWNORMAL)
+							Case 2
+								ShellExecute(CPtr(Any Ptr, hwnd), "open", "3_UPRISE_estimate_wave.exe", NULL, NULL, SW_SHOWNORMAL)
+						End Select
 					Else
-						ShellExecute(CPtr(Any Ptr, hwnd), "open", "4_UPRISE_estimate_grad_COld.exe", NULL, NULL, SW_SHOWNORMAL)
+						ShellExecute(CPtr(Any Ptr, hwnd), "open", "3_UPRISE_estimate_COld.exe", NULL, NULL, SW_SHOWNORMAL)
 					EndIf
 
 				Case BTN_HELP
@@ -188,7 +184,7 @@ Do
 				Case BTN_SAVE
 
 					Dim As Integer type_of_export = 0
-
+					/'
 					Var hwnd_export = OpenWindow(caption,0,0,400,200, WS_VISIBLE Or WS_CAPTION Or WS_MINIMIZEBOX Or WS_SYSMENU)
 					CenterWindow(hwnd_export)
 					Dim As Integer close_=0
@@ -250,7 +246,9 @@ Do
 
 						End Select
 					Loop Until close_= 1
+					'/
 
+					type_of_export = 1
 					If type_of_export <> 0 Then
 
 						Dim As String directory
@@ -265,13 +263,13 @@ Do
 
 									Select Case type_of_export
 										Case 1
-											MessBox(caption, "1", MB_ICONINFORMATION)
+											'MessBox(caption, "1", MB_ICONINFORMATION)
 											result = ResultsExportTxt(directory)
 										Case 2
-											MessBox(caption, "2", MB_ICONINFORMATION)
+											'MessBox(caption, "2", MB_ICONINFORMATION)
 											result = ResultsExportGp(directory)
 										Case 3
-											MessBox(caption, "SS", MB_ICONINFORMATION)
+											'MessBox(caption, "SS", MB_ICONINFORMATION)
 											result = ResultsExportKentavr(directory)
 									End Select
 
@@ -294,9 +292,9 @@ Do
 
 
 
-			End Select
+End Select
 
-	End Select
+End Select
 
 Loop
 
@@ -1349,7 +1347,7 @@ Function ResultsExportKentavr(directory_in As String) As Integer
 		Print #file, head(t);
 		Print #file, "   Fkr = "; fkr_array(t);
 		Print #file, "   Pn = "; pn_array(t)
-		Print #file, "Hmax(Ne)=";    
+		Print #file, "Hmax(Ne)=";
 		Close #file
 	Next t
 

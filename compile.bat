@@ -1,6 +1,10 @@
 @echo off
 
 
+echo UPRISE.bas
+fbc -t 10000 -fpu sse  -arch 686 -O 3 -vec 1 UPRISE.bas
+
+
 
 echo 1_UPRISE_short.bas
 fbc -s console -t 10000 -fpu sse  -arch 686  -O 3 -vec 1 1_UPRISE_short.bas
@@ -53,6 +57,7 @@ mkdir UPRISE
 mkdir UPRISE\in
 mkdir UPRISE\out
 
+copy UPRISE.exe UPRISE
 copy 1_UPRISE_short.exe UPRISE
 copy 1_UPRISE_view_SNew.exe UPRISE
 copy 1_UPRISE_view_SOld.exe UPRISE
@@ -76,5 +81,7 @@ copy config_short.dat UPRISE
 copy config_COld.dat UPRISE
 
 xcopy ambig UPRISE\ambig /e /i /h
+
+copy help.chm UPRISE
 
 pause

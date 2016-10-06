@@ -177,6 +177,11 @@ Print
 Input "¬ведите дату начала измерений (день мес€ц год): ", d_day, d_month, d_year
 Input "¬ведите количество суток: ", d_ndays
 
+If (d_day < 1) Or (d_month < 1) Or (d_year < 1996) Or (d_ndays < 1) Then
+	PrintErrorToLog(ErrorInputData, __FILE__, __LINE__)
+	End
+EndIf
+
 SEANS_DIR_OUT = "./out/"
 DirectoryOutput = ""
 

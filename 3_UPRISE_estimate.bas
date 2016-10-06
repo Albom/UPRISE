@@ -588,7 +588,10 @@ Print
 Input "Введите дату начала измерений (день месяц год): ", d_day, d_month, d_year
 Input "Введите количество суток: ", d_ndays
 
-
+If (d_day < 1) Or (d_month < 1) Or (d_year < 1996) Or (d_ndays < 1) Then
+	PrintErrorToLog(ErrorInputData, __FILE__, __LINE__)
+	End
+EndIf
 
 SEANS_DIR_OUT = "./out/"
 DirectoryOutput = ""
@@ -766,12 +769,7 @@ For t = 0 To seans_num_out-1 ' по времени
 		PrintErrorToLog(ErrorLoadASFile, __FILE__, __LINE__)
 		End
 	EndIf
-	/'
-	If t = 15 Then
-		as_file_save("as_test.txt", @as_file_in)
-		break
-	EndIf
-	'/
+
 
 	Print #1, "AS"+DirectoryOutput+"."+ext
 
@@ -1095,6 +1093,7 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 		EndIf
 
 
+
 		If Config_auto <> 0 Then
 			If MultiKey(FB.SC_ESCAPE) And auto = 1 Then
 				auto = 0
@@ -1265,7 +1264,12 @@ Sub inverse_problem_v1_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_
 										d = 0
 										If Config_sigma <> 0 Then
 											For tau = 1 To 18
-												d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2 / dat_all_str(h, t).var(tau)
+												If dat_all_str(h, t).var(tau) <> 0 Then '!!! грязный хак (если дисперсия по каким-то причинам оказалась равна 0)
+													d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2 / dat_all_str(h, t).var(tau)
+												Else
+													d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2 
+												EndIf
+												
 											Next tau
 										Else
 											For tau = 1 To 18
@@ -1535,7 +1539,12 @@ Sub inverse_problem_v2_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_
 												d = 0
 												If Config_sigma <> 0 Then
 													For tau = 1 To 18
-														d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2 / dat_all_str(h, t).var(tau)
+														If dat_all_str(h, t).var(tau) <> 0 Then
+															d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2 / dat_all_str(h, t).var(tau)
+														Else
+															d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2 
+														EndIf
+														
 													Next tau
 												Else
 													For tau = 1 To 18

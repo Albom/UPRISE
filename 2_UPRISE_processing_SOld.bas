@@ -136,7 +136,7 @@ Print "UPRISE version " + UPRISE_VERSION
 Print "(Unified Processing of the Results of Incoherent Scatter Experiments)"
 Print
 Color 7
-Print "Processing - программа подготовки данных (S-файлов системы К3) к решению обратной задачи"
+Print "Processing - программа подготовки данных (S-файлов системы К1) к решению обратной задачи"
 Print "(c) Богомаз А.В., Котов Д.В. (Институт ионосферы)"
 Print
 
@@ -144,6 +144,12 @@ Color 15
 
 Input "Введите дату начала измерений (день месяц год): ", d_day, d_month, d_year
 Input "Введите количество суток: ", d_ndays
+
+If (d_day < 1) Or (d_month < 1) Or (d_year < 1996) Or (d_ndays < 1) Then
+	PrintErrorToLog(ErrorInputData, __FILE__, __LINE__)
+	End
+EndIf
+
 Print
 Input "Введите время накопления (в мин): ", Tnak
 Input "Введите шаг перемещения окна (в мин): ", Tstep
@@ -151,7 +157,10 @@ Input "Введите количество точек для интерполяции: ", n2
 Print
 Input "Введите параметр трапецеидального суммирования: ", partrap
 
-
+If (Tnak < 1) Or (Tstep < 1) Or (n2 < 1996) Or (partrap < 1) Then
+	PrintErrorToLog(ErrorInputData, __FILE__, __LINE__)
+	End
+EndIf
 
 
 ' загрузка сеансов

@@ -129,6 +129,12 @@ Color 15
 
 Input "¬ведите дату начала измерений (день мес€ц год): ", d_day, d_month, d_year
 Input "¬ведите количество суток: ", d_ndays
+
+If (d_day < 1) Or (d_month < 1) Or (d_year < 1996) Or (d_ndays < 1) Then
+	PrintErrorToLog(ErrorInputData, __FILE__, __LINE__)
+	End
+EndIf
+
 Print
 Input "¬ведите врем€ накоплени€ (в мин): ", Tnak
 Input "¬ведите шаг перемещени€ окна (в мин): ", Tstep
@@ -136,6 +142,10 @@ Input "¬ведите количество точек дл€ интерпол€ции: ", n2
 Print
 Input "¬ведите параметр трапецеидального суммировани€: ", partrap
 
+If (Tnak < 1) Or (Tstep < 1) Or (n2 < 1) Or (partrap < 1) Then
+	PrintErrorToLog(ErrorInputData, __FILE__, __LINE__)
+	End
+EndIf
 
 
 
