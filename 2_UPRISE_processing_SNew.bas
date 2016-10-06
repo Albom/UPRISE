@@ -123,6 +123,11 @@ Print
 Color 7
 Print "Processing - программа подготовки данных (S-файлов системы К3) к решению обратной задачи"
 Print "(c) Богомаз А.В., Котов Д.В. (Институт ионосферы)"
+Color 8
+Print
+Print "================================"
+Print "Программа собрана " + Mid(__DATE__, 4, 2)+"."+Mid(__DATE__, 1, 2)+"."+Mid(__DATE__, 7, 4)
+Print "================================"
 Print
 
 Color 15
@@ -139,10 +144,11 @@ Print
 Input "Введите время накопления (в мин): ", Tnak
 Input "Введите шаг перемещения окна (в мин): ", Tstep
 Input "Введите количество точек для интерполяции: ", n2
-Print
-Input "Введите параметр трапецеидального суммирования: ", partrap
+'Print
+'Input "Введите параметр трапецеидального суммирования: ", partrap
+partrap = 0
 
-If (Tnak < 1) Or (Tstep < 1) Or (n2 < 1) Or (partrap < 1) Then
+If (Tnak < 1) Or (Tstep < 1) Or (n2 < 1) Or (partrap < 0) Then
 	PrintErrorToLog(ErrorInputData, __FILE__, __LINE__)
 	End
 EndIf

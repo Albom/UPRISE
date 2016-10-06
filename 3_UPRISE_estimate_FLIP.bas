@@ -218,6 +218,10 @@ Declare Sub trand_ti(ByVal h As Integer, ByVal z As Integer, ByVal t_start As In
 Declare Sub trand_te(ByVal h As Integer, ByVal z As Integer, ByVal t_start As Integer, ByVal t_end As Integer, wnd As Integer)
 Declare Sub trand_hyd(ByVal h As Integer, ByVal z As Integer, ByVal t_start As Integer, ByVal t_end As Integer, wnd As Integer)
 
+Declare Sub trand_ti_flip(ByVal h As Integer, ByVal z As Integer, ByVal t_start As Integer, ByVal t_end As Integer, wnd As Integer)
+Declare Sub trand_te_flip(ByVal h As Integer, ByVal z As Integer, ByVal t_start As Integer, ByVal t_end As Integer, wnd As Integer)
+
+
 Declare Sub level_ti(ByVal h As Integer, ByVal z As Integer, ByVal t_start As Integer, ByVal t_end As Integer, level As Integer)
 Declare Sub level_te(ByVal h As Integer, ByVal z As Integer, ByVal t_start As Integer, ByVal t_end As Integer, level As Integer)
 Declare Sub level_hyd(ByVal h As Integer, ByVal z As Integer, ByVal t_start As Integer, ByVal t_end As Integer, level As Integer)
@@ -266,12 +270,7 @@ Print
 Color 7
 Print "Estimate - программа оценки параметров ионосферы (решение обратной задачи рассеяния)"
 Print "(c) Богомаз А.В., Котов Д.В. (Институт ионосферы)"
-Color 8
 Print
-Print "================================"
-Print "Программа собрана " + Mid(__DATE__, 4, 2)+"."+Mid(__DATE__, 1, 2)+"."+Mid(__DATE__, 7, 4)
-Print "================================"
-
 
 Color 15
 
@@ -553,6 +552,7 @@ Print
 Print
 Print "Количество точек для сглаживание временных рядов (по Ti, Te и H+): "; Config_ti_num; " "; Config_te_num; " "; Config_hyd_num
 
+Print
 Print
 Color 12
 Print "Нажмите Enter"
@@ -931,6 +931,16 @@ Print_process_percent(1000)
 Print "OK"
 
 
+Dim Shared As Double tFlip(0 To 23), tiFlip(0 To 23), teFlip(0 To 23)
+file = FreeFile()
+Open "Flip.txt" For Input As #file
+For i = 0 To 23
+	Input #file, tFlip(i), tiFlip(i), teFlip(i)
+Next i
+Close #file
+
+
+
 ' Решение обратной задачи
 
 If Config_oxygen <> 0 Then
@@ -939,7 +949,7 @@ EndIf
 
 
 z = 0
-For h = Hmin To Hmax Step Hstep ' по высоте
+For h = Hmin To Hmin /'Hmax'/ Step Hstep ' по высоте '/!modified
 
 	Cls
 	Print "Решение обратной задачи... "
@@ -1072,6 +1082,13 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 			dat_all_str(h, t).d_c = 1e200
 		Next t
 
+		trand_ti_flip (h, z, 1, seans_num_out-1, Config_ti_num)
+		trand_te_flip (h, z, 1, seans_num_out-1, Config_te_num)
+		inverse_problem_ti_te(h, z)
+
+	Next he
+
+	/'
 		ranges_reset(h)
 
 		If Config_auto <> 0 Then
@@ -1198,7 +1215,7 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 	If Config_oxygen <> 0 Then
 		he_max = 0
 	EndIf
-
+'/
 Next h ' !!!!
 
 Print "OK"
@@ -1271,9 +1288,9 @@ Sub inverse_problem_v1_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_
 												If dat_all_str(h, t).var(tau) <> 0 Then '!!! грязный хак (если дисперсия по каким-то причинам оказалась равна 0)
 													d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2 / dat_all_str(h, t).var(tau)
 												Else
-													d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2 
+													d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2
 												EndIf
-												
+
 											Next tau
 										Else
 											For tau = 1 To 18
@@ -1546,9 +1563,9 @@ Sub inverse_problem_v2_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_
 														If dat_all_str(h, t).var(tau) <> 0 Then
 															d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2 / dat_all_str(h, t).var(tau)
 														Else
-															d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2 
+															d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2
 														EndIf
-														
+
 													Next tau
 												Else
 													For tau = 1 To 18
@@ -3935,6 +3952,87 @@ Sub trand_ti(ByVal h As Integer, ByVal z As Integer, ByVal t_start As Integer, B
 	' запись временного хода выбранного параметра
 	file = FreeFile()
 	Open SEANS_DIR_OUT + DirectoryOutput+"/step3/Ti."+ Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+
+	For t = 0 To seans_num_out-1
+		Print #file, Using "####.# "; param_loaded(t)
+	Next t
+	Close #file
+
+End Sub
+
+
+''' ================================================================
+
+
+Sub trand_ti_flip(ByVal h As Integer, ByVal z As Integer, ByVal t_start As Integer, ByVal t_end As Integer, wnd As Integer)
+
+	ReDim As Double param_loaded(0 To seans_num_out-1)
+	ReDim As Double timeDecimal(0 To seans_num_out-1)
+
+	Dim As Integer t
+	Dim As Integer file
+
+	' загрузка временного хода выбранного параметра
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3/T.txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, timeDecimal(t)
+	Next t
+	Close #file
+
+
+	For t = 0 To seans_num_out-1
+		param_loaded(t) = array_linear_d(timeDecimal(t), @tFlip(0), @tiFlip(0), 24)
+	Next t
+
+	For t = 0 To seans_num_out-1 ' по времени
+		param_loaded(t) =   ( CInt( param_loaded(t) ) \ 20 ) * 20
+	Next t
+
+	' запись временного хода выбранного параметра
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3/Ti."+ Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+
+	For t = 0 To seans_num_out-1
+		Print #file, Using "####.# "; param_loaded(t)
+	Next t
+	Close #file
+
+End Sub
+
+''' ================================================================
+
+
+Sub trand_te_flip(ByVal h As Integer, ByVal z As Integer, ByVal t_start As Integer, ByVal t_end As Integer, wnd As Integer)
+
+	ReDim As Double param_loaded(0 To seans_num_out-1)
+	ReDim As Double timeDecimal(0 To seans_num_out-1)
+
+	Dim As Integer t
+	Dim As Integer file
+
+	' загрузка временного хода выбранного параметра
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3/T.txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, timeDecimal(t)
+	Next t
+	Close #file
+
+
+	For t = 0 To seans_num_out-1
+		param_loaded(t) = array_linear_d(timeDecimal(t), @tFlip(0), @teFlip(0), 24)
+	Next t
+
+	For t = 0 To seans_num_out-1 ' по времени
+		param_loaded(t) =   ( CInt( param_loaded(t) ) \ 20 ) * 20
+	Next t
+
+	' запись временного хода выбранного параметра
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3/Te."+ Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
 
 	For t = 0 To seans_num_out-1
 		Print #file, Using "####.# "; param_loaded(t)

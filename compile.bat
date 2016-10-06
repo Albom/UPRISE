@@ -2,7 +2,7 @@
 
 
 echo UPRISE.bas
-fbc -t 10000 -fpu sse  -arch 686 -O 3 -vec 1 UPRISE.bas
+fbc  -s gui -t 10000 -fpu sse  -arch 686 -O 3 -vec 1 UPRISE.bas
 
 
 

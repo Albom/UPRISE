@@ -1,8 +1,9 @@
 
 #Include Once "albom_lib.bi"	'Описание библиотеки "albom.dll"
 #Include Once "albom_log.bi"		'Подключение лога
-#Include Once "albom_version.bi"
 #Include "fbgfx.bi"			'Подключение графической библиотеки
+#Include Once "albom_version.bi"
+
 
 #Include  "crt/stdlib.bi"
 
@@ -63,6 +64,8 @@ Dim As Integer d_month, d_year, d_day, d_ndays
 Dim As String s_year, s_month, s_day
 
 Dim As Integer file
+Dim Shared As Integer SEL_START = 0
+Dim Shared As Integer SEL_END = 0
 
 ''' =======================================================================
 
@@ -96,6 +99,11 @@ Print
 Color 7
 Print "View - программа просмотра S-файлов системы К3"
 Print "(c) Богомаз А.В., Котов Д.В. (Институт ионосферы)"
+Color 8
+Print
+Print "================================"
+Print "Программа собрана " + Mid(__DATE__, 4, 2)+"."+Mid(__DATE__, 1, 2)+"."+Mid(__DATE__, 7, 4)
+Print "================================"
 Print
 
 Color 15
@@ -165,16 +173,22 @@ Vis_array_load() ' загрузить данные для отображения
 
 Do
 
-	ScreenLock 'начинаем вывод на экран
+	ScreenLock() 'начинаем вывод на экран
 
 	Cls
 
+	' рисование выделенной области
+	If SEL_START <> SEL_END Then
+		Line (5+(SEL_START-START_X)*DX, 25)-(5+(SEL_END-START_X)*DX, 768-25), 7, BF
+	EndIf
+	' рисование курсора
 	If seans_str(CUR).seans.m(H) = 0 Then
 		Line (5+(CUR-START_X)*DX, 25)-(5+(CUR-START_X)*DX, 768-25), 7
 	Else
 		Line (5+(CUR-START_X)*DX, 25)-(5+(CUR-START_X)*DX, 768-25), 7, , &b0000000011110000
 	End If
 
+	' рисование графиков
 	For j = POINTS_START To POINTS_END
 		Line  (0, Y0+DY*j/6)-(1024, Y0+DY*j/6), 15-j, , &b0000000011110000
 		For i = START_X To (seans_loaded-2)
@@ -236,32 +250,54 @@ Do
 
 	key = GetKey()
 
-'		Cls
-'		Print key
-'		Sleep 1000
+'			Cls
+'			Print key
+'			Sleep 1000
 
 	Select Case key
 
-		Case KEY_CTRL_P, KEY_P_CAPITAL
+		Case KEY_CTRL_P
 			BSave ("screen.bmp", 0)
 
+		Case KEY_CTRL_RIGHT
+			If CUR < seans_loaded-1 Then
+				If SEL_END > SEL_START Then
+					SEL_END += 1
+				Else
+					SEL_START = CUR
+					SEL_END = SEL_START
+					SEL_END += 1
+				EndIf
+				CUR += 1
+			EndIf
+
+		Case KEY_CTRL_LEFT
+			If (CUR > 0) And (SEL_END > SEL_START) Then
+				SEL_END -= 1
+				CUR -= 1
+			EndIf
+
 		Case KEY_RIGHT
-			If CUR < seans_loaded-1 Then CUR = CUR + 1 End If
+			If (CUR < seans_loaded-1) And (SEL_START = SEL_END) Then
+				CUR += 1
+			EndIf
 
 		Case KEY_LEFT
-			If CUR > 0 Then CUR = CUR - 1  End If
+			If (CUR > 0) And (SEL_START = SEL_END) Then
+				CUR -= 1
+			EndIf
 
 		Case KEY_PLUS
-			If DX < 32 Then DX = DX*2 End If
+			If DX < 32 Then DX *= 2 End If
 
 		Case KEY_MINUS
-			If DX > 1 Then DX = DX/2 End If
+			If DX > 1 Then DX /= 2 End If
 
 		Case KEY_DOWN
-			If START_X < seans_loaded-1 Then START_X = START_X + 1 End If
+			If START_X < seans_loaded-1 Then START_X += 1 End If
 
 		Case KEY_UP
-			If START_X > 0  Then START_X = START_X - 1  End If
+			If START_X > 0  Then START_X -= 1  End If
 
 		Case KEY_CTRL_DOWN
 			If START_X < seans_loaded-10 Then START_X += 10 End If
@@ -270,6 +306,8 @@ Do
 			If START_X > 10  Then START_X -= 10  End If
 
 		Case KEY_H
+			SEL_START = 0
+			SEL_END = 0
 			Color 15
 			Input "H: ", H
 			H = H-1
@@ -288,22 +326,28 @@ Do
 			If POINTS_END > 13 Then POINTS_END = 13 End If
 
 		Case KEY_PAGE_UP
+			SEL_START = 0
+			SEL_END = 0
 			If H < HMAX-1 Then H = H + 1 End If
 			Vis_array_load ' загрузить данные для отображения
 
 		Case KEY_PAGE_DOWN
+			SEL_START = 0
+			SEL_END = 0
 			If H > HMIN Then H = H - 1 End If
 			Vis_array_load ' загрузить данные для отображения
 
 		Case KEY_SPACE
-			If seans_str(CUR).seans.m(H) = 0 Then
-				seans_str(CUR).seans.m(H) = 1
-			Else
-				seans_str(CUR).seans.m(H) = 0
-			End If
-			seans_str(CUR).isM = 2
-			seans2_saveM3(seans_str(CUR).filename_full, @(seans_str(CUR).seans))
-			Vis_array_load ' загрузить данные для отображения
+			If SEL_START = SEL_END Then
+				If seans_str(CUR).seans.m(H) = 0 Then
+					seans_str(CUR).seans.m(H) = 1
+				Else
+					seans_str(CUR).seans.m(H) = 0
+				End If
+				seans_str(CUR).isM = 2
+				seans2_saveM3(seans_str(CUR).filename_full, @(seans_str(CUR).seans))
+				Vis_array_load ' загрузить данные для отображения
+			EndIf
 
 		Case KEY_V
 			If VISIBLE = 0 Then
@@ -322,270 +366,19 @@ Do
 			Vis_array_load ' загрузить данные для отображения
 
 		Case KEY_HOME
-			CUR=START_X
+			If SEL_START = SEL_END Then
+				CUR = START_X
+			EndIf
 
 		Case KEY_END
-			If START_X+(1024\DX)-1 < seans_loaded Then
-				CUR = START_X+(1024\DX)-1
-			Else
-				CUR=seans_loaded-1
-			End If
+			If SEL_START = SEL_END Then
+				If START_X+(1024\DX)-1 < seans_loaded Then
+					CUR = START_X+(1024\DX)-1
+				Else
+					CUR=seans_loaded-1
+				EndIf
+			EndIf
 
-		/'
-		Case KEY_D
-			Dim As Integer fileTemp
-			Dim As Double pN1, pN2
-
-			pN1 = 0
-			pN2 = 0
-			For i = 650 To 670
-				pN1 += seans_str(CUR).seans.datps1(i)
-				pN2 += seans_str(CUR).seans.datps2(i)
-			Next i
-			pN1 /= 20
-			pN2 /= 20
-
-			fileTemp = FreeFile()
-			Open "S1-"+ Str(seans_str(CUR).seans.Year1) + "-" + Str(seans_str(CUR).seans.Month1) + "-"+ Str(seans_str(CUR).seans.Day1) + "__" + Str(seans_str(CUR).seans.Hour1) + "."+Str(seans_str(CUR).seans.Minute1) + "."+Str(seans_str(CUR).seans.Second1) + ".csv" For Output As #fileTemp
-			For i = 0 To 679
-				Print #fileTemp, Using "####.#; ####.####"; seans2_altS(i); (seans_str(CUR).seans.datps1(i)-pN1)/pN1
-			Next i
-			Close #fileTemp
-
-			fileTemp = FreeFile()
-			Open "S2-"+ Str(seans_str(CUR).seans.Year1) + "-" + Str(seans_str(CUR).seans.Month1) + "-"+ Str(seans_str(CUR).seans.Day1) + "__" + Str(seans_str(CUR).seans.Hour1) + "."+Str(seans_str(CUR).seans.Minute1) + "."+Str(seans_str(CUR).seans.Second1) + ".csv" For Output As #fileTemp
-			For i = 0 To 679
-				Print #fileTemp, Using "####.#; ####.####"; seans2_altS(i); (seans_str(CUR).seans.datps2(i)-pN2)/pN2
-			Next i
-			Close #fileTemp
-
-			pN1 = 0
-			pN2 = 0
-			For i = 650 To 670
-				pN1 += seans_str(CUR).seans.dat1(i, 0)
-				pN2 += seans_str(CUR).seans.dat3(i, 0)
-			Next i
-			pN1 /= 20
-			pN2 /= 20
-
-
-			fileTemp = FreeFile()
-			Open "L1-"+ Str(seans_str(CUR).seans.Year1) + "-" + Str(seans_str(CUR).seans.Month1) + "-"+ Str(seans_str(CUR).seans.Day1) + "__" + Str(seans_str(CUR).seans.Hour1) + "."+Str(seans_str(CUR).seans.Minute1)  + "."+Str(seans_str(CUR).seans.Second1) + ".csv" For Output As #fileTemp
-			For i = 0 To 679
-				Print #fileTemp, Using "####.#; ####.####"; seans2_altL(i); (seans_str(CUR).seans.dat1(i, 0)-pN1)/pN1
-			Next i
-			Close #fileTemp
-
-			fileTemp = FreeFile()
-			Open "L2-"+ Str(seans_str(CUR).seans.Year1) + "-" + Str(seans_str(CUR).seans.Month1) + "-"+ Str(seans_str(CUR).seans.Day1) + "__" + Str(seans_str(CUR).seans.Hour1) + "."+Str(seans_str(CUR).seans.Minute1) +  "."+Str(seans_str(CUR).seans.Second1) + ".csv" For Output As #fileTemp
-			For i = 0 To 679
-				Print #fileTemp, Using "####.#; ####.####"; seans2_altL(i); (seans_str(CUR).seans.dat3(i, 0)-pN2)/pN2
-			Next i
-			Close #fileTemp
-			'/
-
-
-		/'
-		Case KEY_Z
-
-			ReDim As Double zt1(0 To seans_loaded-1)
-			ReDim As Double zt2(0 To seans_loaded-1)
-			ReDim As Double zt3(0 To seans_loaded-1)
-			ReDim As Double zt4(0 To seans_loaded-1)
-
-			ReDim As Double ztr1(0 To seans_loaded-1)
-			ReDim As Double ztr2(0 To seans_loaded-1)
-
-			ReDim As Double rnz1(0 To 18, 0 To seans_loaded-1)
-			ReDim As Double rnz2(0 To 18, 0 To seans_loaded-1)
-
-			ReDim As Double rnz1s(0 To 18, 0 To seans_loaded-1)
-			ReDim As Double rnz2s(0 To 18, 0 To seans_loaded-1)
-
-			Dim As Integer t
-
-			Dim As Integer file1, file2, file3, file4
-			Dim As Integer file5, file6, file7, file8
-			Dim As Integer file9, file10
-
-			file1 = FreeFile()
-			Open "Z1-"+ Str(seans_str(CUR).seans.Year1) + "-" + Str(seans_str(CUR).seans.Month1) + "-"+ Str(seans_str(CUR).seans.Day1) + ".csv" For Output As #file1
-
-			file2 = FreeFile()
-			Open "Z2-"+ Str(seans_str(CUR).seans.Year1) + "-" + Str(seans_str(CUR).seans.Month1) + "-"+ Str(seans_str(CUR).seans.Day1) + ".csv" For Output As #file2
-
-			file3 = FreeFile()
-			Open "Z3-"+ Str(seans_str(CUR).seans.Year1) + "-" + Str(seans_str(CUR).seans.Month1) + "-"+ Str(seans_str(CUR).seans.Day1) + ".csv" For Output As #file3
-
-			file4 = FreeFile()
-			Open "Z4-"+ Str(seans_str(CUR).seans.Year1) + "-" + Str(seans_str(CUR).seans.Month1) + "-"+ Str(seans_str(CUR).seans.Day1) + ".csv" For Output As #file4
-
-			file5 = FreeFile()
-			Open "Z1r-"+ Str(seans_str(CUR).seans.Year1) + "-" + Str(seans_str(CUR).seans.Month1) + "-"+ Str(seans_str(CUR).seans.Day1) + ".csv" For Output As #file5
-
-			file6 = FreeFile()
-			Open "Z2r-"+ Str(seans_str(CUR).seans.Year1) + "-" + Str(seans_str(CUR).seans.Month1) + "-"+ Str(seans_str(CUR).seans.Day1) + ".csv" For Output As #file6
-
-			file7 = FreeFile()
-			Open "RNZ1-"+ Str(seans_str(CUR).seans.Year1) + "-" + Str(seans_str(CUR).seans.Month1) + "-"+ Str(seans_str(CUR).seans.Day1) + ".csv" For Output As #file7
-
-			file8 = FreeFile()
-			Open "RNZ2-"+ Str(seans_str(CUR).seans.Year1) + "-" + Str(seans_str(CUR).seans.Month1) + "-"+ Str(seans_str(CUR).seans.Day1) + ".csv" For Output As #file8
-
-			file9 = FreeFile()
-			Open "RNZ1s-"+ Str(seans_str(CUR).seans.Year1) + "-" + Str(seans_str(CUR).seans.Month1) + "-"+ Str(seans_str(CUR).seans.Day1) + ".csv" For Output As #file9
-
-			file10 = FreeFile()
-			Open "RNZ2s-"+ Str(seans_str(CUR).seans.Year1) + "-" + Str(seans_str(CUR).seans.Month1) + "-"+ Str(seans_str(CUR).seans.Day1) + ".csv" For Output As #file10
-
-
-			For t = 0 To seans_loaded-1
-				zt1(t) = 0
-				zt2(t) = 0
-				zt3(t) = 0
-				zt4(t) = 0
-
-				ztr1(t) = 0
-				ztr2(t) = 0
-
-				For tau As Integer = 0 To 18
-					rnz1(tau, t) = 0
-					rnz2(tau, t) = 0
-					rnz1s(tau, t) = 0
-					rnz2s(tau, t) = 0
-				Next tau
-
-				Dim As Integer numH = 0
-
-				For i = 500 To 600
-					zt1(t) += seans_str(t).seans.dat01(i)
-					zt2(t) += seans_str(t).seans.dat02(i)
-					zt3(t) += seans_str(t).seans.dat03(i)
-					zt4(t) += seans_str(t).seans.dat04(i)
-
-					For tau As Integer = 0 To 18
-						rnz1(tau, t) += seans_str(t).seans.dat1(i, tau)
-						rnz2(tau, t) += seans_str(t).seans.dat3(i, tau)
-						rnz1s(tau, t) += seans_str(t).seans.dat2(i, tau)
-						rnz2s(tau, t) += seans_str(t).seans.dat4(i, tau)
-					Next tau
-
-					For tau As Integer = 15 To 18
-						ztr1(t) += seans_str(t).seans.dat1(i, tau)
-						ztr2(t) += seans_str(t).seans.dat3(i, tau)
-					Next tau
-
-					numH += 1
-				Next i
-
-				zt1(t) /= numH
-				zt2(t) /= numH
-				zt3(t) /= numH
-				zt4(t) /= numH
-
-				ztr1(t) /= 4*numH
-				ztr2(t) /= 4*numH
-
-				For tau As Integer = 0 To 18
-					rnz1(tau, t) /= numH
-					rnz2(tau, t) /= numH
-					rnz1s(tau, t) /= numH
-					rnz2s(tau, t) /= numH
-				Next tau
-
-				For tau As Integer = 0 To 18
-					rnz1(tau, t) -= zt1(t)*zt1(t)/1463.0
-					rnz2(tau, t) -= zt2(t)*zt2(t)/1463.0
-				Next tau
-
-				Print #file1, Using "##.####; ##.####^^^"; seans_str(t).time_decimal; zt1(t)
-				Print #file2, Using "##.####; ##.####^^^"; seans_str(t).time_decimal; zt2(t)
-				Print #file3, Using "##.####; ##.####^^^"; seans_str(t).time_decimal; zt3(t)
-				Print #file4, Using "##.####; ##.####^^^"; seans_str(t).time_decimal; zt4(t)
-
-				Print #file5, Using "##.####; ##.####^^^"; seans_str(t).time_decimal; ztr1(t)
-				Print #file6, Using "##.####; ##.####^^^"; seans_str(t).time_decimal; ztr2(t)
-
-				For tau As Integer = 0 To 18
-					Print #file7, Using "######.####; "; rnz1(tau, t);
-					Print #file8, Using "######.####; "; rnz2(tau, t);
-					Print #file9,  Using "######.####; "; rnz1s(tau, t);
-					Print #file10, Using "######.####; "; rnz2s(tau, t);
-				Next tau
-				Print #file7,
-				Print #file8,
-				Print #file9,
-				Print #file10,
-
-			Next t
-
-			Close #file1
-			Close #file2
-			Close #file3
-			Close #file4
-			Close #file5
-			Close #file6
-			Close #file7
-			Close #file8
-			Close #file9
-			Close #file10
-			'/
-			
-
-/'
-		Case KEY_I
-			ReDim As Double p(0 To 679, 0 To seans_loaded-1)
-			Dim As Integer file
-
-
-			For h As Integer = 0 To 679
-				For t As Integer = 0 To seans_loaded-1
-					p(h, t) = 0
-					For tau As Integer = 0 To 18
-						p(h, t) += seans_str(t).seans.dat1(h, tau)
-					Next tau
-				Next t
-			Next h
-
-			file = FreeFile()
-			Open "p.csv" For Output As #file
-
-			For h As Integer = 0 To 679 Step 1
-				For t As Integer = 0 To seans_loaded-1 Step 1
-					Print #file, Using "##.###^^^; "; p(h, t);
-				Next t
-				Print #file,
-			Next h
-
-			Close #file
-
-			file = FreeFile()
-			Open "p2.csv" For Output As #file
-			For h As Integer = 0 To 679 Step 1
-				For t As Integer = 0 To seans_loaded-1 Step 1
-					Print #file, Using "##.###^^^^; "; seans_str(t).seans.dat1(h, 0);
-				Next t
-				Print #file,
-			Next h
-			Close #file
-
-
-			file = FreeFile()
-			Open "t.csv" For Output As #file
-			For t As Integer = 0 To seans_loaded-1 Step 1
-				Print #file, Using "##.###^^^^; "; seans_str(t).time_decimal;
-			Next t
-			Close #file
-
-
-			file = FreeFile()
-			Open "h.csv" For Output As #file
-			For h As Integer = 0 To 679 Step 1
-				Print #file, Using "##.###^^^^; "; seans2_altL_front(h)
-			Next h
-			Close #file
-'/
-		
 		Case KEY_A, KEY_A_CAPITAL
 			Color 15
 			AutomaticClear()
@@ -599,26 +392,76 @@ Do
 			Vis_array_load ' загрузить данные для отображения
 
 		Case KEY_DEL
-			seans_str(CUR).seans.m(H) = 1
-			seans_str(CUR).isM = 2
-			seans2_saveM3(seans_str(CUR).filename_full, @(seans_str(CUR).seans))
-			If CUR < seans_loaded-1 Then CUR = CUR + 1 End If
+			If SEL_START = SEL_END Then
+				seans_str(CUR).seans.m(H) = 1
+				seans_str(CUR).isM = 2
+				seans2_saveM3(seans_str(CUR).filename_full, @(seans_str(CUR).seans))
+				If CUR < seans_loaded-1 Then CUR = CUR + 1 End If
+			Else
+				For i = SEL_START To SEL_END
+					seans_str(i).seans.m(H) = 1
+					seans_str(i).isM = 2
+					seans2_saveM3(seans_str(i).filename_full, @(seans_str(i).seans))
+				Next i
+				SEL_START = 0
+				SEL_END = 0
+			EndIf
 			Vis_array_load ' загрузить данные для отображения
+
+		Case KEY_CTRL_U
+			If SEL_END > SEL_START Then
+				For i = SEL_START To SEL_END
+					seans_str(i).seans.m(H) = 0
+					seans_str(i).isM = 2
+					seans2_saveM3(seans_str(i).filename_full, @(seans_str(i).seans))
+				Next i
+				SEL_START = 0
+				SEL_END = 0
+				Vis_array_load ' загрузить данные для отображения
+			EndIf
+
+		Case KEY_CTRL_R
+			If SEL_START <> SEL_END Then
+				For j = SEL_START To SEL_END
+					For i = 0 To 679
+						seans_str(j).seans.m(i) = 0
+					Next i
+					seans_str(j).isM = 2
+					seans2_saveM3(seans_str(j).filename_full, @(seans_str(j).seans))
+				Next j
+				SEL_START = 0
+				SEL_END = 0
+				Vis_array_load
+			EndIf
 
 		Case KEY_CTRL_DEL
-			For i = 0 To 679
-				seans_str(CUR).seans.m(i) = 1
-			Next i
-			seans_str(CUR).isM = 2
-			seans2_saveM3(seans_str(CUR).filename_full, @(seans_str(CUR).seans))
-			Vis_array_load ' загрузить данные для отображения			
+			If SEL_START = SEL_END Then
+				For i = 0 To 679
+					seans_str(CUR).seans.m(i) = 1
+				Next i
+				seans_str(CUR).isM = 2
+				seans2_saveM3(seans_str(CUR).filename_full, @(seans_str(CUR).seans))
+			Else
+				For j = SEL_START To SEL_END
+					For i = 0 To 679
+						seans_str(j).seans.m(i) = 1
+					Next i
+					seans_str(j).isM = 2
+					seans2_saveM3(seans_str(j).filename_full, @(seans_str(j).seans))
+				Next j
+				SEL_START = 0
+				SEL_END = 0
+			EndIf
+			Vis_array_load ' загрузить данные для отображения
 
 		Case KEY_BACKSPACE
-			seans_str(CUR).seans.m(H) = 1
-			seans_str(CUR).isM = 2
-			seans2_saveM3(seans_str(CUR).filename_full, @(seans_str(CUR).seans))
-			If CUR > 0 Then CUR = CUR - 1  End If
-			Vis_array_load ' загрузить данные для отображения
+			If SEL_START = SEL_END Then
+				seans_str(CUR).seans.m(H) = 1
+				seans_str(CUR).isM = 2
+				seans2_saveM3(seans_str(CUR).filename_full, @(seans_str(CUR).seans))
+				If CUR > 0 Then CUR = CUR - 1  End If
+				Vis_array_load ' загрузить данные для отображения
+			EndIf
 
 		Case KEY_1
 			CHANNEL = 1
@@ -635,10 +478,6 @@ Do
 		Case KEY_4
 			CHANNEL = 4
 			Vis_array_load ' загрузить данные для отображения
-
-
-
-
 
 	End Select
 
@@ -678,6 +517,7 @@ Sub HelpPrint
 	Print "Управление:"
 	Print " Alt + Enter      Переключиться из оконного режима в полноэкранный и наоборот (работает не на всех системах)"
 	Print "       Left Right Перемещение по сеансам"
+	Print "Ctrl + Left Right Выделение нескольких сеансов"
 	Print "       Home       Перемещение курсора на сеанс в начале экрана"
 	Print "       End        Перемещение курсора на сеанс в конце экрана"
 	Print "       Tab        Перемещение курсора на 10 сеансов вправо"
@@ -686,9 +526,9 @@ Sub HelpPrint
 	Print "        +   -     Изменение масштаба по оси времени"
 	Print "       PgUp PgDn  Перемещение по высотам"
 	Print "       H          Задать текущую высоту"
-	Print "       Пробел     Вырезать данные на текущей высоте из текущего сеанса"
-	Print "       Del        Вырезать данные на текущей высоте из текущего сеанса и сместить курсор на следующий сеанс"
-	Print "       BackSpace  Вырезать данные на текущей высоте из текущего сеанса и сместить курсор на предыдущий сеанс"
+	Print "       Пробел     Вырезать или восстановить данные на текущей высоте из текущего сеанса"
+	Print "       Del        Вырезать данные в выделенной области или на текущей высоте из текущего сеанса и сместить курсор вправо"
+	Print "       BackSpace  Вырезать данные на текущей высоте из текущего сеанса и сместить курсор влево"
 	Print "       V          Отображать или скрывать вырезанные данные"
 	Print "       O          Выбор ординат для отображения"
 	Print "       R          Показать коэффициент корреляции сигнала НР"
@@ -696,6 +536,8 @@ Sub HelpPrint
 	Print "       1 2 3 4    Выбор канала"
 	Print "       A          Автоматическое удаление когерентных отражений"
 	Print "       F1         Вызов этой помощи"
+	Print "Ctrl + U          Восстановить выделенные данные на текущей высоте"
+	Print "Ctrl + R          Восстановить выделенные данные на всех высотах"
 	Print "Ctrl + P          Сохранение экрана в файл screen.bmp"
 	Print "Ctrl + Q          Выход из программы"
 	Print
@@ -1222,7 +1064,7 @@ Sub ACFPrint()
 
 		For i = 0 To 17
 			Line (x0+i*dxdy, 400-5*dxdy*acf_filter(i))-(x0+(i+1)*dxdy, 400-5*dxdy*acf_filter(i+1)), 14  ' вывод АКФ ИХ фильтра
-			Line (x0+i*dxdy, 400-5*dxdy*n(i))-(x0+(i+1)*dxdy, 400-5*dxdy*n(i+1)), 9			
+			Line (x0+i*dxdy, 400-5*dxdy*n(i))-(x0+(i+1)*dxdy, 400-5*dxdy*n(i+1)), 9
 			Line (x0+i*dxdy, 400-5*dxdy*r(i))-(x0+(i+1)*dxdy, 400-5*dxdy*r(i+1)), 10
 		Next i
 

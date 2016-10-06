@@ -62,6 +62,9 @@ Declare Function seans_struct_time_compare cdecl (elem1 as any ptr, elem2 as any
 Dim As Integer d_month, d_year, d_day, d_ndays
 Dim As String s_year, s_month, s_day
 
+Dim Shared As Integer SEL_START = 0
+Dim Shared As Integer SEL_END = 0
+
 ''' =======================================================================
 
 
@@ -113,6 +116,11 @@ Print
 Color 7
 Print "View - программа просмотра S-файлов системы К1"
 Print "(c) Богомаз А.В., Котов Д.В. (Институт ионосферы)"
+Color 8
+Print
+Print "================================"
+Print "Программа собрана " + Mid(__DATE__, 4, 2)+"."+Mid(__DATE__, 1, 2)+"."+Mid(__DATE__, 7, 4)
+Print "================================"
 Print
 
 Color 15
@@ -187,12 +195,19 @@ Do
 
 	Cls
 
+	' рисование выделенной области
+	If SEL_START <> SEL_END Then
+		Line (5+(SEL_START-START_X)*DX, 25)-(5+(SEL_END-START_X)*DX, 768-25), 7, BF
+	EndIf
+
+	' рисование курсора
 	If seans_str(CUR).seans.m(H*4) = 0 Then
-		Line (5+(CUR-START_X)*DX, 25)-(5+(CUR-START_X)*DX, 768-25), 7
+		Line (5+(CUR-START_X)*DX, 25)-(5+(CUR-START_X)*DX, 768-25), 15
 	Else
-		Line (5+(CUR-START_X)*DX, 25)-(5+(CUR-START_X)*DX, 768-25), 7, , &b0000000011110000
+		Line (5+(CUR-START_X)*DX, 25)-(5+(CUR-START_X)*DX, 768-25), 15, , &b0000000011110000
 	End If
 
+	' рисование графиков
 	For j = POINTS_START To POINTS_END
 		Line  (0, Y0+DY*j/6)-(1024, Y0+DY*j/6), 15-j, , &b0000000011110000
 		For i = START_X To (seans_loaded-2)
@@ -269,22 +284,48 @@ Do
 		Case KEY_CTRL_P
 			BSave ("screen.bmp", 0)
 
+		Case KEY_CTRL_RIGHT
+			If CUR < seans_loaded-1 Then
+				If SEL_END > SEL_START Then
+					SEL_END += 1
+				Else
+					SEL_START = CUR
+					SEL_END = SEL_START
+					SEL_END += 1
+				EndIf
+				CUR += 1
+			EndIf
+
+		Case KEY_CTRL_LEFT
+			If (CUR > 0) And (SEL_END > SEL_START) Then
+				SEL_END -= 1
+				CUR -= 1
+			EndIf
+
 		Case KEY_RIGHT
-			If CUR < seans_loaded-1 Then CUR = CUR + 1 End If
+			If (CUR < seans_loaded-1) And (SEL_START = SEL_END) Then
+				CUR += 1
+			End If
 
 		Case KEY_LEFT
-			If CUR > 0 Then CUR = CUR - 1  End If
+			If (CUR > 0) And (SEL_START = SEL_END) Then
+				CUR -= 1
+			EndIf
 
 		Case KEY_PLUS
-			If DX < 32 Then DX = DX*2 End If
+			If DX < 32 Then DX *= 2 End If
 
 		Case KEY_MINUS
-			If DX > 1 Then DX = DX/2 End If
+			If DX > 1 Then DX /= 2 End If
 
 		Case KEY_DOWN
+			SEL_START = 0
+			SEL_END = 0
 			If START_X < seans_loaded-1 Then START_X += 1 End If
 
 		Case KEY_UP
+			SEL_START = 0
+			SEL_END = 0
 			If START_X > 0  Then START_X -= 1  End If
 
 		Case KEY_CTRL_DOWN
@@ -294,6 +335,8 @@ Do
 			If START_X > 10  Then START_X -= 10  End If
 
 		Case KEY_H
+			SEL_START = 0
+			SEL_END = 0
 			Color 15
 			Input "H: ", H
 			H = H-1
@@ -312,29 +355,35 @@ Do
 			If POINTS_END > 13 Then POINTS_END = 13 End If
 
 		Case KEY_PAGE_UP
+			SEL_START = 0
+			SEL_END = 0
 			If H < HMAX-1 Then H = H + 1 End If
 			Vis_array_load ' загрузить данные для отображения
 
 		Case KEY_PAGE_DOWN
+			SEL_START = 0
+			SEL_END = 0
 			If H > HMIN Then H = H - 1 End If
 			Vis_array_load ' загрузить данные для отображения
 
 		Case KEY_SPACE
-			If seans_str(CUR).seans.m(H*4) = 0 Then
-				seans_str(CUR).seans.m(H*4) = 1
-			Else
-				seans_str(CUR).seans.m(H*4) = 0
-			End If
-			seans_str(CUR).isM = 2
-			seans1s_saveM3(seans_str(CUR).filename_full, @(seans_str(CUR).seans))
-			Vis_array_load ' загрузить данные для отображения
+			If SEL_START = SEL_END Then
+				If seans_str(CUR).seans.m(H*4) = 0 Then
+					seans_str(CUR).seans.m(H*4) = 1
+				Else
+					seans_str(CUR).seans.m(H*4) = 0
+				EndIf
+				seans_str(CUR).isM = 2
+				seans1s_saveM3(seans_str(CUR).filename_full, @(seans_str(CUR).seans))
+				Vis_array_load ' загрузить данные для отображения
+			EndIf
 
 		Case KEY_V
 			If VISIBLE = 0 Then
 				VISIBLE = 1
 			Else
 				VISIBLE = 0
-			End If
+			EndIf
 			Vis_array_load ' загрузить данные для отображения
 
 		Case KEY_F1
@@ -346,16 +395,20 @@ Do
 			Vis_array_load ' загрузить данные для отображения
 
 		Case KEY_HOME
-			CUR=START_X
+			If SEL_START = SEL_END Then
+				CUR = START_X
+			EndIf
 
 		Case KEY_END
-			If START_X+(1024\DX)-1 < seans_loaded Then
-				CUR = START_X+(1024\DX)-1
-			Else
-				CUR=seans_loaded-1
-			End If
+			If SEL_START = SEL_END Then
+				If START_X+(1024\DX)-1 < seans_loaded Then
+					CUR = START_X+(1024\DX)-1
+				Else
+					CUR=seans_loaded-1
+				End If
+			EndIf
 
-		Case KEY_A
+		Case KEY_A, KEY_A_CAPITAL
 			Color 15
 			AutomaticClear()
 			Vis_array_load ' загрузить данные для отображения
@@ -368,44 +421,79 @@ Do
 			Vis_array_load ' загрузить данные для отображения
 
 		Case KEY_DEL
-			seans_str(CUR).seans.m(H*4) = 1
-			seans_str(CUR).isM = 2
-			seans1s_saveM3(seans_str(CUR).filename_full, @(seans_str(CUR).seans))
-			If CUR < seans_loaded-1 Then CUR = CUR + 1 End If
+			If SEL_START = SEL_END Then
+				seans_str(CUR).seans.m(H*4) = 1
+				seans_str(CUR).isM = 2
+				seans1s_saveM3(seans_str(CUR).filename_full, @(seans_str(CUR).seans))
+				If CUR < seans_loaded-1 Then
+					CUR += 1
+				EndIf
+			Else
+				For i = SEL_START To SEL_END
+					seans_str(i).seans.m(H*4) = 1
+					seans_str(i).isM = 2
+					seans1s_saveM3(seans_str(i).filename_full, @(seans_str(i).seans))
+				Next i
+				SEL_START = 0
+				SEL_END = 0
+			EndIf
 			Vis_array_load ' загрузить данные для отображения
 
+		Case KEY_CTRL_U
+			If SEL_END > SEL_START Then
+				For i = SEL_START To SEL_END
+					seans_str(i).seans.m(H*4) = 0
+					seans_str(i).isM = 2
+					seans1s_saveM3(seans_str(i).filename_full, @(seans_str(i).seans))
+				Next i
+				SEL_START = 0
+				SEL_END = 0
+				Vis_array_load ' загрузить данные для отображения
+			EndIf
+
+		Case KEY_CTRL_R
+			If SEL_START <> SEL_END Then
+				For j = SEL_START To SEL_END
+					For i = 0 To 170-1
+						seans_str(j).seans.m(i*4) = 0
+					Next i
+					seans_str(j).isM = 2
+					seans1s_saveM3(seans_str(j).filename_full, @(seans_str(j).seans))
+				Next j
+				SEL_START = 0
+				SEL_END = 0
+				Vis_array_load
+			EndIf
 
 		Case KEY_CTRL_DEL
-			For i = 0 To 170-1
-				seans_str(CUR).seans.m(i*4) = 1
-			Next i
-			seans_str(CUR).isM = 2
-			seans1s_saveM3(seans_str(CUR).filename_full, @(seans_str(CUR).seans))
+			If SEL_START = SEL_END Then
+				For i = 0 To 170-1
+					seans_str(CUR).seans.m(i*4) = 1
+				Next i
+				seans_str(CUR).isM = 2
+				seans1s_saveM3(seans_str(CUR).filename_full, @(seans_str(CUR).seans))
+			Else
+				For j = SEL_START To SEL_END
+					For i = 0 To 170-1
+						seans_str(j).seans.m(i*4) = 1
+					Next i
+					seans_str(j).isM = 2
+					seans1s_saveM3(seans_str(j).filename_full, @(seans_str(j).seans))
+				Next j
+				SEL_START = 0
+				SEL_END = 0
+			EndIf
 			Vis_array_load
 
 
 		Case KEY_BACKSPACE
-			seans_str(CUR).seans.m(H*4) = 1
-			seans_str(CUR).isM = 2
-			seans1s_saveM3(seans_str(CUR).filename_full, @(seans_str(CUR).seans))
-			If CUR > 0 Then CUR = CUR - 1  End If
-			Vis_array_load ' загрузить данные для отображения
-
-		Case KEY_1
-			CHANNEL = 1
-			Vis_array_load ' загрузить данные для отображения
-
-		Case KEY_2
-			CHANNEL = 2
-			Vis_array_load ' загрузить данные для отображения
-
-		Case KEY_3
-			CHANNEL = 3
-			Vis_array_load ' загрузить данные для отображения
-
-		Case KEY_4
-			CHANNEL = 4
-			Vis_array_load ' загрузить данные для отображения
+			If SEL_START = SEL_END Then
+				seans_str(CUR).seans.m(H*4) = 1
+				seans_str(CUR).isM = 2
+				seans1s_saveM3(seans_str(CUR).filename_full, @(seans_str(CUR).seans))
+				If CUR > 0 Then CUR = CUR - 1  End If
+				Vis_array_load ' загрузить данные для отображения
+			EndIf
 
 	End Select
 
@@ -445,6 +533,7 @@ Sub HelpPrint
 	Print "Управление:"
 	Print " Alt + Enter      Переключиться из оконного режима в полноэкранный и наоборот (работает не на всех системах)"
 	Print "       Left Right Перемещение по сеансам"
+	Print "Ctrl + Left Right Выделение нескольких сеансов"
 	Print "       Home       Перемещение курсора на сеанс в начале экрана"
 	Print "       End        Перемещение курсора на сеанс в конце экрана"
 	Print "       Tab        Перемещение курсора на 10 сеансов вправо"
@@ -453,16 +542,17 @@ Sub HelpPrint
 	Print "        +   -     Изменение масштаба по оси времени"
 	Print "       PgUp PgDn  Перемещение по высотам"
 	Print "       H          Задать текущую высоту"
-	Print "       Пробел     Вырезать данные на текущей высоте из текущего сеанса"
-	Print "       Del        Вырезать данные на текущей высоте из текущего сеанса и сместить курсор на следующий сеанс"
-	Print "       BackSpace  Вырезать данные на текущей высоте из текущего сеанса и сместить курсор на предыдущий сеанс"
+	Print "       Пробел     Вырезать или восстановить данные на текущей высоте из текущего сеанса"
+	Print "       Del        Вырезать данные в выделенной области или на текущей высоте из текущего сеанса и сместить курсор вправо"
+	Print "       BackSpace  Вырезать данные на текущей высоте из текущего сеанса и сместить курсор влево"
 	Print "       V          Отображать или скрывать вырезанные данные"
 	Print "       O          Выбор ординат для отображения"
 	Print "       R          Показать коэффициент корреляции сигнала НР"
 	Print "       N          Выбор режима - сигнал+шум или сигнал (коэффициент корреляции)"
-	Print "       1 2 3 4    Выбор канала"
 	Print "       A          Автоматическое удаление когерентных отражений"
 	Print "       F1         Вызов этой помощи"
+	Print "Ctrl + U          Восстановить выделенные данные на текущей высоте"
+	Print "Ctrl + R          Восстановить выделенные данные на всех высотах"
 	Print "Ctrl + P          Сохранение экрана в файл screen.bmp"
 	Print "Ctrl + Q          Выход из программы"
 	Print
