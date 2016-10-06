@@ -7,7 +7,7 @@
 #Define NULL 0
 #EndIf
 
-#Ifndef M_PI 
+#Ifndef M_PI
 #Define M_PI 3.14159265358979323846
 #EndIf
 
@@ -24,59 +24,61 @@
 ' описание scan-кодов клавиш и комбинация клавиш
 
 Enum AlbomKeys
-	KEY_CTRL_A = 1 
-	KEY_BACKSPACE = 8
-	KEY_TAB = 9
-	KEY_ENTER = 13
-	KEY_CTRL_N = 14
-	KEY_CTRL_P = 16
-	KEY_CTRL_Q = 17
-	KEY_ESC = 27
-	KEY_SPACE = 32
-	KEY_PLUS = 43
-	KEY_MINUS = 45
-	KEY_1 = 49
-	KEY_2 = 50
-	KEY_3 = 51
-	KEY_4 = 52
-	KEY_A = 97
-	KEY_B = 98
-	KEY_C = 99
-	KEY_D = 100
-	KEY_E = 101
-	KEY_F = 102
-	KEY_G = 103
-	KEY_H = 104
-	KEY_I = 105
-	KEY_M = 109
-	KEY_N = 110
-	KEY_O = 111
-	KEY_P = 112
-	KEY_Q = 113
-	KEY_R = 114
-	KEY_S = 115
-	KEY_T = 116
-	KEY_U = 117
-	KEY_V = 118
-	KEY_Y = 121
-	KEY_Z = 122
-	KEY_F1 = 15359
-	KEY_LEFT = 19455
-	KEY_RIGHT = 19967 
-	KEY_UP = 18687
-	KEY_DOWN = 20735
-	KEY_DEL = 21503
-	KEY_CTRL_DEL = 37887 
-	KEY_CTRL_LEFT = 29695
-	KEY_CTRL_RIGHT = 29951
-	KEY_CTRL_UP = 36351
-	KEY_CTRL_DOWN = 37375
-	KEY_SHIFT_LEFT = 19455
-	KEY_SHIFT_RIGHT = 19967
-	KEY_PAGE_UP = 18943
-	KEY_PAGE_DOWN = 20991
-	KEY_HOME = 18431
-	KEY_END = 20479 
+KEY_CTRL_A = 1
+KEY_BACKSPACE = 8
+KEY_TAB = 9
+KEY_ENTER = 13
+KEY_CTRL_N = 14
+KEY_CTRL_P = 16
+KEY_CTRL_Q = 17
+KEY_ESC = 27
+KEY_SPACE = 32
+KEY_PLUS = 43
+KEY_MINUS = 45
+KEY_1 = 49
+KEY_2 = 50
+KEY_3 = 51
+KEY_4 = 52
+KEY_A = 97
+KEY_B = 98
+KEY_C = 99
+KEY_D = 100
+KEY_E = 101
+KEY_F = 102
+KEY_G = 103
+KEY_H = 104
+KEY_I = 105
+KEY_M = 109
+KEY_N = 110
+KEY_O = 111
+KEY_P = 112
+KEY_Q = 113
+KEY_R = 114
+KEY_S = 115
+KEY_T = 116
+KEY_U = 117
+KEY_V = 118
+KEY_Y = 121
+KEY_Z = 122
+KEY_F1 = 15359
+KEY_F11 = 34303
+KEY_F12 = 34559
+KEY_LEFT = 19455
+KEY_RIGHT = 19967
+KEY_UP = 18687
+KEY_DOWN = 20735
+KEY_DEL = 21503
+KEY_CTRL_DEL = 37887
+KEY_CTRL_LEFT = 29695
+KEY_CTRL_RIGHT = 29951
+KEY_CTRL_UP = 36351
+KEY_CTRL_DOWN = 37375
+KEY_SHIFT_LEFT = 19455
+KEY_SHIFT_RIGHT = 19967
+KEY_PAGE_UP = 18943
+KEY_PAGE_DOWN = 20991
+KEY_HOME = 18431
+KEY_END = 20479
 End Enum
 
 
@@ -100,14 +102,14 @@ End Function
 Sub Print_process_percent(ByVal num As Integer)
 	Dim As String s
 	If num > 100 Then
-		Print "    "; 
+		Print "    ";
 		Locate ,Pos-4
 	Else
 		s = Str(num)
 		If num < 10  Then s = "0"+s
 		If num < 100 Then s = "0"+s
-	
-		Print s;"%"; 
+
+		Print s;"%";
 		Locate ,Pos-4
 	EndIf
 End Sub
@@ -117,7 +119,7 @@ End Sub
 ' Процедура break - Ожидает нажатия клавиши и завершает работу программы
 
 Sub break()
-	Sleep 
+	Sleep
 	End
 End Sub
 
@@ -132,7 +134,7 @@ Function GetKey_YN() As Integer
 	Do
 		key = GetKey
 	Loop Until key = KEY_Y Or key = KEY_N
-	
+
 	If key = KEY_Y Then Print "Y": Return 1 Else Print "N": Return 0
 End Function
 
@@ -143,19 +145,19 @@ End Function
 
 Type  seans_header Field = 1
 
-	Dim Day1							As Integer 
-	Dim Month1						As Integer 
-	Dim Year1						As Integer 
-	Dim Hour1						As Integer 
-	Dim Minute1						As Integer 
-	Dim Second1						As Integer 
+	Dim Day1							As Integer
+	Dim Month1						As Integer
+	Dim Year1						As Integer
+	Dim Hour1						As Integer
+	Dim Minute1						As Integer
+	Dim Second1						As Integer
 
-	Dim NSeans						As Integer 
-	Dim Nr0							As Integer 
-	Dim Nr1							As Integer 
-	
+	Dim NSeans						As Integer
+	Dim Nr0							As Integer
+	Dim Nr1							As Integer
+
 	Dim U1							As Integer
- 
+
 End Type
 
 ''' ===================================================================================================
@@ -163,49 +165,49 @@ End Type
 
 Type  seans1s_data Field = 1
 
-	Dim Day1							As Integer 
-	Dim Month1						As Integer 
-	Dim Year1						As Integer 
-	Dim Hour1						As Integer 
-	Dim Minute1						As Integer 
-	Dim Second1						As Integer 
-	
-	Dim NSeans						As Integer 
-	Dim Nr0							As Integer 
-	Dim Nr1							As Integer 
-	
-	Dim U1							As Integer 
+	Dim Day1							As Integer
+	Dim Month1						As Integer
+	Dim Year1						As Integer
+	Dim Hour1						As Integer
+	Dim Minute1						As Integer
+	Dim Second1						As Integer
 
-	Dim Dat(0 To 169, 0 To 17) As Integer 
-	
-	Dim Datm(0 To 679)			As Integer 
-	Dim Datp(0 To 679)			As Integer 
+	Dim NSeans						As Integer
+	Dim Nr0							As Integer
+	Dim Nr1							As Integer
 
-	Dim m(0 To 679)				As Integer 
-	
+	Dim U1							As Integer
+
+	Dim Dat(0 To 169, 0 To 17) As Integer
+
+	Dim Datm(0 To 679)			As Integer
+	Dim Datp(0 To 679)			As Integer
+
+	Dim m(0 To 679)				As Integer
+
 End Type
 
 Type  seans1c_data Field = 1
 
-	Dim Day1							As Integer 
-	Dim Month1						As Integer 
-	Dim Year1						As Integer 
-	Dim Hour1						As Integer 
-	Dim Minute1						As Integer 
-	Dim Second1						As Integer 
-	
-	Dim NSeans						As Integer 
-	Dim Nr0							As Integer 
-	Dim Nr1							As Integer 
-	
-	Dim U1							As Integer 
+	Dim Day1							As Integer
+	Dim Month1						As Integer
+	Dim Year1						As Integer
+	Dim Hour1						As Integer
+	Dim Minute1						As Integer
+	Dim Second1						As Integer
 
-	Dim Dat1(0 To 359, 0 To 6)	As Integer 
-	Dim Dat2(0 To 359, 0 To 6)	As Integer 
-	Dim Dat0(0 To 359)			As Integer 
+	Dim NSeans						As Integer
+	Dim Nr0							As Integer
+	Dim Nr1							As Integer
 
-	Dim m(0 To 359)				As Integer 
-	
+	Dim U1							As Integer
+
+	Dim Dat1(0 To 359, 0 To 6)	As Integer
+	Dim Dat2(0 To 359, 0 To 6)	As Integer
+	Dim Dat0(0 To 359)			As Integer
+
+	Dim m(0 To 359)				As Integer
+
 End Type
 
 
@@ -213,24 +215,24 @@ Extern "c"
 Declare Function  seans1s_test Alias "seans1s_test" ( ByVal filename As ZString Ptr) As Integer
 
 Declare Function  seans1s_load_header Alias "seans1s_load_header" (_
-											 ByVal filename As ZString Ptr, _
-											 ByVal header As seans_header Ptr _
-										) As Integer
+ByVal filename As ZString Ptr, _
+ByVal header As seans_header Ptr _
+) As Integer
 
 
 Declare Function  seans1s_load Alias "seans1s_load" (_
-											 ByVal filename As ZString Ptr, _
-											 ByVal seans As seans1s_data Ptr _
-										) As Integer
+ByVal filename As ZString Ptr, _
+ByVal seans As seans1s_data Ptr _
+) As Integer
 
 Declare Function  seans1s_saveM0 Alias "seans1s_saveM0" (_
-											 ByVal filename As ZString Ptr _
-											 ) As Integer
+ByVal filename As ZString Ptr _
+) As Integer
 
 Declare Function  seans1s_saveM3 Alias "seans1s_saveM3" (_
-											 ByVal filename As ZString Ptr, _
-											 ByVal seans As seans1s_data Ptr _
-										) As Integer
+ByVal filename As ZString Ptr, _
+ByVal seans As seans1s_data Ptr _
+) As Integer
 
 
 Declare Function  seans1s_alt Alias "seans1s_alt" (ByVal H As Integer) As Double
@@ -239,46 +241,46 @@ Declare Function  seans1s_alt_795 Alias "seans1s_alt_795" (ByVal H As Integer) A
 
 
 Declare Function  seans1s_noise Alias "seans1s_noise" (_
-											 ByVal seans As seans1s_data Ptr, _
-											 ByVal acf_noise As Double Ptr, _
-											 ByVal length As Integer, _ 
-											 ByVal alt_start As Integer, _
-											 ByVal alt_end As Integer _
-										) As Integer
+ByVal seans As seans1s_data Ptr, _
+ByVal acf_noise As Double Ptr, _
+ByVal length As Integer, _
+ByVal alt_start As Integer, _
+ByVal alt_end As Integer _
+) As Integer
 
 Declare Function  seans1c_alt Alias "seans1c_alt" (ByVal H As Integer) As Double
 
 Declare Function  seans1c_test Alias "seans1c_test" ( ByVal filename As ZString Ptr) As Integer
 
 Declare Function  seans1c_load Alias "seans1c_load" (_
-											 ByVal filename As ZString Ptr, _
-											 ByVal seans As seans1c_data Ptr _
-										) As Integer
+ByVal filename As ZString Ptr, _
+ByVal seans As seans1c_data Ptr _
+) As Integer
 
 Declare Function  seans1c_noise1 Alias "seans1c_noise1" (_
-											 ByVal seans As seans1c_data Ptr, _
-											 ByVal acf_noise As Double Ptr, _
-											 ByVal length As Integer, _ 
-											 ByVal alt_start As Integer, _
-											 ByVal alt_end As Integer _
-										) As Integer
+ByVal seans As seans1c_data Ptr, _
+ByVal acf_noise As Double Ptr, _
+ByVal length As Integer, _
+ByVal alt_start As Integer, _
+ByVal alt_end As Integer _
+) As Integer
 
 Declare Function  seans1c_noise2 Alias "seans1c_noise1" (_
-											 ByVal seans As seans1c_data Ptr, _
-											 ByVal acf_noise As Double Ptr, _
-											 ByVal length As Integer, _ 
-											 ByVal alt_start As Integer, _
-											 ByVal alt_end As Integer _
-										) As Integer
+ByVal seans As seans1c_data Ptr, _
+ByVal acf_noise As Double Ptr, _
+ByVal length As Integer, _
+ByVal alt_start As Integer, _
+ByVal alt_end As Integer _
+) As Integer
 
 Declare Function  seans1c_saveM0 Alias "seans1c_saveM0" (_
-											ByVal filename As ZString Ptr _
-										) As Integer
-										
+ByVal filename As ZString Ptr _
+) As Integer
+
 Declare Function  seans1c_saveM3 Alias "seans1c_saveM3" (_
-											ByVal filename As ZString Ptr, _
-											ByVal seans As seans1c_data Ptr _
-										) As Integer
+ByVal filename As ZString Ptr, _
+ByVal seans As seans1c_data Ptr _
+) As Integer
 
 End Extern
 
@@ -289,107 +291,107 @@ End Extern
 
 Type  seans2_data Field = 1
 
-	Dim Day1								As Integer 
-	Dim Month1							As Integer 
-	Dim Year1							As Integer 
-	Dim Hour1							As Integer 
-	Dim Minute1							As Integer 
-	Dim Second1							As Integer 
+	Dim Day1								As Integer
+	Dim Month1							As Integer
+	Dim Year1							As Integer
+	Dim Hour1							As Integer
+	Dim Minute1							As Integer
+	Dim Second1							As Integer
 
-	Dim NSeans							As Integer 
-	Dim Nr0								As Integer 
-	Dim Nr1								As Integer 
+	Dim NSeans							As Integer
+	Dim Nr0								As Integer
+	Dim Nr1								As Integer
 
-	Dim U1								As Integer 
+	Dim U1								As Integer
 
-	Dim Dat1(0 To 679, 0 To 18)	As Integer 
-	Dim Dat2(0 To 679, 0 To 18)	As Integer 
-	Dim Dat3(0 To 679, 0 To 18)	As Integer 
-	Dim Dat4(0 To 679, 0 To 18)	As Integer 
+	Dim Dat1(0 To 679, 0 To 18)	As Integer
+	Dim Dat2(0 To 679, 0 To 18)	As Integer
+	Dim Dat3(0 To 679, 0 To 18)	As Integer
+	Dim Dat4(0 To 679, 0 To 18)	As Integer
 
-	Dim Dat01(0 To 679)				As Integer 
-	Dim Dat02(0 To 679)				As Integer 
+	Dim Dat01(0 To 679)				As Integer
+	Dim Dat02(0 To 679)				As Integer
 
-	Dim Datps1(0 To 679)				As Integer 
-	Dim Datps2(0 To 679)				As Integer 
+	Dim Datps1(0 To 679)				As Integer
+	Dim Datps2(0 To 679)				As Integer
 
-	Dim Dat03(0 To 679)				As Integer 
-	Dim Dat04(0 To 679)				As Integer 
+	Dim Dat03(0 To 679)				As Integer
+	Dim Dat04(0 To 679)				As Integer
 
 	Dim M(0 To 679)					As Integer
 
 End Type
 
 Extern "c"
-Declare Function  seans2_test Alias "seans2_test" ( _ 
-											ByVal filename As ZString Ptr _
-										) As Integer
+Declare Function  seans2_test Alias "seans2_test" ( _
+ByVal filename As ZString Ptr _
+) As Integer
 
 Declare Function  seans2_load_header Alias "seans2_load_header" (_
-											ByVal filename As ZString Ptr, _
-											ByVal header As seans_header Ptr _
-										) As Integer
+ByVal filename As ZString Ptr, _
+ByVal header As seans_header Ptr _
+) As Integer
 
 Declare Function  seans2_load Alias "seans2_load" ( _
-											ByVal filename As ZString Ptr, _ 
-											ByVal seans As seans2_data Ptr _
-										) As Integer
+ByVal filename As ZString Ptr, _
+ByVal seans As seans2_data Ptr _
+) As Integer
 
 Declare Function  seans2_save Alias "seans2_save" ( _
-											ByVal filename As ZString Ptr, _
-											ByVal seans As seans2_data Ptr _
-										) As Integer
-										
+ByVal filename As ZString Ptr, _
+ByVal seans As seans2_data Ptr _
+) As Integer
+
 Declare Function  seans2_altL Alias "seans2_altL" ( _
-											ByVal H As Integer _
-										) As Double
+ByVal H As Integer _
+) As Double
 
 Declare Function  seans2_altS Alias "seans2_altS" ( _
-											ByVal H As Integer _
-										) As Double
+ByVal H As Integer _
+) As Double
 
 Declare Function  seans2_altL_front Alias "seans2_altL_front" ( _
-											ByVal H As Integer _
-										) As Double
+ByVal H As Integer _
+) As Double
 
 Declare Function  seans2_saveM0 Alias "seans2_saveM0" (_
-											ByVal filename As ZString Ptr _
-										) As Integer
+ByVal filename As ZString Ptr _
+) As Integer
 
 
 Declare Function  seans2_saveM3 Alias "seans2_saveM3" (_
-											ByVal filename As ZString Ptr, _
-											ByVal seans As seans2_data Ptr _
-										) As Integer
+ByVal filename As ZString Ptr, _
+ByVal seans As seans2_data Ptr _
+) As Integer
 
 Declare Function  seans2_noise1 Alias "seans2_noise1" (ByVal seans As seans2_data Ptr, _
-											ByVal acf_noise As Double Ptr, _ 
-											ByVal length As Integer, _
-											ByVal alt_start As Integer, _
-											ByVal alt_end As Integer _
-										) As Integer										
+ByVal acf_noise As Double Ptr, _
+ByVal length As Integer, _
+ByVal alt_start As Integer, _
+ByVal alt_end As Integer _
+) As Integer
 
 Declare Function  seans2_noise3 Alias "seans2_noise3" (ByVal seans As seans2_data Ptr, _
-											ByVal acf_noise As Double Ptr, _ 
-											ByVal length As Integer, _
-											ByVal alt_start As Integer, _
-											ByVal alt_end As Integer _
-										) As Integer
+ByVal acf_noise As Double Ptr, _
+ByVal length As Integer, _
+ByVal alt_start As Integer, _
+ByVal alt_end As Integer _
+) As Integer
 
 
 Declare Function  seans2_noise2 Alias "seans2_noise2" (ByVal seans As seans2_data Ptr, _
-											ByVal acf_noise As Double Ptr, _ 
-											ByVal length As Integer, _
-											ByVal alt_start As Integer, _
-											ByVal alt_end As Integer _
-										) As Integer
+ByVal acf_noise As Double Ptr, _
+ByVal length As Integer, _
+ByVal alt_start As Integer, _
+ByVal alt_end As Integer _
+) As Integer
 
 Declare Function  seans2_noise4 Alias "seans2_noise4" (ByVal seans As seans2_data Ptr, _
-											ByVal acf_noise As Double Ptr, _ 
-											ByVal length As Integer, _
-											ByVal alt_start As Integer, _
-											ByVal alt_end As Integer _
-										) As Integer
+ByVal acf_noise As Double Ptr, _
+ByVal length As Integer, _
+ByVal alt_start As Integer, _
+ByVal alt_end As Integer _
+) As Integer
 
 
 End Extern
@@ -400,31 +402,31 @@ End Extern
 
 Type  seans3_data Field = 1
 
-	Dim Day1		As Integer 
-	Dim Month1	As Integer 
-	Dim Year1	As Integer 
-	Dim Hour1	As Integer 
-	Dim Minute1	As Integer 
-	Dim Second1	As Integer 
-	
-	Dim NP		As Integer 
-	Dim NR		As Integer 
-	
+	Dim Day1		As Integer
+	Dim Month1	As Integer
+	Dim Year1	As Integer
+	Dim Hour1	As Integer
+	Dim Minute1	As Integer
+	Dim Second1	As Integer
+
+	Dim NP		As Integer
+	Dim NR		As Integer
+
 	Dim Freq		As Double
-	
-	Dim Magic	As Integer  
+
+	Dim Magic	As Integer
 
 	Dim Dat1		As Integer Ptr
 	Dim Dat2		As Integer Ptr
-	Dim Dat3		As Integer Ptr 
+	Dim Dat3		As Integer Ptr
 	Dim Dat4		As Integer Ptr
-	
+
 End Type
 
 Extern "c"
 
 Declare Function seans3_load Alias "seans3_load" ( ByVal filename As ZString Ptr, ByVal seans As seans3_data Ptr) As Integer
-Declare Function seans3_close Alias "seans3_close" (ByVal seans As seans3_data Ptr) As Integer 
+Declare Function seans3_close Alias "seans3_close" (ByVal seans As seans3_data Ptr) As Integer
 
 End Extern
 
@@ -434,35 +436,35 @@ End Extern
 
 Type  seansH_data Field = 0
 
-	Dim Day1								As Integer 
-	Dim Month1							As Integer 
-	Dim Year1							As Integer 
-	Dim Hour1							As Integer 
-	Dim Minute1							As Integer 
-	Dim Second1							As Integer 
+	Dim Day1								As Integer
+	Dim Month1							As Integer
+	Dim Year1							As Integer
+	Dim Hour1							As Integer
+	Dim Minute1							As Integer
+	Dim Second1							As Integer
 
-	Dim nH								As Integer 
-	Dim nP								As Integer 
-	Dim nR								As Integer 
+	Dim nH								As Integer
+	Dim nP								As Integer
+	Dim nR								As Integer
 
 	Dim dT								As Double
 	Dim dH								As Double
 
-	Dim magic							As Short 
+	Dim magic							As Short
 
-	Dim Dat1(0 To 679, 0 To 113)	As LongInt 
-	Dim Dat2(0 To 679, 0 To 113)	As LongInt 
-	Dim Dat3(0 To 679, 0 To 113)	As LongInt 
-	Dim Dat4(0 To 679, 0 To 113)	As LongInt 
+	Dim Dat1(0 To 679, 0 To 113)	As LongInt
+	Dim Dat2(0 To 679, 0 To 113)	As LongInt
+	Dim Dat3(0 To 679, 0 To 113)	As LongInt
+	Dim Dat4(0 To 679, 0 To 113)	As LongInt
 
-	Dim Dat01(0 To 679)				As LongInt 
-	Dim Dat02(0 To 679)				As LongInt 
+	Dim Dat01(0 To 679)				As LongInt
+	Dim Dat02(0 To 679)				As LongInt
 
-	Dim Datps1(0 To 679)				As LongInt 
-	Dim Datps2(0 To 679)				As LongInt 
+	Dim Datps1(0 To 679)				As LongInt
+	Dim Datps2(0 To 679)				As LongInt
 
-	Dim Dat03(0 To 679)				As LongInt 
-	Dim Dat04(0 To 679)				As LongInt 
+	Dim Dat03(0 To 679)				As LongInt
+	Dim Dat04(0 To 679)				As LongInt
 
 End Type
 
@@ -470,9 +472,9 @@ Extern "c"
 
 
 Declare Function  seansH_load Alias "seansH_load" ( _
-											ByVal filename As ZString Ptr, _ 
-											ByVal seans As seansH_data Ptr _
-										) As Integer
+ByVal filename As ZString Ptr, _
+ByVal seans As seansH_data Ptr _
+) As Integer
 
 End Extern
 
@@ -666,18 +668,18 @@ End Extern
 
 Type ionogram_data Field = 1
 
-	Dim Day1							As Integer 
-	Dim Month1						As Integer 
-	Dim Year1						As Integer 
-	Dim Hour1						As Integer 
-	Dim Minute1						As Integer 
-	Dim Second1						As Integer 
+	Dim Day1							As Integer
+	Dim Month1						As Integer
+	Dim Year1						As Integer
+	Dim Hour1						As Integer
+	Dim Minute1						As Integer
+	Dim Second1						As Integer
 
 	Dim nc							As Integer
 	Dim nf							As Integer
-	Dim np							As Integer   
+	Dim np							As Integer
 
-	Dim Dat(0 To 399, 0 To 15, 0 To 249) As UByte				
+	Dim Dat(0 To 399, 0 To 15, 0 To 249) As UByte
 
 End Type
 
@@ -685,9 +687,9 @@ End Type
 Extern "c"
 
 Declare Function  ionogram_load Alias "ionogram_load" ( _
-											 ByVal filename As ZString Ptr, _
-											 ByVal ionogram As ionogram_data Ptr _
-										) As Integer
+ByVal filename As ZString Ptr, _
+ByVal ionogram As ionogram_data Ptr _
+) As Integer
 
 End Extern
 

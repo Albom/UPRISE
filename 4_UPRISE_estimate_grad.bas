@@ -5865,7 +5865,7 @@ Sub save_and_exit()
 
 	h = Config_h_min_q
 	Do
-		Print #file, Using "###### "; Hkm(h);
+		Print #file, Using " ###### "; Hkm(h);
 		h += 1
 	Loop Until Hkm(h) > h_array(nH-1)
 
@@ -5874,7 +5874,7 @@ Sub save_and_exit()
 		Print #file, Using "##.#### "; t_array(t);
 		h = Config_h_min_q
 		Do
-			Print #file, Using "###.## "; dat_all_str(h, t).q;
+			Print #file, Using "###.### "; dat_all_str(h, t).q;
 			h += 1
 		Loop Until Hkm(h) > h_array(nH-1)
 	Next t
@@ -5883,7 +5883,7 @@ Sub save_and_exit()
 
 
 
-/'
+
 	' запись Qh2
 
 	file = FreeFile()
@@ -5894,21 +5894,22 @@ Sub save_and_exit()
 
 	h = Config_h_min_q
 	Do
-		Print #file, Using "###### "; h_array(h);
+		Print #file, Using "###### "; Hkm(h);
 		h += 1
-	Loop Until Hkm(h) >= h_array(nH-1)
+	Loop Until Hkm(h) > h_array(nH-1)
 
 	For t = 0 To nT-1
 		Print #file,
 		Print #file, Using "##.#### "; t_array(t);
 		h = Config_h_min_q
 		Do
-			Print #file, Using "##.###^^^^ "; dat_all_str(h, t).q*(h_array(h)^2);
-		Loop Until Hkm(h) >= h_array(nH-1)
+			Print #file, Using "##.###^^^^ "; dat_all_str(h, t).q*(Hkm(h)^2);
+			h += 1
+		Loop Until Hkm(h) > h_array(nH-1)
 	Next t
 
 	Close #file
-'/
+
 
 	
 

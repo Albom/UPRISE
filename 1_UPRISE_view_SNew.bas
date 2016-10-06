@@ -235,11 +235,17 @@ Do
 		Case KEY_MINUS
 			If DX > 1 Then DX = DX/2 End If
 
-		Case KEY_CTRL_LEFT
+		Case KEY_DOWN
 			If START_X < seans_loaded-1 Then START_X = START_X + 1 End If
 
-		Case KEY_CTRL_RIGHT
+		Case KEY_UP
 			If START_X > 0  Then START_X = START_X - 1  End If
+
+		Case KEY_CTRL_DOWN
+			If START_X < seans_loaded-10 Then START_X += 10 End If
+
+		Case KEY_CTRL_UP
+			If START_X > 10  Then START_X -= 10  End If
 
 		Case KEY_H
 			Color 15
@@ -656,7 +662,8 @@ Sub HelpPrint
 	Print "       Home       Перемещение курсора на сеанс в начале экрана"
 	Print "       End        Перемещение курсора на сеанс в конце экрана"
 	Print "       Tab        Перемещение курсора на 10 сеансов вправо"
-	Print "Ctrl + Left Right Сдвиг сеансов по оси времени"
+	Print "       Up Down    Сдвиг сеансов по оси времени на 1"
+	Print "Ctrl + Up Down    Сдвиг сеансов по оси времени на 10"
 	Print "        +   -     Изменение масштаба по оси времени"
 	Print "       PgUp PgDn  Перемещение по высотам"
 	Print "       H          Задать текущую высоту"
