@@ -2,6 +2,7 @@
 #Include Once "albom_lib.bi"	   ' Описание библиотеки "albom.dll"
 #Include Once "albom_log.bi"		' Подключение лога
 #Include Once "albom_as_file.bi"	' Описание структур и процедур для работы с AS-файлами
+#Include Once "albom_version.bi"
 
 #Include "crt/stdlib.bi"
 
@@ -41,8 +42,6 @@ Dim As Integer z ' номер текущей высоты
 Dim As as_file_struct	as_file_in
 Dim As as_file_struct 	as_file_out
 
-Dim As Integer h_out
-
 Dim As Integer is_divide
 
 Dim Shared As Double razr(0 To 350)
@@ -61,7 +60,6 @@ If razr_load(razr_filename, @razr(0), 330) = 0 Then ' загрузка разрядника
 	End
 EndIf
 
-
 SetEnviron("fbgfx=GDI")
 
 Screen 20
@@ -69,7 +67,7 @@ Screen 20
 
 Cls
 Color 11
-Print "UPRISE version 1.1 beta"
+Print "UPRISE version " + UPRISE_VERSION
 Print "(Unified Processing of the Results of Incoherent Scatter Experiments)"
 Print
 Color 7
@@ -192,24 +190,11 @@ For t = 0 To seans_num_out-1 ' по времени
 	Dim As Integer h_start = 0
 	Dim As Integer h_end = 680
 
-	h_out = 0
 	For h = h_start To h_end-1
 
-		as_file_out.acf[h_out].n = h_out
-		as_file_out.acf[h_out].h = as_file_in.acf[h].h
+		as_file_out.acf[h].n = h
+		as_file_out.acf[h].h = as_file_in.acf[h].h
 
-		h_out += 1
-
-	Next h
-
-
-
-	' умножить на 2
-	For h = h_start To h_end-1
-		For tau = 0 To 18
-			as_file_in.acf[h].rc(tau) *= 2
-			as_file_in.acf[h].rs(tau) *= 2
-		Next tau
 	Next h
 
 
@@ -271,16 +256,6 @@ For t = 0 To seans_num_out-1 ' по времени
 	Next h
 
 
-	' Вычитание шума
-	For h = h_start To h_end-1
-		For tau = 0 To 18
-			as_file_in.acf[h].rc(tau) -= as_file_in.rnc(tau)
-			as_file_in.acf[h].rs(tau) -= as_file_in.rns(tau)
-		Next tau
-	Next h
-
-
-
 	' учёт разрядника для профиля мощности по короткому импульсу
 	For h = h_start To h_end-1-12 ' по высоте
 
@@ -308,56 +283,72 @@ For t = 0 To seans_num_out-1 ' по времени
 
 
 	' 1) для косинусной составляющей
-	h_out = 0
-	For h = 18+partrap To as_file_in.nh-partrap-1
 
-		For tau = 0 To 18
+	For h = 0 To as_file_in.nh-1
 
-			as_file_out.acf[h_out].rc(tau) = 0
-			For z = h-tau-partrap To h+partrap ' по высоте
-				as_file_out.acf[h_out].rc(tau) += as_file_in.acf[z].rc(tau)
-			Next z
+		If h >= 18+partrap And h <= as_file_in.nh-partrap-1 Then
 
-			If is_divide = 1 Then
-				as_file_out.acf[h_out].rc(tau) /= tau+2*partrap+1 ' делить на количество слагаемых
-			EndIf
+			For tau = 0 To 18
 
-		Next tau
+				as_file_out.acf[h].rc(tau) = 0
+				For z = h-tau-partrap To h+partrap ' по высоте
+					as_file_out.acf[h].rc(tau) += as_file_in.acf[z].rc(tau)
+				Next z
 
-		h_out += 1
+				If is_divide = 1 Then
+					as_file_out.acf[h].rc(tau) /= tau+2*partrap+1 ' делить на количество слагаемых
+				EndIf
+
+			Next tau
+
+		Else
+
+			For tau = 0 To 18
+				as_file_out.acf[h].rc(tau) = 0
+			Next tau
+
+		EndIf
 
 	Next h
 
 	' 2) для синусной составляющей
-	h_out = 0
-	For h = 18+partrap To as_file_in.nh-partrap-1
+
+	For h = 0 To as_file_in.nh-1
+
+		If h >= 18+partrap And h <= as_file_in.nh-partrap-1 Then
+
 		For tau = 0 To 18
 
-			as_file_out.acf[h_out].rs(tau) = 0
+			as_file_out.acf[h].rs(tau) = 0
 			For z = h-tau-partrap To h+partrap ' по высоте
-				as_file_out.acf[h_out].rs(tau) += as_file_in.acf[z].rs(tau)
+				as_file_out.acf[h].rs(tau) += as_file_in.acf[z].rs(tau)
 			Next z
 
 			If is_divide = 1 Then
-				as_file_out.acf[h_out].rs(tau) /= tau+2*partrap+1 ' делить на количество слагаемых
+				as_file_out.acf[h].rs(tau) /= tau+2*partrap+1 ' делить на количество слагаемых
 			EndIf
 
 		Next tau
+		
+		Else
 
-		h_out += 1
+			For tau = 0 To 18
+				as_file_out.acf[h].rs(tau) = 0
+			Next tau
+
+		EndIf
+		
 	Next h
 
 	' Запись корректированной мощности и отношения с/ш, расчёт и запись отношения с/ш
 
-	h_out = 0
-	For h = 18+partrap To as_file_in.nh-partrap-1
+	For h = 0 To as_file_in.nh-1
 
-		as_file_out.acf[h_out].pcorr = as_file_in.acf[h].pcorr
-		as_file_out.acf[h_out].qcorr = as_file_in.acf[h].qcorr
+		as_file_out.acf[h].pcorr = as_file_in.acf[h].pcorr
+		as_file_out.acf[h].qcorr = as_file_in.acf[h].qcorr
 
-		as_file_out.acf[h_out].q = as_file_out.acf[h_out].rc(0)/as_file_out.rnc(0)
+		as_file_out.acf[h].q = as_file_out.acf[h].rc(0)/as_file_out.rnc(0)
 
-		h_out += 1
 
 	Next h
 

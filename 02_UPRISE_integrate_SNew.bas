@@ -2,6 +2,7 @@
 #Include Once "albom_lib.bi"	' Описание библиотеки "albom.dll"
 #Include Once "albom_log.bi"		' Подключение лога
 #Include Once "albom_as_file.bi"	' Описание структур и процедур для работы с AS-файлами
+#Include Once "albom_version.bi"
 
 #Include "crt/stdlib.bi"
 
@@ -93,11 +94,11 @@ Open Err For Output As #1
 
 Cls
 Color 11
-Print "UPRISE version 1.1 beta"
+Print "UPRISE version " + UPRISE_VERSION
 Print "(Unified Processing of the Results of Incoherent Scatter Experiments)"
 Print
 Color 7
-Print "Integrate - программа накопления данных по времени"
+Print "Integrate - программа накопления по времени S-файлов системы К3"
 Print "(c) Богомаз А.В., Котов Д.В. (Институт ионосферы)"
 Print
 

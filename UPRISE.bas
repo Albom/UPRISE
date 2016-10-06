@@ -3,6 +3,7 @@
 
 #Include Once "albom_lib.bi"
 #Include Once "albom_log.bi"
+#Include Once "albom_version.bi"
 #Include  "window9.bi"
 
 
@@ -42,15 +43,16 @@ Dim As Integer font
 
 #Define COMBO_APPROX    12
 #Define COMBO_ESTIMATE  13
+#Define COMBO_TYPE	   14
 
-#Define TEXT_COPYRIGHT  14
+#Define TEXT_COPYRIGHT  15
 
-Const As String caption = "UPRISE v1.1 beta"
+Const As String caption = "UPRISE v" + UPRISE_VERSION
 
 
 ''' ===================================
 
-IncludeBinary("images/logo2.png", ImageLogo)
+IncludeBinary("images/logo.png", ImageLogo)
 IncludeBinary("images/open.png", FolderIcon)
 IncludeBinary("images/save.png", SaveIcon)
 IncludeBinary("images/lamp.png", HelpIcon)
@@ -81,15 +83,19 @@ ButtonGadget(BTN_ESTIMATE,  10, 230, 220, 28, "4. Оценка параметров")
 
 ComboBoxGadget(COMBO_APPROX,   240, 200, 270, 80)
 ComboBoxGadget(COMBO_ESTIMATE, 240, 230, 270, 80)
+ComboBoxGadget(COMBO_TYPE,     240, 155, 270, 80)
 
 AddComboBoxItem(COMBO_APPROX, "Трапецеидальное суммирование", -1)
 AddComboBoxItem(COMBO_APPROX, "Скользящее окно", -1)
 SetItemComboBox(COMBO_APPROX, 0)
 
-
 AddComboBoxItem(COMBO_ESTIMATE, "Температуры и ионный состав", -1)
-'AddComboBoxItem(COMBO_ESTIMATE, "Скорость движения плазмы", -1)
+AddComboBoxItem(COMBO_ESTIMATE, "Скорость движения плазмы", -1)
 SetItemComboBox(COMBO_ESTIMATE, 0)
+
+AddComboBoxItem(COMBO_TYPE, "Файлы SNew (коррелятор K3)", -1)
+AddComboBoxItem(COMBO_TYPE, "Файлы SOld (коррелятор K1)", -1)
+SetItemComboBox(COMBO_TYPE, 0)
 
 TextGadget (TEXT_COPYRIGHT, 10, 270, 520, 24 ,"© Богомаз А.В., Котов Д.В. (Институт ионосферы)")
 
@@ -103,6 +109,7 @@ SetGadgetFont(BTN_HELP,      font)
 
 SetGadgetFont(COMBO_APPROX,  font)
 SetGadgetFont(COMBO_ESTIMATE,font)
+SetGadgetFont(COMBO_TYPE,font)
 
 SetGadgetFont(TEXT_COPYRIGHT,font)
 
@@ -119,19 +126,24 @@ Do
 			Select Case EventNumber
 
 				Case BTN_VIEW
-					ShellExecute(CPtr(Any Ptr, hwnd), "open", "01_UPRISE_view.exe", NULL, NULL, SW_SHOWNORMAL)
-
-'				Case BTN_SPLINE
-'					ShellExecute(CPtr(Any Ptr, hwnd), "open", "02_UPRISE_spline.exe", NULL, NULL, SW_SHOWNORMAL)
+					If GetItemComboBox(COMBO_TYPE) = 0 Then
+						ShellExecute(CPtr(Any Ptr, hwnd), "open", "01_UPRISE_view_SNew.exe", NULL, NULL, SW_SHOWNORMAL)
+					Else
+						ShellExecute(CPtr(Any Ptr, hwnd), "open", "01_UPRISE_view_SOld.exe", NULL, NULL, SW_SHOWNORMAL)
+					EndIf
 
 				Case BTN_INTEGRATE
-					ShellExecute(CPtr(Any Ptr, hwnd), "open", "02_UPRISE_integrate.exe", NULL, NULL, SW_SHOWNORMAL)
+					If GetItemComboBox(COMBO_TYPE) = 0 Then
+						ShellExecute(CPtr(Any Ptr, hwnd), "open", "02_UPRISE_integrate_SNew.exe", NULL, NULL, SW_SHOWNORMAL)
+					Else
+						ShellExecute(CPtr(Any Ptr, hwnd), "open", "02_UPRISE_integrate_SOld.exe", NULL, NULL, SW_SHOWNORMAL)
+					EndIf
 
 				Case BTN_APPROX
 					If GetItemComboBox(COMBO_APPROX) = 0 Then
-						ShellExecute(CPtr(Any Ptr, hwnd), "open", "03_UPRISE_approximate_trapezoidal_1.exe", NULL, NULL, SW_SHOWNORMAL)
+						ShellExecute(CPtr(Any Ptr, hwnd), "open", "03_UPRISE_approximate_trapezoidal.exe", NULL, NULL, SW_SHOWNORMAL)
 					Else
-						ShellExecute(CPtr(Any Ptr, hwnd), "open", "03_UPRISE_approximate_polynomial_1.exe", NULL, NULL, SW_SHOWNORMAL)
+						ShellExecute(CPtr(Any Ptr, hwnd), "open", "03_UPRISE_approximate_polynomial.exe", NULL, NULL, SW_SHOWNORMAL)
 					EndIf
 
 
@@ -139,7 +151,7 @@ Do
 					If GetItemComboBox(COMBO_ESTIMATE) = 0 Then
 						ShellExecute(CPtr(Any Ptr, hwnd), "open", "04_UPRISE_estimate_grad.exe", NULL, NULL, SW_SHOWNORMAL)
 					Else
-						ShellExecute(CPtr(Any Ptr, hwnd), "open", "05_UPRISE_velocity.exe", NULL, NULL, SW_SHOWNORMAL)
+						ShellExecute(CPtr(Any Ptr, hwnd), "open", "04_UPRISE_velocity.exe", NULL, NULL, SW_SHOWNORMAL)
 					EndIf
 
 
@@ -230,11 +242,11 @@ Do
 
 							Select Case Mid(directory, Len(directory), 1)
 
-								Case "3" ' step4
+								Case "3" ' step3
 									result = ResultsExportTxt(directory)
 
-'								Case "5" ' step5
-'									result = ResultsExportVelocityTxt(directory)
+								Case "4" ' step4
+									result = ResultsExportVelocityTxt(directory)
 
 							End Select
 
@@ -707,7 +719,7 @@ Function ResultsExportTxt(directory_in As String) As Integer
 	Next t
 
 	Close #file
-	
+
 
 	' запись Ti
 
@@ -825,7 +837,7 @@ Function ResultsExportTxt(directory_in As String) As Integer
 	Next t
 
 	Close #file
-	
+
 	file = FreeFile()
 	Open directory_out+"\Te2.txt" For Output As #file
 	If Err() <> 0 Then
@@ -964,7 +976,7 @@ Function ResultsExportTxt(directory_in As String) As Integer
 	Next t
 
 	Close #file
-	
+
 
 	file = FreeFile()
 	Open directory_out+"\Hyd2.txt" For Output As #file

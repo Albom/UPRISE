@@ -2,6 +2,7 @@
 #Include Once "albom_lib.bi"	   ' Описание библиотеки "albom.dll"
 #Include Once "albom_log.bi"		' Подключение лога
 #Include Once "albom_as_file.bi"	' Описание структур и процедур для работы с AS-файлами
+#Include Once "albom_version.bi"
 
 #Include "crt/stdlib.bi"
 
@@ -85,7 +86,7 @@ Screen 20
 
 Cls
 Color 11
-Print "UPRISE version 1.1 beta"
+Print "UPRISE version " + UPRISE_VERSION
 Print "(Unified Processing of the Results of Incoherent Scatter Experiments)"
 Print
 Color 7
@@ -236,13 +237,6 @@ For t = 0 To seans_num_out-1 ' по времени
 	Next h
 
 
-	' умножить на 2
-	For h = h_start To h_end-1
-		For tau = 0 To 18
-			as_file_in.acf[h].rc(tau) *= 2
-			as_file_in.acf[h].rs(tau) *= 2
-		Next tau
-	Next h
 
 	' Вычитание шума
 	For h = h_start To h_end-1
@@ -251,6 +245,18 @@ For t = 0 To seans_num_out-1 ' по времени
 			as_file_in.acf[h].rs(tau) -= as_file_in.rns(tau)
 		Next tau
 	Next h
+
+	Dim As Double pNShort = 0
+	For h = 500 To 599
+		pNShort += as_file_in.acf[h].pShort
+	Next h
+	pNShort /= 100
+
+	For h = h_start To h_end-1
+		as_file_in.acf[h].pShort -= pNShort
+	Next h
+
+
 
 
 	' учёт разрядника
@@ -289,16 +295,32 @@ For t = 0 To seans_num_out-1 ' по времени
 	Next h
 
 
+	' учёт разрядника для профиля мощности по короткому импульсу
+	For h = h_start To h_end-1-12 ' по высоте
 
-	' Вычитание шума
-	For h = h_start To h_end-1
-		For tau = 0 To 18
-			as_file_in.acf[h].rc(tau) -= as_file_in.rnc(tau)
-			as_file_in.acf[h].rs(tau) -= as_file_in.rns(tau)
-		Next tau
+		Dim As Double r ' значение коэффициента передачи
+
+		If h < 300 Then
+			r = razr(h+12)
+		Else
+			r = 1.0
+		EndIf
+
+		If r > 1e-6 Then
+			as_file_in.acf[h].pShort /= r
+		Else
+			as_file_in.acf[h].pShort = 0
+		EndIf
+
 	Next h
 
 
+	For h = h_start To h_end-1 ' по высоте
+		as_file_out.acf[h].pShort = as_file_in.acf[h].pShort
+	Next h
+
+
+	' аппроксимация полиномом
 
 	' 1) для косинусной составляющей
 
@@ -371,9 +393,6 @@ For t = 0 To seans_num_out-1 ' по времени
 
 
 
-
-
-
 	' Устранение глюков с ГРОМАДНЫМИ числами после интерполяции
 	For h = h_start To h_end-1 ' по высоте
 		For tau = 0 To 18
@@ -391,6 +410,7 @@ For t = 0 To seans_num_out-1 ' по времени
 
 
 
+
 	' вычисление отношения сигнал/шум
 	For h = h_start To h_end-1 ' по высоте
 		If as_file_out.rnc(0) <> 0 Then
@@ -402,7 +422,18 @@ For t = 0 To seans_num_out-1 ' по времени
 
 
 
-/'
+	For tau = 0 To 18
+
+		For h =  h_start+tau\2 To h_end-1
+
+			as_file_out.acf[h].var(tau) = as_file_in.acf[h-tau\2].var(tau)
+
+		Next h
+
+	Next tau
+
+
+	
 	' Коррекция профиля мощности
 
 	' !!! Шаг 1 - сдвиг экспериментального профиля P на 0,6*Tи
@@ -426,6 +457,8 @@ For t = 0 To seans_num_out-1 ' по времени
 		p_06Tu[h] = as_file_out.acf[h+13].rc(0)
 		h_06Tu[h] = as_file_out.acf[h].h
 	Next h
+
+
 
 	' !!! Шаг 2 - интерполяция сдвинутого профиля сплайном
 
@@ -590,17 +623,21 @@ For t = 0 To seans_num_out-1 ' по времени
 
 
 
+
+
+
 	DeAllocate(p_06Tu)
 	DeAllocate(h_06Tu)
 
 	DeAllocate(p_work)
 
-'/
+
 
 
 
 	filename = SEANS_DIR_OUT+DirectoryOutput+"/step2/AS"+DirectoryOutput+"."+ext
 	as_file_save(filename, @as_file_out)
+
 
 
 	as_file_close(@as_file_in)
