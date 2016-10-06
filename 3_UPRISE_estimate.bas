@@ -745,6 +745,8 @@ If Err() <> 0 Then
 EndIf
 'ReDim Shared As Double noise_acf(0 To seans_num_out-1, 0 To 255)
 
+
+
 ReDim Shared As Double heRange(0 To seans_num_out-1)
 For t = 0 To seans_num_out-1
 	heRange(t) = He_max

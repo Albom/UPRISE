@@ -173,7 +173,7 @@ Sub as_file_save(ByRef Filename As String, ByRef as_file_str As as_file_struct P
 	EndIf
 
 	buffer_clear(buffer)
-	
+
 	buffer_add_s(buffer, as_file_str->filename, "%s") ' записываем имя файла
 	buffer_newline(buffer)
 
@@ -189,36 +189,37 @@ Sub as_file_save(ByRef Filename As String, ByRef as_file_str As as_file_struct P
 	buffer_add_i(buffer, @(as_file_str->tnak), 1, "%d") ' записываем время накопления
 	buffer_newline(buffer)
 
-	buffer_add_d(buffer, @(as_file_str->fkr), 1, "%-10.5lf") ' записываем критическую частоту
+	buffer_add_d(buffer, @(as_file_str->fkr), 1, "%-10.5f") ' записываем критическую частоту
 	buffer_newline(buffer)
 
-	buffer_add_d(buffer, @(as_file_str->rnc(0)), 19, " %-16.0lf") ' запись АКФ шума (cos)
+	buffer_add_d(buffer, @(as_file_str->rnc(0)), 19, " %-16.0f") ' запись АКФ шума (cos)
 
-	buffer_add_d(buffer, @(as_file_str->rns(0)), 19, " %-16.0lf") ' запись АКФ шума (sin)
+	buffer_add_d(buffer, @(as_file_str->rns(0)), 19, " %-16.0f") ' запись АКФ шума (sin)
 
 	buffer_newline(buffer)
 
 	buffer_add_i(buffer, @(as_file_str->nh), 1, "%d") ' записываем число высот
 	buffer_newline(buffer)
 
+
 	For h = 0 To as_file_str->nh - 1
-
+		
 		buffer_add_i(buffer, @(as_file_str->acf[h].n), 1, "%-7d") ' записываем номер высоты
-		buffer_add_d(buffer, @(as_file_str->acf[h].h), 1, "%10.3lf") ' запись высоты в км
+		buffer_add_d(buffer, @(as_file_str->acf[h].h), 1, "%10.3f") ' запись высоты в км
 
-		buffer_add_d(buffer, @(as_file_str->acf[h].q), 1, " %10.3lf") ' запись отношения с/ш
+		buffer_add_d(buffer, @(as_file_str->acf[h].q), 1, " %10.3f") ' запись отношения с/ш
 '		buffer_add_d(buffer, @(as_file_str->acf[h].qcorr), 1, "%10.3lf") ' запись откорректированного отношения с/ш
 
 '		buffer_add_d(buffer, @(as_file_str->acf[h].pcorr), 1, "%15.0lf") ' запись откорректированной мощности
 		
-		buffer_add_d(buffer, @(as_file_str->acf[h].pshort),1, " %16.0lf") ' запись мощности по короткому импульсу
+		buffer_add_d(buffer, @(as_file_str->acf[h].pshort),1, " %16.0f") ' запись мощности по короткому импульсу
 		
-		buffer_add_d(buffer, @(as_file_str->acf[h].qshort), 1, " %10.3lf") ' запись отношения с/ш по короткому импульсу
+		buffer_add_d(buffer, @(as_file_str->acf[h].qshort), 1, " %10.3f") ' запись отношения с/ш по короткому импульсу
 
-		buffer_add_d(buffer, @(as_file_str->acf[h].rc(0)), 19, " %16.0lf") ' запись АКФ сигнала НР (cos)
-		buffer_add_d(buffer, @(as_file_str->acf[h].rs(0)), 19, " %16.0lf") ' запись АКФ сигнала НР (sin)
+		buffer_add_d(buffer, @(as_file_str->acf[h].rc(0)), 19, " %16.0f") ' запись АКФ сигнала НР (cos)
+		buffer_add_d(buffer, @(as_file_str->acf[h].rs(0)), 19, " %16.0f") ' запись АКФ сигнала НР (sin)
 		
-		buffer_add_d(buffer, @(as_file_str->acf[h].var(0)),19, " %16.0lf") ' запись дисперсии точек АКФ
+		buffer_add_d(buffer, @(as_file_str->acf[h].var(0)),19, " %16.0f") ' запись дисперсии точек АКФ
 
 		/'
 		buffer_add_d(buffer, @(as_file_str->param[h].ti), 1, "%10.3lf") ' запись Ti
@@ -234,10 +235,17 @@ Sub as_file_save(ByRef Filename As String, ByRef as_file_str As as_file_struct P
 
 	Next h
 
+
+
+'Print #1, "10"
+
 	'	file_creat(filename)
 	'	file_add_s(filename, buffer, "%s")
 
+
+
 	file_creat_and_add_s(@filename[0], buffer)
+
 
 	DeAllocate (buffer)
 

@@ -500,7 +500,7 @@ Print "Шаг по высоте Hstep: "; Hstep
 
 If Config_oxygen = 0 Then
 	Print
-	Print "He max на первой высоте: ";  He_max; " %"; "       He max: "; He_maxLib; " %" 
+	Print "He max на первой высоте: ";  He_max; " %"; "       He max: "; He_maxLib; " %"
 EndIf
 
 Print
@@ -850,16 +850,17 @@ Print_process_percent(1000)
 Print "OK"
 Print #1, Str(seans_num_out)+" files loaded"
 
+' Начало работы с файлами FLIP
+
 Dim As Integer nHeader = 4 ' 4 строки на заголовок (год, месяц, день, часы)
 
-ReDim As Double temp_flip(0 To 50000)
+ReDim As Double temp_flip(0 To 100000)
 Dim As Integer nRow, nColumn, temp_flip_length
 
+
+' ti
 filename = SEANS_DIR_OUT+DirectoryOutput+"/step2/FLIP_TI_"+DirectoryOutput+".txt"
 temp_flip_length = file_table_load(filename, @nColumn, @nRow, @temp_flip(0))
-'проверка размера таблицы
-'Print nRow, nColumn
-'break
 If ( (temp_flip_length <> nRow*nColumn) Or (temp_flip_length = 0) ) Then
 	PrintErrorToLog(ErrorFlip, __FILE__, __LINE__)
 	End
@@ -872,21 +873,12 @@ For r As Integer = 0 To nRow-1-nHeader
 	Next
 Next
 
-'file = FreeFile()
-'Open "out.txt" For Output As #file
-'For r As Integer = 0 To nRow-1-nHeader
-'	For c As Integer = 0 To nColumn-1-1
-'		Print #file, Using "#####      "; ti_flip(r, c);
-'	Next
-'	Print #file,
-'Next
-'Close #file
-'break
 
+' te
 filename = SEANS_DIR_OUT+DirectoryOutput+"/step2/FLIP_TE_"+DirectoryOutput+".txt"
 temp_flip_length = file_table_load(filename, @nColumn, @nRow, @temp_flip(0))
 If ( (temp_flip_length <> nRow*nColumn) Or (temp_flip_length = 0) ) Then
-	PrintErrorToLog(ErrorInputData, __FILE__, __LINE__)
+	PrintErrorToLog(ErrorFlip, __FILE__, __LINE__)
 	End
 EndIf
 
@@ -897,16 +889,68 @@ For r As Integer = 0 To nRow-1-nHeader
 	Next
 Next
 
-'file = FreeFile()
-'Open "out.txt" For Output As #file
-'For r As Integer = 0 To nRow-1-nHeader
-'	For c As Integer = 0 To nColumn-1-1
-'		Print #file, Using "#####      "; te_flip(r, c);
-'	Next
-'	Print #file,
-'Next
-'Close #file
-'break
+
+' hyd
+filename = SEANS_DIR_OUT+DirectoryOutput+"/step2/FLIP_[H+]_"+DirectoryOutput+".txt"
+temp_flip_length = file_table_load(filename, @nColumn, @nRow, @temp_flip(0))
+If ( (temp_flip_length <> nRow*nColumn) Or (temp_flip_length = 0) ) Then
+	PrintErrorToLog(ErrorFlip, __FILE__, __LINE__)
+	End
+EndIf
+
+ReDim As Double hyd_flip(0 To nRow-1-nHeader, 0 To nColumn-1-1)
+For r As Integer = 0 To nRow-1-nHeader
+	For c As Integer = 0 To nColumn-1-1
+		hyd_flip(r, c) = temp_flip( (r+nHeader)*nColumn + c + 1 )
+	Next
+Next
+
+' he
+filename = SEANS_DIR_OUT+DirectoryOutput+"/step2/FLIP_[He+]_"+DirectoryOutput+".txt"
+temp_flip_length = file_table_load(filename, @nColumn, @nRow, @temp_flip(0))
+If ( (temp_flip_length <> nRow*nColumn) Or (temp_flip_length = 0) ) Then
+	PrintErrorToLog(ErrorFlip, __FILE__, __LINE__)
+	End
+EndIf
+
+ReDim As Double he_flip(0 To nRow-1-nHeader, 0 To nColumn-1-1)
+For r As Integer = 0 To nRow-1-nHeader
+	For c As Integer = 0 To nColumn-1-1
+		he_flip(r, c) = temp_flip( (r+nHeader)*nColumn + c + 1 )
+	Next
+Next
+
+
+' ox
+filename = SEANS_DIR_OUT+DirectoryOutput+"/step2/FLIP_[O+]_"+DirectoryOutput+".txt"
+temp_flip_length = file_table_load(filename, @nColumn, @nRow, @temp_flip(0))
+If ( (temp_flip_length <> nRow*nColumn) Or (temp_flip_length = 0) ) Then
+	PrintErrorToLog(ErrorFlip, __FILE__, __LINE__)
+	End
+EndIf
+
+ReDim As Double ox_flip(0 To nRow-1-nHeader, 0 To nColumn-1-1)
+For r As Integer = 0 To nRow-1-nHeader
+	For c As Integer = 0 To nColumn-1-1
+		ox_flip(r, c) = temp_flip( (r+nHeader)*nColumn + c + 1 )
+	Next
+Next
+
+
+' ne
+filename = SEANS_DIR_OUT+DirectoryOutput+"/step2/FLIP_[E]_"+DirectoryOutput+".txt"
+temp_flip_length = file_table_load(filename, @nColumn, @nRow, @temp_flip(0))
+If ( (temp_flip_length <> nRow*nColumn) Or (temp_flip_length = 0) ) Then
+	PrintErrorToLog(ErrorFlip, __FILE__, __LINE__)
+	End
+EndIf
+
+ReDim As Double ne_flip(0 To nRow-1-nHeader, 0 To nColumn-1-1)
+For r As Integer = 0 To nRow-1-nHeader
+	For c As Integer = 0 To nColumn-1-1
+		ne_flip(r, c) = temp_flip( (r+nHeader)*nColumn + c + 1 )
+	Next
+Next
 
 
 ReDim As Double time_flip(0 To nColumn-1-1)
@@ -922,7 +966,7 @@ For c As Integer = 0 To nColumn-1-1
 	hour1 = temp_flip( 3*nColumn + c+1 )
 
 	time_flip(c) = date_2unixtime( day1, month1, year1, Int(hour1), Int((hour1-Int(hour1))*60), ((hour1-Int(hour1))*60 - Int((hour1-Int(hour1))*60) )*60 )
-	'Print #1, time_flip(c)
+
 Next
 
 
@@ -938,11 +982,16 @@ nColumn -= 1
 
 ReDim As Double ti_flip_time(0 To nRow-1, 0 To seans_num_out-1)
 ReDim As Double te_flip_time(0 To nRow-1, 0 To seans_num_out-1)
+ReDim As Double hyd_flip_time(0 To nRow-1, 0 To seans_num_out-1)
+ReDim As Double he_flip_time(0 To nRow-1, 0 To seans_num_out-1)
+ReDim As Double ox_flip_time(0 To nRow-1, 0 To seans_num_out-1)
+ReDim As Double ne_flip_time(0 To nRow-1, 0 To seans_num_out-1)
 
 For r As Integer = 0 To nRow-1
 
 	Dim As Double temperatures_flip_time(0 To nColumn-1)
 
+	' ti
 	For t = 0 To nColumn-1
 		temperatures_flip_time(t) = ti_flip(r, t)
 	Next t
@@ -954,6 +1003,7 @@ For r As Integer = 0 To nRow-1
 		EndIf
 	Next t
 
+	' te
 	For t = 0 To nColumn-1
 		temperatures_flip_time(t) = te_flip(r, t)
 	Next t
@@ -963,38 +1013,76 @@ For r As Integer = 0 To nRow-1
 		If te_flip_time(r, t) < 0 Then
 			te_flip_time(r, t) = 0
 		EndIf
+	Next t
 
+	' hyd
+	For t = 0 To nColumn-1
+		temperatures_flip_time(t) = hyd_flip(r, t)
+	Next t
+
+	For t = 0 To seans_num_out-1
+		hyd_flip_time(r, t) = array_linear_d(time_decimal_all(t), @time_flip(0), @temperatures_flip_time(0), nColumn)
+		If hyd_flip_time(r, t) < 0 Then
+			hyd_flip_time(r, t) = 0
+		EndIf
+	Next t
+
+	' he
+	For t = 0 To nColumn-1
+		temperatures_flip_time(t) = he_flip(r, t)
+	Next t
+
+	For t = 0 To seans_num_out-1
+		he_flip_time(r, t) = array_linear_d(time_decimal_all(t), @time_flip(0), @temperatures_flip_time(0), nColumn)
+		If he_flip_time(r, t) < 0 Then
+			he_flip_time(r, t) = 0
+		EndIf
+	Next t
+
+	' ox
+	For t = 0 To nColumn-1
+		temperatures_flip_time(t) = ox_flip(r, t)
+	Next t
+
+	For t = 0 To seans_num_out-1
+		ox_flip_time(r, t) = array_linear_d(time_decimal_all(t), @time_flip(0), @temperatures_flip_time(0), nColumn)
+		If ox_flip_time(r, t) < 0 Then
+			ox_flip_time(r, t) = 0
+		EndIf
+	Next t
+
+	' ne
+	For t = 0 To nColumn-1
+		temperatures_flip_time(t) = ne_flip(r, t)
+	Next t
+
+	For t = 0 To seans_num_out-1
+		ne_flip_time(r, t) = array_linear_d(time_decimal_all(t), @time_flip(0), @temperatures_flip_time(0), nColumn)
+		If ne_flip_time(r, t) < 0 Then
+			ne_flip_time(r, t) = 0
+		EndIf
 	Next t
 
 Next r
 
 
-'file = FreeFile()
-'Open "out.txt" For Output As #file
-'For r As Integer = 0 To nRow-1
-'	For c As Integer = 0 To seans_num_out-1
-'		Print #file, Using "#####      "; ti_flip_time(r, c);
-'	Next
-'	Print #file,
-'Next
-'Close #file
-'break
 
 ReDim Shared As Double ti_flip_all(0 To nh-1, 0 To seans_num_out-1)
 ReDim Shared As Double te_flip_all(0 To nh-1, 0 To seans_num_out-1)
-
-
+ReDim Shared As Double hyd_flip_all(0 To nh-1, 0 To seans_num_out-1)
+ReDim Shared As Double he_flip_all(0 To nh-1, 0 To seans_num_out-1)
+ReDim Shared As Double ox_flip_all(0 To nh-1, 0 To seans_num_out-1)
+ReDim Shared As Double ne_flip_all(0 To nh-1, 0 To seans_num_out-1)
 
 
 For t = 0 To seans_num_out-1
 
 	Dim As Double temperatures_flip_alt(0 To nRow-1)
 
+	' ti
 	For r As Integer = 0 To nRow-1
 		temperatures_flip_alt(r) = ti_flip_time(r, t)
-		'		Print temperatures_flip_alt(r)
 	Next
-	'break
 
 	For r As Integer = 0 To nH-1
 		ti_flip_all(r, t) = array_linear_d(Hkm(r), @alt_flip(0), @temperatures_flip_alt(0), nRow)
@@ -1007,6 +1095,7 @@ For t = 0 To seans_num_out-1
 		EndIf
 	Next
 
+	' te
 	For r As Integer = 0 To nRow-1
 		temperatures_flip_alt(r) = te_flip_time(r, t)
 	Next
@@ -1022,10 +1111,57 @@ For t = 0 To seans_num_out-1
 		EndIf
 	Next
 
+	' hyd
+	For r As Integer = 0 To nRow-1
+		temperatures_flip_alt(r) = hyd_flip_time(r, t)
+	Next
+
+	For r As Integer = 0 To nH-1
+		hyd_flip_all(r, t) = array_linear_d(Hkm(r), @alt_flip(0), @temperatures_flip_alt(0), nRow)
+		If hyd_flip_all(r, t) < 0 Then
+			hyd_flip_all(r, t) = 0
+		EndIf
+	Next
+
+	' he
+	For r As Integer = 0 To nRow-1
+		temperatures_flip_alt(r) = he_flip_time(r, t)
+	Next
+
+	For r As Integer = 0 To nH-1
+		he_flip_all(r, t) = array_linear_d(Hkm(r), @alt_flip(0), @temperatures_flip_alt(0), nRow)
+		If he_flip_all(r, t) < 0 Then
+			he_flip_all(r, t) = 0
+		EndIf
+	Next
+
+	' ox
+	For r As Integer = 0 To nRow-1
+		temperatures_flip_alt(r) = ox_flip_time(r, t)
+	Next
+
+	For r As Integer = 0 To nH-1
+		ox_flip_all(r, t) = array_linear_d(Hkm(r), @alt_flip(0), @temperatures_flip_alt(0), nRow)
+		If ox_flip_all(r, t) < 0 Then
+			ox_flip_all(r, t) = 0
+		EndIf
+	Next
+
+	' ne
+	For r As Integer = 0 To nRow-1
+		temperatures_flip_alt(r) = ne_flip_time(r, t)
+	Next
+
+	For r As Integer = 0 To nH-1
+		ne_flip_all(r, t) = array_linear_d(Hkm(r), @alt_flip(0), @temperatures_flip_alt(0), nRow)
+		If ne_flip_all(r, t) < 0 Then
+			ne_flip_all(r, t) = 0
+		EndIf
+	Next
+
 Next t
 
 
-/'
 file = FreeFile()
 Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+"T.txt" For Input As #file
 For t = 0 To seans_num_out-1
@@ -1033,6 +1169,8 @@ For t = 0 To seans_num_out-1
 Next t
 Close #file
 
+
+' ti
 file = FreeFile()
 Open SEANS_DIR_OUT+DirectoryOutput+"/step5/Ti.F.txt" For Output As #file
 
@@ -1052,26 +1190,110 @@ Next t
 
 Close #file
 
+
+' te
 file = FreeFile()
 Open SEANS_DIR_OUT+DirectoryOutput+"/step5/Te.F.txt" For Output As #file
 
 Print #file, "      0 ";
 
 For h = hMin To hMax Step hStep
-	Print #file, Using "###### "; Hkm(h);
+Print #file, Using "###### "; Hkm(h);
+Next h
+
+For t = 0 To seans_num_out-1
+Print #file,
+Print #file, Using "##.#### "; time_decimal_all(t);
+For h = hMin To hMax Step hStep
+Print #file, Using "###### "; te_flip_all(h, t);
+Next h
+Next t
+
+Close #file
+
+
+' hyd
+file = FreeFile()
+Open SEANS_DIR_OUT+DirectoryOutput+"/step5/Hyd.F.txt" For Output As #file
+
+Print #file, "      0 ";
+
+For h = hMin To hMax Step hStep
+	Print #file, Using "######     "; Hkm(h);
 Next h
 
 For t = 0 To seans_num_out-1
 	Print #file,
 	Print #file, Using "##.#### "; time_decimal_all(t);
 	For h = hMin To hMax Step hStep
-		Print #file, Using "###### "; te_flip_all(h, t);
+		Print #file, Using "##.####^^^ "; hyd_flip_all(h, t);
 	Next h
 Next t
 
 Close #file
-'/
 
+
+' he
+file = FreeFile()
+Open SEANS_DIR_OUT+DirectoryOutput+"/step5/He.F.txt" For Output As #file
+
+Print #file, "      0 ";
+
+For h = hMin To hMax Step hStep
+	Print #file, Using "######     "; Hkm(h);
+Next h
+
+For t = 0 To seans_num_out-1
+	Print #file,
+	Print #file, Using "##.#### "; time_decimal_all(t);
+	For h = hMin To hMax Step hStep
+		Print #file, Using "##.####^^^ "; he_flip_all(h, t);
+	Next h
+Next t
+
+Close #file
+
+
+' ox
+file = FreeFile()
+Open SEANS_DIR_OUT+DirectoryOutput+"/step5/O.F.txt" For Output As #file
+
+Print #file, "      0 ";
+
+For h = hMin To hMax Step hStep
+	Print #file, Using "######     "; Hkm(h);
+Next h
+
+For t = 0 To seans_num_out-1
+	Print #file,
+	Print #file, Using "##.#### "; time_decimal_all(t);
+	For h = hMin To hMax Step hStep
+		Print #file, Using "##.####^^^ "; ox_flip_all(h, t);
+	Next h
+Next t
+
+Close #file
+
+
+' ne
+file = FreeFile()
+Open SEANS_DIR_OUT+DirectoryOutput+"/step5/Ne.F.txt" For Output As #file
+
+Print #file, "      0 ";
+
+For h = hMin To hMax Step hStep
+	Print #file, Using "######     "; Hkm(h);
+Next h
+
+For t = 0 To seans_num_out-1
+	Print #file,
+	Print #file, Using "##.#### "; time_decimal_all(t);
+	For h = hMin To hMax Step hStep
+		Print #file, Using "##.####^^^ "; ne_flip_all(h, t);
+	Next h
+Next t
+
+Close #file
 
 'file = FreeFile()
 'Open "out.txt" For Output As #file
@@ -1089,6 +1311,9 @@ Close #file
 'Next
 'Close #file
 'break
+
+' Конец работы с файлами FLIP
+
 
 
 file = FreeFile()
@@ -5960,7 +6185,7 @@ Sub save_and_exit()
 			Input #file, he2_array(t, h)
 		Next t
 		Close #file
-		
+
 		'/
 
 	Next h
@@ -6279,11 +6504,15 @@ Sub save_and_exit()
 	MkDir(SEANS_DIR_OUT + DirectoryOutput+"/step3")
 
 	CopyFile( SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/Ti.F.txt", SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/Ti.FLIP.FLIP.txt", 0)
+	CopyFile( SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/Te.F.txt", SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/Te.FLIP.FLIP.txt", 0)
+	CopyFile( SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/Hyd.F.txt", SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/Hyd.FLIP.FLIP.txt", 0)
+	CopyFile( SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/He.F.txt", SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/He.FLIP.FLIP.txt", 0)
+	CopyFile( SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/O.F.txt", SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/O.FLIP.FLIP.txt", 0)
+	CopyFile( SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/Ne.F.txt", SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/Ne.FLIP.FLIP.txt", 0)
 	CopyFile( SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/Ti.txt", SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/Ti.FLIP.txt", 0)
 	CopyFile( SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/Te.txt", SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/Te.FLIP.txt", 0)
 	CopyFile( SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/Hyd.txt", SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/Hyd.FLIP.txt", 0)
 	CopyFile( SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/He.txt", SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/He.FLIP.txt", 0)
-
 
 End Sub
 

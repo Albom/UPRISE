@@ -874,12 +874,13 @@ If as_file_str.acf = NULL Then
 	End
 EndIf
 
-
 Dim As Integer seans_current = 0
 t = 0
 Do Until t + tNak > seans_out_num-1
 
-	Print_process_percent((t*100)/seans_out_num)
+'	Print_process_percent((t*100)/seans_out_num)
+
+
 
 	EXT = Str(seans_current+1)
 	If seans_current+1 < 1000 Then EXT = "0" + EXT
@@ -890,6 +891,8 @@ Do Until t + tNak > seans_out_num-1
 	as_file_str.filename = "AS" + DirectoryOutput + "." + EXT
 	as_file_str.date_ = *seans_str_time.date_[t+tNak\2]
 	as_file_str.time_ = *seans_str_time.time_[t+tNak\2]
+
+
 
 	as_file_str.nseans = seans_current+1
 	as_file_str.tnak = tNak
@@ -915,7 +918,6 @@ Do Until t + tNak > seans_out_num-1
 			as_file_str.acf[h].rc(tau) /= tNak
 			as_file_str.acf[h].rs(tau) /= tNak
 		Next tau
-
 	Next h
 
 
@@ -931,9 +933,7 @@ Do Until t + tNak > seans_out_num-1
 		as_file_str.rnc(tau) /= tNak
 		as_file_str.rns(tau) /= tNak
 	Next tau
-
-
-
+	
 	' отношение сигнал/шум
 	For h = 0 To 679 ' по высоте
 		If as_file_str.rnc(0) <> 0 Then
@@ -942,7 +942,6 @@ Do Until t + tNak > seans_out_num-1
 			as_file_str.acf[h].q = 0
 		EndIf
 	Next h
-
 
 	For h = 12 To 679 ' по высоте
 		as_file_str.acf[h-12].pShort = 0
@@ -967,7 +966,6 @@ Do Until t + tNak > seans_out_num-1
 	Next h
 
 
-
 	' расчёт дисперсии точек АКФ
 
 	For h = 0 To 679
@@ -982,11 +980,7 @@ Do Until t + tNak > seans_out_num-1
 		Next tau
 	Next h
 
-
 	as_file_save( SEANS_DIR_OUT + DirectoryOutput + "/step2/"+ "AS" + DirectoryOutput + "." + EXT,  @as_file_str) ' запись в файл
-
-
-
 
 
 	t += tStep

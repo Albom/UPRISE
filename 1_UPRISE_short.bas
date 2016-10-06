@@ -409,6 +409,7 @@ Do
 
 		Case KEY_MINUS
 			If DX > 1 Then DX = DX/2 End If
+
 		Case KEY_PAGE_UP
 			If hCur < 679 Then hCur += 1 End If
 			Vis_array_load() ' загрузить данные для отображения
@@ -618,11 +619,17 @@ file = FreeFile()
 Open SEANS_DIR_OUT +DirectoryOutput+"/step3/T.txt" For Input As #file
 If Err() <> 0 Then
 
+	Print "Вывод результатов в файл... ";
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT +DirectoryOutput+"/step3/PnShort.txt" For Output As #file
+	For t = 0 To seans_current-1
+		Print #file, CInt(seans_str_out(t).pn)
+	Next
+	Close #file
 
 	file = FreeFile()
 	Open SEANS_DIR_OUT +DirectoryOutput+"/step3/Short.txt" For Output As #file
-
-	Print "Вывод результатов в файл... ";
 
 	Print #file, "       0";
 	For h = h_start To h_end Step h_step
@@ -655,6 +662,9 @@ Else
 	ReDim As Double in_time(0 To seans_current-1)
 	ReDim As Double in_q(0 To seans_current-1)
 
+	ReDim As Double pnIn(0 To seans_current-1)
+	ReDim As Double pnOut(0 To nT-1)
+
 	For t = 0 To seans_current-1
 		in_time(t) = seans_str_out(t).time_decimal
 	Next
@@ -663,7 +673,6 @@ Else
 
 	Seek #file, 1
 
-	'Print #1, seans_current, nT
 
 	For t = 0 To nT-1
 		Input #file, out_time(t)
@@ -680,6 +689,14 @@ Else
 		For t = 0 To nT-1
 			out_q(h, t) = array_linear_d(out_time(t), @in_time(0), @in_q(0), seans_current)
 		Next
+	Next
+
+	For t = 0 To seans_current-1
+		pnIn(t) = seans_str_out(t).pn
+	Next
+
+	For t = 0 To nT-1
+		PnOut(t) = array_linear_d(out_time(t), @in_time(0), @pnIn(0), seans_current)
 	Next
 
 	time_normalize(@out_time(0), nT)
@@ -706,6 +723,15 @@ Else
 	Print "OK"
 
 	Close #file ' "Short.txt"
+
+
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT +DirectoryOutput+"/step3/PnShort.txt" For Output As #file
+	For t = 0 To nT-1
+		Print #file, CInt(PnOut(t))
+	Next
+	Close #file
 
 EndIf
 
