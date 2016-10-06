@@ -625,6 +625,7 @@ Declare Function date_year_leap Alias "date_year_leap" (ByVal year1 As Integer) 
 Declare Function date_next Alias "date_next" (ByVal day1 As Integer Ptr, ByVal month1 As Integer Ptr, ByVal year1 As Integer Ptr) As Integer
 Declare Function date_valid Alias "date_valid" (ByVal day1 As Integer, ByVal month1 As Integer, ByVal year1 As Integer) As Integer
 Declare Function time_from_str Alias "time_from_str"  (ByVal hh As Integer Ptr, ByVal mm As Integer Ptr, ByVal ss As Integer Ptr,  ByVal timestr As ZString Ptr) As Integer
+Declare Function date_from_str Alias "date_from_str"  (ByVal dd As Integer Ptr, ByVal mm As Integer Ptr, ByVal yy As Integer Ptr,  ByVal datestr As ZString Ptr) As Integer
 Declare Function tdatetime_2date Alias "tdatetime_2date"  (ByVal tdatetime As Double, ByVal day1 As Integer Ptr, ByVal month1 As Integer Ptr, ByVal year1 As Integer Ptr, ByVal hh As Integer Ptr, ByVal mm As Integer Ptr, ByVal ss As Integer Ptr, ByVal ms As Integer Ptr) As Integer
 
 End Extern

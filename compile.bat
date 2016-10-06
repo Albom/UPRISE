@@ -31,6 +31,8 @@ fbc -s console -t 10000 -fpu sse  -arch 686  -O 3 -vec 1 2_UPRISE_processing_SOl
 echo 2_UPRISE_processing_COld.bas
 fbc -s console -t 10000 -fpu sse  -arch 686  -O 3 -vec 1 2_UPRISE_processing_COld.bas
 
+echo 2_UPRISE_processing_SNew_Minus.bas
+fbc -s console -t 10000 -fpu sse  -arch 686  -O 3 -vec 1 2_UPRISE_processing_SNew_Minus.bas
 
 
 echo 3_UPRISE_estimate.bas
@@ -42,13 +44,16 @@ fbc -s console -t 10000 -fpu sse  -arch 686  -O 3 -vec 1 3_UPRISE_estimate_wave.
 echo 3_UPRISE_estimate_COld.bas
 fbc -s console -t 10000 -fpu sse  -arch 686  -O 3 -vec 1 3_UPRISE_estimate_COld.bas
 
-echo 3_UPRISE_estimate_FLIP.bas
-fbc -s console -t 10000 -fpu sse  -arch 686  -O 3 -vec 1 3_UPRISE_estimate_FLIP.bas
+echo 3_UPRISE_estimate_FLIP_te_ti.bas
+fbc -s console -t 10000 -fpu sse  -arch 686  -O 3 -vec 1 3_UPRISE_estimate_FLIP_te_ti.bas
 
+echo 3_UPRISE_estimate_FLIP_te.bas
+fbc -s console -t 10000 -fpu sse  -arch 686  -O 3 -vec 1 3_UPRISE_estimate_FLIP_te.bas
 
 
 echo 3_UPRISE_velocity.bas
 fbc -s console -t 10000 -fpu sse  -arch 686  -O 3 -vec 1 3_UPRISE_velocity.bas
+
 
 
 
@@ -68,10 +73,12 @@ copy 1_UPRISE_view_COld.exe UPRISE
 copy 2_UPRISE_processing_SNew.exe UPRISE
 copy 2_UPRISE_processing_SOld.exe UPRISE
 copy 2_UPRISE_processing_COld.exe UPRISE
+copy 2_UPRISE_processing_SNew_Minus.exe UPRISE
 copy 3_UPRISE_estimate.exe UPRISE
 copy 3_UPRISE_estimate_wave.exe UPRISE
 copy 3_UPRISE_estimate_COld.exe UPRISE
-copy 3_UPRISE_estimate_FLIP.exe UPRISE
+copy 3_UPRISE_estimate_FLIP_te_ti.exe UPRISE
+copy 3_UPRISE_estimate_FLIP_te.exe UPRISE
 copy 3_UPRISE_velocity.exe UPRISE
 
 copy albom.dll UPRISE
@@ -87,6 +94,10 @@ copy config_COld.dat UPRISE
 
 xcopy ambig UPRISE\ambig /e /i /h
 
-copy help.chm UPRISE
+del help\uprise.chm
+hhc help\uprise.hhp
+copy help\uprise.chm UPRISE
+
+copy Report.xls UPRISE
 
 pause

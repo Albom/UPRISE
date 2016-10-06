@@ -153,16 +153,17 @@ Loop Until key = KEY_ENTER
 Cls
 Color 11
 
-Print "Результаты обработки в папке " + Chr(34) + "out" + Chr(34) + ":"
+Print "Результаты обработки, находящиеся в папке " + Chr(34) + "out" + Chr(34) + ":"
 Color 10
 Dim As String fn
 fn = Dir("./out/*", fbDirectory)
-While Len(fn) > 0 
+While Len(fn) > 0
 	fn = Dir()
 	If (Len(fn)=13) And (Mid(fn, 7, 1)="-") Then
-		Print fn
+		Print fn;"   ";
 	EndIf
 Wend
+Print
 Print
 
 Color 15
@@ -595,12 +596,26 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 Next h
 Close #file
 
+' Ограничения скорости снизу и сверху
+For h = Hmin To Hmax Step Hstep ' по высоте
+	For t = 0 To seans_num_in-1
+		If drift_d(h, t) > 200.0 Then
+			drift_d(h, t) = 200.0
+		EndIf
+		If drift_d(h, t) < -200.0 Then
+			drift_d(h, t) = -200.0
+		EndIf
+	Next t
+Next h
+
+
 For h = Hmin To Hmax Step Hstep ' по высоте
 
 	file = FreeFile()
 	Open SEANS_DIR_OUT + DirectoryOutput+"/step4/V."+ Str(CInt(Hkm(h))) +".txt" For Output As #file
 
 	For t = 0 To seans_num_in-1
+
 		Print #file, Using "#####.###  "; drift_d(h, t)
 	Next t
 
@@ -636,6 +651,19 @@ Close #file
 
 
 If (isVelocityTrap <> 0) And (isSpectrumMod <> 0) And (isSpectrum <> 0)  Then
+
+	' Ограничения скорости снизу и сверху
+	For h = Hmin To Hmax Step Hstep ' по высоте
+		For t = 0 To seans_num_in-1
+			If drift_d_trap(h, t) > 200.0 Then
+				drift_d_trap(h, t) = 200.0
+			EndIf
+			If drift_d_trap(h, t) < -200.0 Then
+				drift_d_trap(h, t) = -200.0
+			EndIf
+		Next t
+	Next h
+
 
 	file = FreeFile()
 	Open SEANS_DIR_OUT + DirectoryOutput+"/step4/"+"V.Trap.txt"  For Output As #file

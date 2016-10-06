@@ -11,6 +11,7 @@
 #Include "file.bi"
 
 #Include "window9.bi"
+#Include "dir.bi"
 
 '''==============================================
 
@@ -102,6 +103,8 @@ Dim Shared As Double Config_kappa
 Dim Shared As Integer Config_sigma
 
 Dim Shared As Integer Config_filter
+
+Dim Shared As Double Config_alt_oxygen
 
 '''==============================================
 
@@ -330,6 +333,8 @@ If Err() > 0 Then
 
 	Config_filter = 9
 
+	Config_alt_oxygen = 0
+
 Else
 
 	Dim As String tmp_string
@@ -452,6 +457,9 @@ Else
 
 	'39
 	Input #file, Config_filter
+
+	'40
+	Input #file, Config_alt_oxygen
 
 	Close #file
 
@@ -590,8 +598,26 @@ If Config_ti_interpolate <> 0 Then
 EndIf
 
 
+
+
 Cls()
-Color 15, 0
+
+Color 11
+
+Print "Результаты обработки, находящиеся в папке " + Chr(34) + "out" + Chr(34) + ":"
+Color 10
+Dim As String fn
+fn = Dir("./out/*", fbDirectory)
+While Len(fn) > 0
+	fn = Dir()
+	If (Len(fn)=13) And (Mid(fn, 7, 1)="-") Then
+		Print fn;"   ";
+	EndIf
+Wend
+Print
+
+Color 15
+
 
 
 num_point_acf = CDbl(pulse_length)/delta_tau
@@ -746,6 +772,15 @@ Print "OK"
 
 
 
+ReDim As Double time_decimal_all(0 To seans_num_out-1)
+
+'file = FreeFile()
+'Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+"T.txt" For Input As #file
+'For t = 0 To seans_num_out-1 ' по времени
+'	Input #file, time_decimal_all(t)
+'Next
+'Close #file
+
 
 
 
@@ -780,9 +815,10 @@ For t = 0 To seans_num_out-1 ' по времени
 	Print #file, Using "####.####"; time_decimal
 	Close #file
 
-
-
-
+	Dim As Integer day1, month1, year1
+	date_from_str(@day1, @month1, @year1, @as_file_in.date_ )
+	time_decimal_all(t) = date_2unixtime(day1, month1, year1, hh, mm, ss)
+	'	Print #1, time_decimal_all(t)
 
 	For h = 0 To nh-1
 
@@ -812,26 +848,31 @@ For t = 0 To seans_num_out-1 ' по времени
 Next t
 Print_process_percent(1000)
 Print "OK"
-
 Print #1, Str(seans_num_out)+" files loaded"
 
+Dim As Integer nHeader = 4 ' 4 строки на заголовок (год, месяц, день, часы)
 
-ReDim As Double temp_flip(0 To 20000)
+ReDim As Double temp_flip(0 To 50000)
 Dim As Integer nRow, nColumn, temp_flip_length
 
 filename = SEANS_DIR_OUT+DirectoryOutput+"/step2/FLIP_TI_"+DirectoryOutput+".txt"
 temp_flip_length = file_table_load(filename, @nColumn, @nRow, @temp_flip(0))
+'проверка размера таблицы
+'Print nRow, nColumn
+'break
 If ( (temp_flip_length <> nRow*nColumn) Or (temp_flip_length = 0) ) Then
 	PrintErrorToLog(ErrorInputData, __FILE__, __LINE__)
 	End
 EndIf
 
-ReDim As Double ti_flip(0 To nRow-1-1, 0 To nColumn-1-1)
-For r As Integer = 0 To nRow-1-1
+ReDim As Double ti_flip(0 To nRow-1-nHeader, 0 To nColumn-1-1)
+For r As Integer = 0 To nRow-1-nHeader
 	For c As Integer = 0 To nColumn-1-1
-		ti_flip(r, c) = temp_flip( (r+1)*nColumn + c + 1 )
+		ti_flip(r, c) = temp_flip( (r+nHeader)*nColumn + c + 1 )
 	Next
 Next
+
+
 
 filename = SEANS_DIR_OUT+DirectoryOutput+"/step2/FLIP_TE_"+DirectoryOutput+".txt"
 temp_flip_length = file_table_load(filename, @nColumn, @nRow, @temp_flip(0))
@@ -840,37 +881,41 @@ If ( (temp_flip_length <> nRow*nColumn) Or (temp_flip_length = 0) ) Then
 	End
 EndIf
 
-ReDim As Double te_flip(0 To nRow-1-1, 0 To nColumn-1-1)
-For r As Integer = 0 To nRow-1-1
+ReDim As Double te_flip(0 To nRow-1-nHeader, 0 To nColumn-1-1)
+For r As Integer = 0 To nRow-1-nHeader
 	For c As Integer = 0 To nColumn-1-1
-		te_flip(r, c) = temp_flip( (r+1)*nColumn + c + 1 )
+		te_flip(r, c) = temp_flip( (r+nHeader)*nColumn + c + 1 )
 	Next
 Next
 
+
+
 ReDim As Double time_flip(0 To nColumn-1-1)
-For c As Integer = 0 To nColumn-1
-	time_flip(c) = temp_flip( c+1 )
+
+For c As Integer = 0 To nColumn-1-1
+
+	Dim As Integer day1, month1, year1
+	Dim As Double hour1
+
+	year1 = temp_flip( c+1 )
+	month1 = temp_flip( 1*nColumn + c+1 )
+	day1 = temp_flip( 2*nColumn + c+1 )
+	hour1 = temp_flip( 3*nColumn + c+1 )
+
+	time_flip(c) = date_2unixtime( day1, month1, year1, Int(hour1), Int((hour1-Int(hour1))*60), ((hour1-Int(hour1))*60 - Int((hour1-Int(hour1))*60) )*60 )
+
 Next
 
 
-
-ReDim As Double alt_flip(0 To nColumn-1-1)
-For r As Integer = 0 To nRow-1-1
-	alt_flip(r) = temp_flip( (r+1)*nColumn )
+ReDim As Double alt_flip(0 To nRow-1-nHeader)
+For r As Integer = 0 To nRow-1-nHeader
+	alt_flip(r) = temp_flip( (r+nHeader)*nColumn )
 Next
 
 
-nRow -= 1
+nRow -= nHeader
 nColumn -= 1
 
-ReDim As Double time_decimal_all(0 To seans_num_out-1)
-
-file = FreeFile()
-Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+"T.txt" For Input As #file
-For t = 0 To seans_num_out-1 ' по времени
-	Input #file, time_decimal_all(t)
-Next
-Close #file
 
 ReDim As Double ti_flip_time(0 To nRow-1, 0 To seans_num_out-1)
 ReDim As Double te_flip_time(0 To nRow-1, 0 To seans_num_out-1)
@@ -885,6 +930,9 @@ For r As Integer = 0 To nRow-1
 
 	For t = 0 To seans_num_out-1
 		ti_flip_time(r, t) = array_linear_d(time_decimal_all(t), @time_flip(0), @temperatures_flip_time(0), nColumn)
+		If ti_flip_time(r, t) < 0 Then
+			ti_flip_time(r, t) = 0
+		EndIf
 	Next t
 
 	For t = 0 To nColumn-1
@@ -893,6 +941,10 @@ For r As Integer = 0 To nRow-1
 
 	For t = 0 To seans_num_out-1
 		te_flip_time(r, t) = array_linear_d(time_decimal_all(t), @time_flip(0), @temperatures_flip_time(0), nColumn)
+		If te_flip_time(r, t) < 0 Then
+			te_flip_time(r, t) = 0
+		EndIf
+
 	Next t
 
 Next r
@@ -901,6 +953,9 @@ Next r
 
 ReDim Shared As Double ti_flip_all(0 To nh-1, 0 To seans_num_out-1)
 ReDim Shared As Double te_flip_all(0 To nh-1, 0 To seans_num_out-1)
+
+
+
 
 For t = 0 To seans_num_out-1
 
@@ -912,6 +967,13 @@ For t = 0 To seans_num_out-1
 
 	For r As Integer = 0 To nH-1
 		ti_flip_all(r, t) = array_linear_d(Hkm(r), @alt_flip(0), @temperatures_flip_alt(0), nRow)
+		ti_flip_all(r, t) = (CInt(ti_flip_all(r, t))\20)*20
+		If ti_flip_all(r, t) < 500 Then
+			ti_flip_all(r, t) = 500
+		EndIf
+		If ti_flip_all(r, t) > 4000 Then
+			ti_flip_all(r, t) = 4000
+		EndIf
 	Next
 
 	For r As Integer = 0 To nRow-1
@@ -920,27 +982,66 @@ For t = 0 To seans_num_out-1
 
 	For r As Integer = 0 To nH-1
 		te_flip_all(r, t) = array_linear_d(Hkm(r), @alt_flip(0), @temperatures_flip_alt(0), nRow)
+		te_flip_all(r, t) = (CInt(te_flip_all(r, t))\20)*20
+		If te_flip_all(r, t) < 500 Then
+			te_flip_all(r, t) = 500
+		EndIf
+		If te_flip_all(r, t) > 4000 Then
+			te_flip_all(r, t) = 4000
+		EndIf
 	Next
 
 Next t
 
+
+file = FreeFile()
+Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+"T.txt" For Input As #file
+For t = 0 To seans_num_out-1
+	Input #file, time_decimal_all(t)
+Next t
+Close #file
+
+file = FreeFile()
+Open SEANS_DIR_OUT+DirectoryOutput+"/step5/Ti.F.txt" For Output As #file
+
+Print #file, "      0 ";
+
+For h = hMin To hMax Step hStep
+	Print #file, Using "###### "; Hkm(h);
+Next h
+
+For t = 0 To seans_num_out-1
+	Print #file,
+	Print #file, Using "##.#### "; time_decimal_all(t);
+	For h = hMin To hMax Step hStep
+		Print #file, Using "###### "; ti_flip_all(h, t);
+	Next h
+Next t
+
+Close #file
+
 /'
 file = FreeFile()
-Open "out.txt" For Output As #file
-Print #file, Using "##### "; 0;
-For c As Integer = 0 To seans_num_out-1
-	Print #file, Using "##.## "; time_decimal_all(c);
-Next
-Print #file,
-For r As Integer = 0 To nH-1
-	Print #file, Using "##### "; Hkm(r);
-	For c As Integer = 0 To seans_num_out-1
-		Print #file, Using "##### "; ti_flip_all(r, c);
-	Next
+Open SEANS_DIR_OUT+DirectoryOutput+"/step5/Te.F.txt" For Output As #file
+
+Print #file, "      0 ";
+
+For h = hMin To hMax Step hStep
+	Print #file, Using "###### "; Hkm(h);
+Next h
+
+For t = 0 To seans_num_out-1
 	Print #file,
-Next
+	Print #file, Using "##.#### "; time_decimal_all(t);
+	For h = hMin To hMax Step hStep
+		Print #file, Using "###### "; te_flip_all(h, t);
+	Next h
+Next t
+
 Close #file
 '/
+
+
 
 
 
@@ -1028,11 +1129,13 @@ Print_process_percent(1000)
 Print "OK"
 
 
+
 ' Решение обратной задачи
 
 If Config_oxygen <> 0 Then
 	he_max = 0
 EndIf
+
 
 
 z = 0
@@ -1071,6 +1174,10 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 	Dim As Integer auto
 
 	auto = 1
+
+	If Hkm(h) < Config_alt_oxygen Then
+		he_max = 0
+	EndIf
 
 	For he = 0 To he_max Step he_step
 
@@ -1128,6 +1235,12 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 			libraries_num = 1
 		EndIf
 
+		If Hkm(h) < Config_alt_oxygen Then
+			libraries_num = 1
+		EndIf
+
+		'Print libraries_num
+
 		For hyd = 0 To libraries_num-1
 			Print_process_percent((hyd*100)/libraries_num)
 			library_light_list_get_filename(@zfilename, @libraries_filelist, hyd)
@@ -1145,6 +1258,10 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 
 		ranges_set_FLIP(h) ' установка температур согласно FLIP и очистка погрешностей
 
+		inverse_problem_v2_ambig(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_1)
+		ranges_set(h, 0, 0, Config_range_ti_2)
+		inverse_problem_v2_ambig(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_2)
+		ranges_set(h, 0, 0, Config_range_ti_3)
 		inverse_problem_v2_ambig(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_3)
 
 		results_write(h, he)
@@ -1169,6 +1286,10 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 	He_max = getHeMax( CInt(Hkm(h)) ) ' He_max2
 
 	If Config_oxygen <> 0 Then
+		he_max = 0
+	EndIf
+
+	If Hkm(h) < Config_alt_oxygen Then
 		he_max = 0
 	EndIf
 
@@ -1469,7 +1590,6 @@ Sub inverse_problem_v2_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_
 	Dim As Double acf_lib(0 To 255)
 	Dim As Double acf_teor(0 To 255)
 
-
 	For hyd = 0 To libraries_num-1 Step step_hyd
 
 		For t = 0 To seans_num_out-1 ' по времени
@@ -1482,86 +1602,86 @@ Sub inverse_problem_v2_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_
 
 					For te = dat_all_str(h, t).te_start To dat_all_str(h, t).te_end Step step_te
 
-						If ( te >= RegRange(0, t) ) And ( te <= RegRange(1, t) ) Then
+						'If ( te >= RegRange(0, t) ) And ( te <= RegRange(1, t) ) Then
 
-							For ti = dat_all_str(h, t).ti_start To dat_all_str(h, t).ti_end Step step_ti
+						For ti = dat_all_str(h, t).ti_start To dat_all_str(h, t).ti_end Step step_ti
 
-								If ( ti >= RegRange(2, t) ) And ( ti <= RegRange(3, t) ) Then
+							'			If ( ti >= RegRange(2, t) ) And ( ti <= RegRange(3, t) ) Then
 
-									If (te >= ti And Config_Overlap_prohibition = 1) Or (Config_Overlap_prohibition = 0) Then
-										If (te/ti <= 4) And (te/ti >= 0.7) Then
+							If (te >= ti And Config_Overlap_prohibition = 1) Or (Config_Overlap_prohibition = 0) Then
+								If (te/ti <= 4) And (te/ti >= 1.0) Then
 
-
-
-											If acf_library_light_short( libraries_file(hyd), @temperatures(0), temperatures_len, ti, te, @acf_lib(25), num_point_acf) <> 0 Then
+									If acf_library_light_short( libraries_file(hyd), @temperatures(0), temperatures_len, ti, te, @acf_lib(25), num_point_acf) <> 0 Then
 
 
-												For tau = 0 To 24
-													acf_lib(tau) = acf_lib(50-tau)
-												Next tau
+										For tau = 0 To 24
+											acf_lib(tau) = acf_lib(50-tau)
+										Next tau
 
 
-												For lag = 0 To 18
-													acf_teor(lag) = 0
-													For tau = 0 To 50
-														acf_teor(lag) += acf_lib(tau) * AmbigCoeff(tau, (h-hMin)\hStep, t, lag)
-													Next tau
-												Next lag
+										For lag = 0 To 18
+											acf_teor(lag) = 0
+											For tau = 0 To 50
+												acf_teor(lag) += acf_lib(tau) * AmbigCoeff(tau, (h-hMin)\hStep, t, lag)
+											Next tau
+										Next lag
 
-												'!											For lag = 0 To 18
-												'!												acf_teor(lag) /= lag+1
-												'!											Next lag
+										'!											For lag = 0 To 18
+										'!												acf_teor(lag) /= lag+1
+										'!											Next lag
 
-												d = 0
-												If Config_sigma <> 0 Then
-													For tau = 1 To 18
-														If dat_all_str(h, t).var(tau) <> 0 Then
-															d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2 / dat_all_str(h, t).var(tau)
-														Else
-															d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2
-														EndIf
-
-													Next tau
+										d = 0
+										If Config_sigma <> 0 Then
+											For tau = 1 To 18
+												If dat_all_str(h, t).var(tau) <> 0 Then
+													d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2 / dat_all_str(h, t).var(tau)
 												Else
-													For tau = 1 To 18
-														d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2
-													Next tau
+													d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2
 												EndIf
 
-												Dim As Double ratio = 0
-
-												If z < 2 Then
-													dat_all_str(h, t).ratio = 0
-												Else
-													Dim As Double chi2constraint = (te - 2*dat_all_str(h-Hstep, t).te_c + dat_all_str(h-2*Hstep, t).te_c)^2 + _
-													(ti - 2*dat_all_str(h-Hstep, t).ti_c + dat_all_str(h-2*Hstep, t).ti_c)^2
-													If chi2constraint <> 0 Then
-														ratio = chi2constraint/d
-														d += Config_kappa*ratio
-													Else
-														ratio = 0
-													EndIf
-												EndIf
-
-												If d < dat_all_str(h, t).d_c Then
-													dat_all_str(h, t).d_c = d
-													dat_all_str(h, t).ti_c = ti
-													dat_all_str(h, t).te_c = te
-													dat_all_str(h, t).hyd_c = hyd
-													dat_all_str(h, t).ratio = ratio
-												EndIf
-
-											EndIf
-
+											Next tau
+										Else
+											For tau = 1 To 18
+												d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2
+											Next tau
 										EndIf
 
+										Dim As Double ratio = 0
+
+										If z < 2 Then
+											dat_all_str(h, t).ratio = 0
+										Else
+											Dim As Double chi2constraint = (te - 2*dat_all_str(h-Hstep, t).te_c + dat_all_str(h-2*Hstep, t).te_c)^2 + _
+											(ti - 2*dat_all_str(h-Hstep, t).ti_c + dat_all_str(h-2*Hstep, t).ti_c)^2
+											If chi2constraint <> 0 Then
+												ratio = chi2constraint/d
+												d += Config_kappa*ratio
+											Else
+												ratio = 0
+											EndIf
+										EndIf
+
+										If d < dat_all_str(h, t).d_c Then
+											dat_all_str(h, t).d_c = d
+											dat_all_str(h, t).ti_c = ti
+											dat_all_str(h, t).te_c = te
+											dat_all_str(h, t).hyd_c = hyd
+											dat_all_str(h, t).ratio = ratio
+										EndIf
+
+										'											Else
+										'												Print t, ti, te
 									EndIf
 
 								EndIf
 
-							Next ti
+							EndIf
 
-						EndIf
+							'			EndIf
+
+						Next ti
+
+						'	EndIf
 
 					Next te
 
@@ -1797,8 +1917,8 @@ Sub ranges_set_FLIP(ByVal h As Integer)
 		dat_all_str(h, t).te_start = te_flip_all(h, t)
 		dat_all_str(h, t).te_end = te_flip_all(h, t)
 
-		dat_all_str(h, t).ti_start = ti_flip_all(h, t)
-		dat_all_str(h, t).ti_end = ti_flip_all(h, t)
+		dat_all_str(h, t).ti_start = 500'ti_flip_all(h, t)
+		dat_all_str(h, t).ti_end = 4000'ti_flip_all(h, t)
 
 		dat_all_str(h, t).hyd_start = 0
 		dat_all_str(h, t).hyd_end = libraries_num-1

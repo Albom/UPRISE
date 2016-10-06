@@ -4,8 +4,8 @@
 #Include "fbgfx.bi"			'Подключение графической библиотеки
 #Include Once "albom_version.bi"
 
-
-#Include  "crt/stdlib.bi"
+#Include "crt/stdlib.bi"
+#Include "dir.bi"
 
 
 #If __FB_LANG__ = "fb"
@@ -105,6 +105,24 @@ Print "================================"
 Print "Программа собрана " + Mid(__DATE__, 4, 2)+"."+Mid(__DATE__, 1, 2)+"."+Mid(__DATE__, 7, 4)
 Print "================================"
 Print
+
+
+Color 11
+
+Print "Исходные данные, находящиеся в папке " + Chr(34) + "in" + Chr(34) + ":"
+Color 10
+Dim As String fn
+fn = Dir("./in/*", fbDirectory)
+While Len(fn) > 0 
+	fn = Dir()
+	If Len(fn)=6 Then
+		Print fn;"  ";
+	EndIf
+Wend
+Print
+Print
+
+
 
 Color 15
 Input "Введите дату начала измерений (день месяц год): ", d_day, d_month, d_year
@@ -1255,7 +1273,7 @@ End Sub
 ''' =======================================================================
 
 
-Function seans_struct_time_compare cdecl (Byval elem1 as any ptr, Byval elem2 as any ptr) as Long
+Function seans_struct_time_compare Cdecl (Byval elem1 as any ptr, Byval elem2 as any ptr) as Long
 	Return ( CPtr(seans_struct Ptr, elem1) -> time_computer ) - ( CPtr(seans_struct Ptr, elem2) -> time_computer )
 End Function
 

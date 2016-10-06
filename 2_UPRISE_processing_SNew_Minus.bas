@@ -5,7 +5,6 @@
 #Include Once "albom_version.bi"
 
 #Include "crt/stdlib.bi"
-#Include "dir.bi"
 
 '''==============================================
 
@@ -118,8 +117,13 @@ Open Err For Output As #1
 
 Cls
 Color 11
-Print "UPRISE version " + UPRISE_VERSION
+Print "UPRISE version " + UPRISE_VERSION 
 Print "(Unified Processing of the Results of Incoherent Scatter Experiments)"
+
+Print
+Color 12
+Print "Без вычитания шума, учёта разрядника и трапецеидального суммирования!"
+
 Print
 Color 7
 Print "Processing - программа подготовки данных (S-файлов системы К3) к решению обратной задачи"
@@ -129,22 +133,6 @@ Print
 Print "================================"
 Print "Программа собрана " + Mid(__DATE__, 4, 2)+"."+Mid(__DATE__, 1, 2)+"."+Mid(__DATE__, 7, 4)
 Print "================================"
-Print
-
-
-Color 11
-
-Print "Исходные данные, находящиеся в папке " + Chr(34) + "in" + Chr(34) + ":"
-Color 10
-Dim As String fn
-fn = Dir("./in/*", fbDirectory)
-While Len(fn) > 0 
-	fn = Dir()
-	If Len(fn)=6 Then
-		Print fn;"  ";
-	EndIf
-Wend
-Print
 Print
 
 Color 15
@@ -696,12 +684,14 @@ For t = 0 To seans_out_num-1
 
 
 	' Вычитание шума
+	/'
 	For h = 0 To 679
 		For tau = 0 To 18
 			seans_str_out(h).datCos(tau)[t] -= noiseAcfCos(tau)[t]
 			seans_str_out(h).datSin(tau)[t] -= noiseAcfSin(tau)[t]
 		Next tau
 	Next h
+	'/
 
 
 	noisePShort[t] = 0
@@ -727,6 +717,7 @@ For t = 0 To seans_out_num-1
 
 
 	' учёт разрядника
+	/'
 	For h = 0 To 679 ' по высоте
 		' вспомогательные локальные переменные (видны только в цикле)
 		Dim As Integer l1, l2 ' индексы
@@ -760,7 +751,7 @@ For t = 0 To seans_out_num-1
 		Next tau
 
 	Next h
-
+'/
 
 	' учёт разрядника для профиля мощности по короткому импульсу
 	For h = 0 To 679-12 ' по высоте
@@ -802,10 +793,10 @@ For t = 0 To seans_out_num-1
 
 	For h = 0 To 679
 
-		If h >= 18+partrap And h <= 679-partrap Then
+'		If h >= 18+partrap And h <= 679-partrap Then
 
 			For tau = 0 To 18
-
+/'
 				seans_str_out(h).datCosTrap(tau)[t] = 0
 				For z As Integer = h-tau-partrap To h+partrap ' по высоте
 					seans_str_out(h).datCosTrap(tau)[t] += seans_str_out(z).datCos(tau)[t]
@@ -814,9 +805,11 @@ For t = 0 To seans_out_num-1
 				If is_divide = 1 Then
 					seans_str_out(h).datCosTrap(tau)[t]  /= tau+2*partrap+1 ' делить на количество слагаемых
 				EndIf
-
+'/ 
+			seans_str_out(h).datCosTrap(tau)[t] = seans_str_out(h).datCos(tau)[t] '!!!
+			
 			Next tau
-
+/'
 		Else
 
 			For tau = 0 To 18
@@ -824,17 +817,17 @@ For t = 0 To seans_out_num-1
 			Next tau
 
 		EndIf
-
+'/
 	Next h
 
 	' 2) для синусной составляющей
 
 	For h = 0 To 679
 
-		If h >= 18+partrap And h <= 679-partrap Then
+'		If h >= 18+partrap And h <= 679-partrap Then
 
 			For tau = 0 To 18
-
+/'
 				seans_str_out(h).datSinTrap(tau)[t] = 0
 				For z As Integer = h-tau-partrap To h+partrap ' по высоте
 					seans_str_out(h).datSinTrap(tau)[t]  += seans_str_out(z).datSin(tau)[t]
@@ -843,17 +836,18 @@ For t = 0 To seans_out_num-1
 				If is_divide = 1 Then
 					seans_str_out(h).datSinTrap(tau)[t] /= tau+2*partrap+1 ' делить на количество слагаемых
 				EndIf
-
+'/
+			seans_str_out(h).datSinTrap(tau)[t] = seans_str_out(h).datSin(tau)[t] '!!!
 			Next tau
 
-		Else
+/'		Else
 
 			For tau = 0 To 18
 				seans_str_out(h).datSinTrap(tau)[t] = 0
 			Next tau
 
 		EndIf
-
+'/
 	Next h
 
 Next t
@@ -937,7 +931,7 @@ Do Until t + tNak > seans_out_num-1
 	' отношение сигнал/шум
 	For h = 0 To 679 ' по высоте
 		If as_file_str.rnc(0) <> 0 Then
-			as_file_str.acf[h].q = as_file_str.acf[h].rc(0)/as_file_str.rnc(0)
+			as_file_str.acf[h].q = as_file_str.acf[h].rc(0)/as_file_str.rnc(0)-1
 		Else
 			as_file_str.acf[h].q = 0
 		EndIf

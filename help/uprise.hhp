@@ -1,0 +1,23 @@
+[OPTIONS]
+Compatibility=1.1 or later
+Compiled file=uprise.chm
+Contents file=TOC.hhc
+Default topic=index.htm
+Display compile progress=No
+Index file=uprise.hhk
+Language=0x419 Русский (Россия)
+
+
+[FILES]
+index.htm
+install.htm
+problems.htm
+processing.htm
+report.htm
+uprise.htm
+view.htm
+estimate.htm
+formats.htm
+
+[INFOTYPES]
+
