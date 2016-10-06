@@ -8,6 +8,8 @@
 
 #Include "fbgfx.bi"			'Подключение графической библиотеки
 
+#Include "window9.bi"
+
 
 '''==============================================
 
@@ -20,10 +22,11 @@ Using FB 'для перехода в полноэкранный режим монитора
 
 Const LAMBDA = 1.8987
 Const DELTA_TAU = 30.555e-6
+Const DELTA_TAU_INTERPOLATED = 1e-6
 
 '''==============================================
 
-Dim As Integer file
+Dim As Integer file, fileRcos, fileRsin
 
 Dim As Integer num_points
 Dim As Integer nh
@@ -52,6 +55,13 @@ Dim As Double r2(0 To 100)
 Dim As as_file_struct	as_file_in
 
 Dim As Integer num_algo
+
+Dim As Integer isSpectrum = 0
+Dim As Integer isSpectrumMod = 0
+
+Dim As Integer isVelocityTrap = 0
+
+Dim As Integer isAcf = 0
 
 '''==============================================
 
@@ -82,23 +92,19 @@ Color 15
 
 
 file = FreeFile()
-Open "config.dat" For Input As #file
+Open "config_velocity.dat" For Input As #file
 If Err() <> 0 Then
 	Input "Hmin: ", Hmin
 	Input "Hmax: ", Hmax
 	Input "Hstep: ", Hstep
 Else
-	Dim As String tmp
-
-	Input #file, tmp
-	Input #file, tmp
-	Input #file, tmp
-	Input #file, tmp
-	Input #file, tmp
-
 	Input #file, Hmin
 	Input #file, Hmax
 	Input #file, Hstep
+	Input #file, isSpectrum
+	Input #file, isSpectrumMod
+	Input #file, isVelocityTrap
+	Input #file, isAcf
 EndIf
 
 If (Hmin < 0) Or (Hmax < Hmax) Or (Hstep < 1)  Then
@@ -109,12 +115,25 @@ EndIf
 
 Print
 Color 12
-Print "Проверьте параметры программы. При необходимости внесите исправления в config.dat и перезапустите программу."
+Print "Проверьте параметры программы. При необходимости внесите исправления в config_velocity.dat и перезапустите программу."
 Print
 Color 15
 Print "Номер минимальной высоты Hmin: "; Hmin
 Print "Номер максимальной высоты Hmax: "; Hmax
 Print "Шаг по высоте Hstep: "; Hstep
+Print
+If isSpectrum <> 0 Then
+	Print "+ Расчёт спектра."
+EndIf
+If (isSpectrum <> 0) And (isSpectrumMod <> 0) Then
+	Print "+ Изменение спектра."
+EndIf
+If (isSpectrum <> 0) And (isSpectrumMod <> 0) And (isVelocityTrap <> 0) Then
+	Print "+ Расчёт скорости по изменённому спектру (смещение трапеции)."
+EndIf
+If isAcf <> 0 Then
+	Print "+ Вывод АКФ в файл."
+EndIf
 Print
 Color 12
 Print "Нажмите Enter"
@@ -223,8 +242,7 @@ Print "OK"
 
 
 
-
-
+DeleteDir(SEANS_DIR_OUT + DirectoryOutput+"/step4", /'FOF_ALLOWUNDO Or '/FOF_NOCONFIRMATION Or FOF_SILENT)
 MkDir(SEANS_DIR_OUT + DirectoryOutput+"/step4")
 
 
@@ -247,6 +265,7 @@ Close #file
 Print "Выделение памяти для данных... ";
 ReDim Shared As Double drift_d (0 To nh-1, 0 To seans_num_in-1)
 ReDim Shared As Double time_d (0 To seans_num_in-1)
+ReDim Shared As Double drift_d_trap (0 To nh-1, 0 To seans_num_in-1)
 Print "OK"
 
 
@@ -258,6 +277,14 @@ Print "OK"
 
 Print "Расчёт скорости движения плазмы... ";
 
+ReDim Shared As Double r_cos(0 To 550), r_sin(0 To 550)
+
+Dim As Double x(0 To 18)
+For tau = 0 To 18
+	x(tau) = tau*DELTA_TAU
+Next
+
+ReDim Shared As Double sp(0 To 10000)
 
 For t = 0 To seans_num_in-1 ' по времени
 
@@ -288,8 +315,117 @@ For t = 0 To seans_num_in-1 ' по времени
 	Print #file, Using "###.####"; time_decimal
 	Close #file
 
+	If isSpectrum <> 0 Then
+		file = FreeFile()
+		Open SEANS_DIR_OUT+DirectoryOutput+"/step4/SP."+ext+".txt" For Output As #file
+		Print #file, Using "########  "; 0;
+		For i = 0 To 10001-1
+			Print #file, Using "###### "; i-5000;
+		Next
+		Print #file,
+	EndIf
+
+	If isAcf <> 0 Then
+		fileRcos = FreeFile()
+		Open SEANS_DIR_OUT+DirectoryOutput+"/step4/Rcos."+ext+".txt" For Output As #fileRcos
+		Print #fileRcos, Using "########  "; 0;
+		For i = 0 To 18
+			Print #fileRcos, Using "####.### "; i*DELTA_TAU*1e6;
+		Next
+		Print #fileRcos,
+
+		fileRsin = FreeFile()
+		Open SEANS_DIR_OUT+DirectoryOutput+"/step4/Rsin."+ext+".txt" For Output As #fileRsin
+		Print #fileRsin, Using "########  "; 0;
+		For i = 0 To 18
+			Print #fileRsin, Using "####.### "; i*DELTA_TAU*1e6;
+		Next
+		Print #fileRsin,
+
+	EndIf
 
 	For h = Hmin To Hmax Step Hstep ' по высоте
+
+		If isSpectrum <> 0 Then
+
+			For i = 0 To 550
+				r_cos(i) = array_linear_d(i*DELTA_TAU_INTERPOLATED, @x(0), @as_file_in.acf[h].rc(0), 19)
+				r_sin(i) = array_linear_d(i*DELTA_TAU_INTERPOLATED, @x(0), @as_file_in.acf[h].rs(0), 19)
+			Next i
+
+			fourier_get_spectrum_from_acf(@r_cos(0), @r_sin(0), 550, DELTA_TAU_INTERPOLATED, @sp(0), 10001)
+
+			If isSpectrumMod <> 0 Then
+
+				For f As Integer = 0 To 10001-1
+					If sp(f) > 0.8 Then
+						sp(f) = 0.8
+					EndIf
+					sp(f) -= 0.2
+					If sp(f) < 0 Then
+						sp(f) = 0
+					EndIf
+				Next
+
+				If isVelocityTrap <> 0 Then
+
+					Dim As Double fMinTop, fMaxTop, fMinBottom, fMaxBottom
+					For f As Integer = 0 To 10001-1
+						If sp(f) > 0.01 Then
+							fMinBottom = f
+							Exit For
+						EndIf
+					Next
+					For f As Integer = 10001-1 To 0 Step -1
+						If sp(f) > 0.01 Then
+							fMaxBottom = f
+							Exit For
+						EndIf
+					Next
+					For f As Integer = (fMaxBottom+fMinBottom)/2 To 10001-1
+						If sp((fMaxBottom+fMinBottom)/2)-sp(f) > 0.01 Then
+							fMaxTop = f
+							Exit For
+						EndIf
+					Next
+					For f As Integer = (fMaxBottom+fMinBottom)/2 To 0 Step -1
+						If sp((fMaxBottom+fMinBottom)/2)-sp(f) > 0.01 Then
+							fMinTop = f
+							Exit For
+						EndIf
+					Next
+
+					drift_d_trap(h, t) = ((fMaxBottom+fMinBottom)/2-5000 + (fMaxTop+fMinTop)/2-5000 ) /2
+
+				EndIf
+
+				fourier_get_acf_from_spectrum(@sp(0), 10001, @as_file_in.acf[h].rc(0), @as_file_in.acf[h].rs(0), 19, DELTA_TAU)
+
+			EndIf
+
+			Print #file, Using "########  "; CInt(Hkm(h));
+			For i = 0 To 10001-1
+				Print #file, Using "##.### "; sp(i);
+			Next
+			Print #file,
+
+		EndIf
+
+		If isAcf <> 0 Then
+
+			Print #fileRcos, Using "########  "; CInt(Hkm(h));
+			For i = 0 To 18
+				Print #fileRcos, Using "##.##### "; as_file_in.acf[h].rc(i)/as_file_in.acf[h].rc(0);
+			Next
+			Print #fileRcos,
+
+			Print #fileRsin, Using "########  "; CInt(Hkm(h));
+			For i = 0 To 18
+				Print #fileRsin, Using "##.##### "; as_file_in.acf[h].rs(i)/as_file_in.acf[h].rc(0);
+			Next
+			Print #fileRsin,
+
+		EndIf
 
 		If num_algo = 1 Then
 
@@ -337,6 +473,16 @@ For t = 0 To seans_num_in-1 ' по времени
 
 	Next h
 
+	If isSpectrum <> 0 Then
+		Close #file
+	EndIf
+
+	If isAcf <> 0 Then
+		Close #fileRcos
+		Close #fileRsin
+	EndIf
+
+
 	as_file_close(@as_file_in)
 
 Next t
@@ -376,8 +522,9 @@ Next h
 
 
 
+
 file = FreeFile()
-Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+"V.txt"  For Output As #file
+Open SEANS_DIR_OUT + DirectoryOutput+"/step4/"+"V.txt"  For Output As #file
 If Err() <> 0 Then
 	break
 EndIf
@@ -398,6 +545,33 @@ Next t
 
 Close #file
 
+
+
+If isVelocityTrap <> 0 Then
+	
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step4/"+"V.Trap.txt"  For Output As #file
+	If Err() <> 0 Then
+		break
+	EndIf
+
+	Print #file, "      0 ";
+
+	For h = Hmin To Hmax Step Hstep
+		Print #file, Using "########  "; CInt(Hkm(h));
+	Next h
+
+	For t As Integer = 0 To seans_num_in-1
+		Print #file,
+		Print #file, Using "##.#### "; time_d(t);
+		For h = Hmin To Hmax Step Hstep
+			Print #file, Using "#####.##  "; drift_d_trap(h, t);
+		Next h
+	Next t
+
+	Close #file
+	
+EndIf
 
 
 Print "OK"

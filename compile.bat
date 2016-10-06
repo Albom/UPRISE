@@ -77,6 +77,7 @@ copy filter.dat UPRISE
 copy filter_COld.dat UPRISE
 copy config.dat UPRISE
 copy config_wave.dat UPRISE
+copy config_velocity.dat UPRISE
 copy config_short.dat UPRISE
 copy config_COld.dat UPRISE
 

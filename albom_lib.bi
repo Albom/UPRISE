@@ -228,6 +228,11 @@ ByVal filename As ZString Ptr, _
 ByVal seans As seans1s_data Ptr _
 ) As Integer
 
+Declare Function  seans1s_save Alias "seans1s_save" ( _
+ByVal filename As ZString Ptr, _
+ByVal seans As seans1s_data Ptr _
+) As Integer
+
 Declare Function  seans1s_saveM0 Alias "seans1s_saveM0" (_
 ByVal filename As ZString Ptr _
 ) As Integer
@@ -435,6 +440,77 @@ End Extern
 
 
 ''' ===================================================================================================
+''' seans3
+
+Const RD_OK As Integer = 0
+Const RD_ERR_FILE  As Integer = 1
+Const RD_ERR_MEM  As Integer = 2
+
+Type  seansRd_data Field = 0
+
+	Dim Day1		As Integer
+	Dim Month1	As Integer
+	Dim Year1	As Integer
+	Dim Hour1	As Integer
+	Dim Minute1	As Integer
+	Dim Second1	As Integer
+
+	Dim NR		As Integer ' количество развёрток
+	Dim NP		As Integer ' количество точек в развёртке
+	Dim NC		As Integer ' количество каналов
+
+	Dim Lag		As Double ' задержка
+	Dim Freq		As Double ' частота
+
+	Dim Dat1		As Integer Ptr
+	Dim Dat2		As Integer Ptr
+	Dim Dat3		As Integer Ptr
+	Dim Dat4		As Integer Ptr
+
+End Type
+
+Extern "c"
+
+Declare Function seansRd_load Alias "seansRd_load" ( ByVal filename As ZString Ptr, ByVal seans As seansRd_data Ptr) As Integer
+Declare Function seansRd_close Alias "seansRd_close" (ByVal seans As seansRd_data Ptr) As Integer
+
+End Extern
+
+
+''' ===================================================================================================
+''' seans3
+
+Const R3C3_OK As Integer = 0
+Const R3C3_ERR_FILE  As Integer = 1
+Const R3C3_ERR_MEM  As Integer = 2
+Const R3C3_ERR_TYPE  As Integer = 3
+
+Type  seans3c3_data Field = 0
+
+
+	Dim NP		As Integer ' количество точек в развёртке
+	Dim NR		As Integer ' количество развёрток
+	Dim Lag		As Double ' задержка
+
+	Dim tDateTime	As Double Ptr
+
+	Dim Dat1		As Short Ptr
+	Dim Dat2		As Short Ptr
+	Dim Dat3		As Short Ptr
+
+
+End Type
+
+Extern "c"
+
+Declare Function seans3c3_load Alias "seans3c3_load" ( ByVal filename As ZString Ptr, ByVal seans As seans3c3_data Ptr) As Integer
+'Declare Function seansRd_close Alias "seansRd_close" (ByVal seans As seansRd_data Ptr) As Integer
+
+End Extern
+
+
+
+''' ===================================================================================================
 ''' seansH
 
 Type  seansH_data Field = 0
@@ -547,6 +623,7 @@ Declare Function date_year_leap Alias "date_year_leap" (ByVal year1 As Integer) 
 Declare Function date_next Alias "date_next" (ByVal day1 As Integer Ptr, ByVal month1 As Integer Ptr, ByVal year1 As Integer Ptr) As Integer
 Declare Function date_valid Alias "date_valid" (ByVal day1 As Integer, ByVal month1 As Integer, ByVal year1 As Integer) As Integer
 Declare Function time_from_str Alias "time_from_str"  (ByVal hh As Integer Ptr, ByVal mm As Integer Ptr, ByVal ss As Integer Ptr,  ByVal timestr As ZString Ptr) As Integer
+Declare Function tdatetime_2date Alias "tdatetime_2date"  (ByVal tdatetime As Double, ByVal day1 As Integer Ptr, ByVal month1 As Integer Ptr, ByVal year1 As Integer Ptr, ByVal hh As Integer Ptr, ByVal mm As Integer Ptr, ByVal ss As Integer Ptr, ByVal ms As Integer Ptr) As Integer
 
 End Extern
 
@@ -567,9 +644,13 @@ Declare Function fourier_DFT_d Alias "fourier_DFT_d"  (ByVal array_in As Double 
 
 Declare Function fourier_DCT_d Alias "fourier_DCT_d"  (ByVal array_in As Double Ptr, ByVal il As Integer, ByVal array_out As Double Ptr, ByVal ol As Integer, ByVal f0 As Double, ByVal df As Double, ByVal dt As Double) As Integer
 
-Declare Function fourier_FFT_d Alias "fourier_FFT_d"  (ByVal array_in1 As Double Ptr, ByVal array_in2 As Double Ptr, ByVal array_out1 As Double Ptr, ByVal array_out2 As Double Ptr, ByVal len As Integer) As Integer
+Declare Function fourier_FFT_d Alias "fourier_FFT_d"  (ByVal array_in1 As Double Ptr, ByVal array_in2 As Double Ptr, ByVal array_out1 As Double Ptr, ByVal array_out2 As Double Ptr, ByVal length As Integer) As Integer
 
-Declare Function fourier_IFFT_d Alias "fourier_IFFT_d"  (ByVal array_in1 As Double Ptr, ByVal array_in2 As Double Ptr, ByVal array_out1 As Double Ptr, ByVal array_out2 As Double Ptr, ByVal len As Integer) As Integer
+Declare Function fourier_IFFT_d Alias "fourier_IFFT_d"  (ByVal array_in1 As Double Ptr, ByVal array_in2 As Double Ptr, ByVal array_out1 As Double Ptr, ByVal array_out2 As Double Ptr, ByVal length As Integer) As Integer
+
+Declare Function fourier_get_spectrum_from_acf Alias "fourier_get_spectrum_from_acf"  (ByVal c As Double Ptr, ByVal s As Double Ptr, ByVal length As Integer, ByVal deltaTau As Double, ByVal sp As Double Ptr, ByVal nF As Integer) As Integer
+
+Declare Function fourier_get_acf_from_spectrum Alias "fourier_get_acf_from_spectrum"  (ByVal sp As Double Ptr, ByVal nF As Integer, ByVal c As Double Ptr, ByVal s As Double Ptr, ByVal length As Integer, ByVal deltaTau As Double) As Integer
 
 Declare Function array_max_d Alias "array_max_d"  (ByVal array As Double Ptr, ByVal length As Integer) as Double
 
