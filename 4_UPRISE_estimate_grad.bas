@@ -82,6 +82,8 @@ Dim Shared As Integer Config_sinus
 
 Dim Shared As Integer ConfigAmbig
 
+Dim Shared As Integer Config_h_min_q
+
 '''==============================================
 
 Dim Shared As Integer START_X = 0
@@ -149,10 +151,10 @@ Dim Shared As Integer heCurrent
 Dim Shared As Double  acf_filter(0 To 100) ' АКФ фильтра
 
 Enum Params
-	PARAM_TI
-	PARAM_TE
-	PARAM_H
-	PARAM_HE
+PARAM_TI
+PARAM_TE
+PARAM_H
+PARAM_HE
 End Enum
 
 '''==============================================
@@ -218,6 +220,8 @@ Declare Function getHydMax(h As Integer) As Integer
 Declare Function analysis_param(ByVal h As Integer, ByVal z As Integer, ByVal param As Integer) As Integer
 
 Declare Sub libraries_list_load(He As Integer)
+
+Declare Sub save_and_exit()
 
 
 '''==============================================
@@ -340,6 +344,8 @@ Else
 	Input #file, Config_hyd_num
 
 	Input #file, ConfigAmbig
+
+	Input #file, Config_h_min_q
 
 	Close #file
 
@@ -709,10 +715,18 @@ ReDim Shared As Single AmbigCoeff(0 To 50, 0 To (hMax-hMin)\hStep+1, 0 To seans_
 Print "Загрузка ДФН... ";
 For lag = 0 To 18
 	Print_process_percent((lag*100)/19)
-	file = FreeFile
+
+	file = FreeFile()
 	ext = Str(lag)
 	If lag < 10 Then ext = "0"+ext
-	filename = "./ambig/00/ambig"+ext+".dat"
+	If pulse_length = 663 Then
+		filename = "./ambig/663/00/ambig"+ext+".dat"
+	Else
+		If pulse_length = 795 Then
+			filename = "./ambig/795/00/ambig"+ext+".dat"
+		EndIf
+	EndIf
+
 	Open filename For Input As #file
 	If Err() <> 0 Then
 		PrintErrorToLog(ErrorAFunction, __FILE__, __LINE__)
@@ -819,6 +833,11 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 				Print "Включён ручной режим."
 				Color 15
 			EndIf
+		EndIf
+
+		If MultiKey(FB.SC_Q) Then
+			save_and_exit()
+			End
 		EndIf
 
 
@@ -5380,3 +5399,517 @@ Sub libraries_list_load(He As Integer)
 
 End Sub
 
+
+
+Sub save_and_exit()
+
+
+	Dim As Integer nH, nT
+	Dim As Integer t, h
+	Dim As Integer file
+	Dim As Double temp
+
+	Color 10
+	Print
+	Print "Сохранить результаты и выйти из программы? (Y/N) "
+	If GetKey_YN() = 0 Then
+		Return
+	EndIf
+
+
+
+	' получаем количество сеансов
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/T.txt" For Input As #file
+
+	nT = 0
+	Do While Not Eof(file)
+		Input #file, temp
+		nT += 1
+	Loop
+
+	Close #file
+
+
+
+	' получаем количество высот
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/H.txt" For Input As #file
+
+	nH = 0
+	Do While Not Eof(file)
+		Input #file, temp
+		nH += 1
+	Loop
+
+	Close #file
+
+
+	' выделяем память
+	ReDim As Double  t_array  (0 To nT-1)
+	ReDim As Integer h_array  (0 To nH-1)
+	ReDim As Double  q_array  (0 To nT-1, 0 To nH-1)
+	ReDim As Double  ti_array (0 To nT-1, 0 To nH-1)
+	ReDim As Double  te_array (0 To nT-1, 0 To nH-1)
+	ReDim As Double  he_array (0 To nT-1, 0 To nH-1)
+	ReDim As Double  hyd_array(0 To nT-1, 0 To nH-1)
+	ReDim As Double  m_array  (0 To nT-1, 0 To nH-1)
+
+
+	' считываем время сеансов
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/T.txt" For Input As #file
+
+	For t = 0 To nT-1
+		Input #file, t_array(t)
+	Next t
+
+	Close #file
+
+
+	' считываем значения высот
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/H.txt" For Input As #file
+
+
+	For h = 0 To nH-1
+		Input #file, h_array(h)
+	Next h
+
+	Close #file
+
+
+	For i As Integer = 0 To nH-1
+		For j As Integer = 0 To nH-1-1
+			If h_array(j) > h_array(j+1) Then
+				Dim As Integer tmp = h_array(j)
+				h_array(j) = h_array(j+1)
+				h_array(j+1) = tmp
+			EndIf
+		Next j
+	Next i
+
+
+
+	ReDim As Double  _ti_array (0 To nT-1, 0 To nH-1)
+	ReDim As Double  _te_array (0 To nT-1, 0 To nH-1)
+	ReDim As Double  _he_array (0 To nT-1, 0 To nH-1)
+	ReDim As Double  _hyd_array(0 To nT-1, 0 To nH-1)
+
+	ReDim As Double  ti2_array (0 To nT-1, 0 To nH-1)
+	ReDim As Double  te2_array (0 To nT-1, 0 To nH-1)
+	ReDim As Double  he2_array (0 To nT-1, 0 To nH-1)
+	ReDim As Double  hyd2_array(0 To nT-1, 0 To nH-1)
+
+	' чтение данных из файла
+	For h = 0 To nH-1
+
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/Q."+ Str(h_array(h)) +".txt" For Input As #file
+		For t = 0 To nT-1
+			Input #file, q_array(t, h)
+		Next t
+		Close #file
+
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/Ti.-1."+ Str(h_array(h)) +".txt" For Input As #file
+		For t = 0 To nT-1
+			Input #file, ti_array(t, h)
+		Next t
+		Close #file
+
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/Te.-1."+ Str(h_array(h)) +".txt" For Input As #file
+		For t = 0 To nT-1
+			Input #file, te_array(t, h)
+		Next t
+		Close #file
+
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/Hyd.-1."+ Str(h_array(h)) +".txt" For Input As #file
+		For t = 0 To nT-1
+			Input #file, hyd_array(t, h)
+		Next t
+		Close #file
+
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/M.-1."+ Str(h_array(h)) +".txt" For Input As #file
+		For t = 0 To nT-1
+			Input #file, m_array(t, h)
+		Next t
+		Close #file
+
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/He.-1."+ Str(h_array(h)) +".txt" For Input As #file
+		For t = 0 To nT-1
+			Input #file, he_array(t, h)
+		Next t
+		Close #file
+
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/_Ti.-1."+ Str(h_array(h)) +".txt" For Input As #file
+		For t = 0 To nT-1
+			Input #file, _ti_array(t, h)
+		Next t
+		Close #file
+
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/_Te.-1."+ Str(h_array(h)) +".txt" For Input As #file
+		For t = 0 To nT-1
+			Input #file, _te_array(t, h)
+		Next t
+		Close #file
+
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/_Hyd.-1."+ Str(h_array(h)) +".txt" For Input As #file
+		For t = 0 To nT-1
+			Input #file, _hyd_array(t, h)
+		Next t
+		Close #file
+
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/_He.-1."+ Str(h_array(h)) +".txt" For Input As #file
+		For t = 0 To nT-1
+			Input #file, _he_array(t, h)
+		Next t
+		Close #file
+
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/Ti2.-1."+ Str(h_array(h)) +".txt" For Input As #file
+		For t = 0 To nT-1
+			Input #file, ti2_array(t, h)
+		Next t
+		Close #file
+
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/Te2.-1."+ Str(h_array(h)) +".txt" For Input As #file
+		For t = 0 To nT-1
+			Input #file, te2_array(t, h)
+		Next t
+		Close #file
+
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/Hyd2.-1."+ Str(h_array(h)) +".txt" For Input As #file
+		For t = 0 To nT-1
+			Input #file, hyd2_array(t, h)
+		Next t
+		Close #file
+
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/He2.-1."+ Str(h_array(h)) +".txt" For Input As #file
+		For t = 0 To nT-1
+			Input #file, he2_array(t, h)
+		Next t
+		Close #file
+
+	Next h
+
+
+
+	' запись Ti
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/Ti.txt" For Output As #file
+
+	Print #file, "      0 ";
+
+	For h = 0 To nH-1
+		Print #file, Using "###### "; h_array(h);
+	Next h
+
+	For t = 0 To nT-1
+		Print #file,
+		Print #file, Using "##.#### "; t_array(t);
+		For h = 0 To nH-1
+			Print #file, Using "###### "; ti_array(t, h);
+		Next h
+	Next t
+
+	Close #file
+
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/_Ti.txt" For Output As #file
+
+	Print #file, "      0 ";
+
+	For h = 0 To nH-1
+		Print #file, Using "###### "; h_array(h);
+	Next h
+
+	For t = 0 To nT-1
+		Print #file,
+		Print #file, Using "##.#### "; t_array(t);
+		For h = 0 To nH-1
+			Print #file, Using "###### "; _ti_array(t, h);
+		Next h
+	Next t
+
+	Close #file
+
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/Ti2.txt" For Output As #file
+
+
+	Print #file, "      0 ";
+
+	For h = 0 To nH-1
+		Print #file, Using "###### "; h_array(h);
+	Next h
+
+	For t = 0 To nT-1
+		Print #file,
+		Print #file, Using "##.#### "; t_array(t);
+		For h = 0 To nH-1
+			Print #file, Using "###### "; ti2_array(t, h);
+		Next h
+	Next t
+
+	Close #file
+
+
+	' запись Te
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/Te.txt" For Output As #file
+
+
+	Print #file, "      0 ";
+
+	For h = 0 To nH-1
+		Print #file, Using "###### "; h_array(h);
+	Next h
+
+	For t = 0 To nT-1
+		Print #file,
+		Print #file, Using "##.#### "; t_array(t);
+		For h = 0 To nH-1
+			Print #file, Using "###### "; te_array(t, h);
+		Next h
+	Next t
+
+	Close #file
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/_Te.txt" For Output As #file
+
+	Print #file, "      0 ";
+
+	For h = 0 To nH-1
+		Print #file, Using "###### "; h_array(h);
+	Next h
+
+	For t = 0 To nT-1
+		Print #file,
+		Print #file, Using "##.#### "; t_array(t);
+		For h = 0 To nH-1
+			Print #file, Using "###### "; _te_array(t, h);
+		Next h
+	Next t
+
+	Close #file
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/Te2.txt" For Output As #file
+
+
+	Print #file, "      0 ";
+
+	For h = 0 To nH-1
+		Print #file, Using "###### "; h_array(h);
+	Next h
+
+	For t = 0 To nT-1
+		Print #file,
+		Print #file, Using "##.#### "; t_array(t);
+		For h = 0 To nH-1
+			Print #file, Using "###### "; te2_array(t, h);
+		Next h
+	Next t
+
+	Close #file
+
+	' запись He
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/He.txt" For Output As #file
+
+	Print #file, "      0 ";
+
+	For h = 0 To nH-1
+		Print #file, Using "###### "; h_array(h);
+	Next h
+
+	For t = 0 To nT-1
+		Print #file,
+		Print #file, Using "##.#### "; t_array(t);
+		For h = 0 To nH-1
+			Print #file, Using "###.## "; he_array(t, h);
+		Next h
+	Next t
+
+	Close #file
+
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/_He.txt" For Output As #file
+
+
+	Print #file, "      0 ";
+
+	For h = 0 To nH-1
+		Print #file, Using "###### "; h_array(h);
+	Next h
+
+	For t = 0 To nT-1
+		Print #file,
+		Print #file, Using "##.#### "; t_array(t);
+		For h = 0 To nH-1
+			Print #file, Using "###.## "; _he_array(t, h);
+		Next h
+	Next t
+
+	Close #file
+
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/He2.txt" For Output As #file
+
+
+	Print #file, "      0 ";
+
+	For h = 0 To nH-1
+		Print #file, Using "###### "; h_array(h);
+	Next h
+
+	For t = 0 To nT-1
+		Print #file,
+		Print #file, Using "##.#### "; t_array(t);
+		For h = 0 To nH-1
+			Print #file, Using "###.## "; he2_array(t, h);
+		Next h
+	Next t
+
+	Close #file
+
+	' запись Hyd
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/Hyd.txt" For Output As #file
+
+	Print #file, "      0 ";
+
+	For h = 0 To nH-1
+		Print #file, Using "###### "; h_array(h);
+	Next h
+
+	For t = 0 To nT-1
+		Print #file,
+		Print #file, Using "##.#### "; t_array(t);
+		For h = 0 To nH-1
+			Print #file, Using "###.## "; hyd_array(t, h)/2;
+		Next h
+	Next t
+
+	Close #file
+
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/_Hyd.txt" For Output As #file
+
+	Print #file, "      0 ";
+
+	For h = 0 To nH-1
+		Print #file, Using "###### "; h_array(h);
+	Next h
+
+	For t = 0 To nT-1
+		Print #file,
+		Print #file, Using "##.#### "; t_array(t);
+		For h = 0 To nH-1
+			Print #file, Using "###.## "; _hyd_array(t, h)/2;
+		Next h
+	Next t
+
+	Close #file
+
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/Hyd2.txt" For Output As #file
+
+	Print #file, "      0 ";
+
+	For h = 0 To nH-1
+		Print #file, Using "###### "; h_array(h);
+	Next h
+
+	For t = 0 To nT-1
+		Print #file,
+		Print #file, Using "##.#### "; t_array(t);
+		For h = 0 To nH-1
+			Print #file, Using "###.## "; hyd2_array(t, h)/2;
+		Next h
+	Next t
+
+	Close #file
+
+
+
+	' запись Q
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/Q.txt" For Output As #file
+
+	Print #file, "      0 ";
+
+	h = Config_h_min_q
+	Do
+		Print #file, Using "###### "; Hkm(h);
+		h += 1
+	Loop Until Hkm(h) > h_array(nH-1)
+
+	For t = 0 To nT-1
+		Print #file,
+		Print #file, Using "##.#### "; t_array(t);
+		h = Config_h_min_q
+		Do
+			Print #file, Using "###.## "; dat_all_str(h, t).q;
+			h += 1
+		Loop Until Hkm(h) > h_array(nH-1)
+	Next t
+
+	Close #file
+
+
+
+/'
+	' запись Qh2
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/Qh2.txt" For Output As #file
+
+
+	Print #file, "      0 ";
+
+	h = Config_h_min_q
+	Do
+		Print #file, Using "###### "; h_array(h);
+		h += 1
+	Loop Until Hkm(h) >= h_array(nH-1)
+
+	For t = 0 To nT-1
+		Print #file,
+		Print #file, Using "##.#### "; t_array(t);
+		h = Config_h_min_q
+		Do
+			Print #file, Using "##.###^^^^ "; dat_all_str(h, t).q*(h_array(h)^2);
+		Loop Until Hkm(h) >= h_array(nH-1)
+	Next t
+
+	Close #file
+'/
+
+	
+
+End Sub
