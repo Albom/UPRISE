@@ -97,7 +97,7 @@ AddComboBoxItem(COMBO_TYPE, "Файлы SNew (коррелятор K3)", -1)
 AddComboBoxItem(COMBO_TYPE, "Файлы SOld (коррелятор K1)", -1)
 SetItemComboBox(COMBO_TYPE, 0)
 
-TextGadget (TEXT_COPYRIGHT, 10, 270, 520, 24 ,"© Богомаз А.В., Котов Д.В. (Институт ионосферы)")
+TextGadget (TEXT_COPYRIGHT, 10, 270, 520, 24 ,"© 2013–2014 Богомаз А.В., Котов Д.В. (Институт ионосферы)")
 
 
 SetGadgetFont(BTN_VIEW,      font)
@@ -127,31 +127,31 @@ Do
 
 				Case BTN_VIEW
 					If GetItemComboBox(COMBO_TYPE) = 0 Then
-						ShellExecute(CPtr(Any Ptr, hwnd), "open", "01_UPRISE_view_SNew.exe", NULL, NULL, SW_SHOWNORMAL)
+						ShellExecute(CPtr(Any Ptr, hwnd), "open", "1_UPRISE_view_SNew.exe", NULL, NULL, SW_SHOWNORMAL)
 					Else
-						ShellExecute(CPtr(Any Ptr, hwnd), "open", "01_UPRISE_view_SOld.exe", NULL, NULL, SW_SHOWNORMAL)
+						ShellExecute(CPtr(Any Ptr, hwnd), "open", "1_UPRISE_view_SOld.exe", NULL, NULL, SW_SHOWNORMAL)
 					EndIf
 
 				Case BTN_INTEGRATE
 					If GetItemComboBox(COMBO_TYPE) = 0 Then
-						ShellExecute(CPtr(Any Ptr, hwnd), "open", "02_UPRISE_integrate_SNew.exe", NULL, NULL, SW_SHOWNORMAL)
+						ShellExecute(CPtr(Any Ptr, hwnd), "open", "2_UPRISE_integrate_SNew.exe", NULL, NULL, SW_SHOWNORMAL)
 					Else
-						ShellExecute(CPtr(Any Ptr, hwnd), "open", "02_UPRISE_integrate_SOld.exe", NULL, NULL, SW_SHOWNORMAL)
+						ShellExecute(CPtr(Any Ptr, hwnd), "open", "2_UPRISE_integrate_SOld.exe", NULL, NULL, SW_SHOWNORMAL)
 					EndIf
 
 				Case BTN_APPROX
 					If GetItemComboBox(COMBO_APPROX) = 0 Then
-						ShellExecute(CPtr(Any Ptr, hwnd), "open", "03_UPRISE_approximate_trapezoidal.exe", NULL, NULL, SW_SHOWNORMAL)
+						ShellExecute(CPtr(Any Ptr, hwnd), "open", "3_UPRISE_approximate_trapezoidal.exe", NULL, NULL, SW_SHOWNORMAL)
 					Else
-						ShellExecute(CPtr(Any Ptr, hwnd), "open", "03_UPRISE_approximate_polynomial.exe", NULL, NULL, SW_SHOWNORMAL)
+						ShellExecute(CPtr(Any Ptr, hwnd), "open", "3_UPRISE_approximate_polynomial.exe", NULL, NULL, SW_SHOWNORMAL)
 					EndIf
 
 
 				Case BTN_ESTIMATE
 					If GetItemComboBox(COMBO_ESTIMATE) = 0 Then
-						ShellExecute(CPtr(Any Ptr, hwnd), "open", "04_UPRISE_estimate_grad.exe", NULL, NULL, SW_SHOWNORMAL)
+						ShellExecute(CPtr(Any Ptr, hwnd), "open", "4_UPRISE_estimate_grad.exe", NULL, NULL, SW_SHOWNORMAL)
 					Else
-						ShellExecute(CPtr(Any Ptr, hwnd), "open", "04_UPRISE_velocity.exe", NULL, NULL, SW_SHOWNORMAL)
+						ShellExecute(CPtr(Any Ptr, hwnd), "open", "4_UPRISE_velocity.exe", NULL, NULL, SW_SHOWNORMAL)
 					EndIf
 
 

@@ -10,6 +10,8 @@
 #Include "windows.bi"
 #Include "file.bi"
 
+#Include "window9.bi"
+
 '''==============================================
 
 #If __FB_LANG__ = "fb"
@@ -69,6 +71,7 @@ Dim Shared As Integer  Config_step_h_3,  Config_step_ti_3,  Config_step_te_3
 Dim Shared As Integer Config_range_h_4, Config_range_ti_4, Config_range_te_4
 Dim Shared As Integer  Config_step_h_4,  Config_step_ti_4,  Config_step_te_4
 Dim Shared As Integer  Config_oxygen
+Dim Shared As Double  Config_harmonic
 
 Dim Shared As Integer he_step
 
@@ -202,6 +205,9 @@ Declare Sub spline_wnd_te(ByVal h As Integer, ByVal z As Integer, ByVal t_start 
 Declare Sub gradient_te(ByVal h As Integer, ByVal z As Integer, ByVal t_start As Integer, ByVal t_end As Integer)
 
 Declare Function getHeMax(h As Integer) As Integer
+Declare Function getHydMax(h As Integer) As Integer
+
+Declare Function analysis_param(ByVal h As Integer, ByVal z As Integer, ByVal param As Integer) As Integer
 
 
 '''==============================================
@@ -267,6 +273,8 @@ If Err() > 0 Then
 
 	Config_sinus = 1
 
+	Config_harmonic = 0.05
+
 Else
 
 	Dim As String tmp_string
@@ -309,6 +317,7 @@ Else
 
 	Input #file, He_grad
 	Input #file, He_maxLib
+	Input #file, Config_harmonic
 
 	Close #file
 
@@ -398,6 +407,8 @@ Else
 	Print "—инусна€ составл€юща€ не учитываетс€."
 EndIf
 
+Print
+Print "”ровень гармоники дл€ определени€ ширины окна сглаживани€: "; Config_harmonic
 
 Print
 Color 12
@@ -486,6 +497,7 @@ Print "OK"
 
 seans_num_out = seans_num_in
 
+DeleteDir(SEANS_DIR_OUT + DirectoryOutput+"/step3", /'FOF_ALLOWUNDO Or '/FOF_NOCONFIRMATION Or FOF_SILENT)
 MkDir(SEANS_DIR_OUT + DirectoryOutput+"/step3")
 
 FileCopy("config.dat", SEANS_DIR_OUT + DirectoryOutput+"/step3/config.dat")
@@ -701,8 +713,26 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 	Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "He."+Str(CInt(Hkm(h)))+".txt" For Output As #file
 	Close #file
 
+	Print
+	Color 12
+	Print "јвтоматический режим."
+	Print "ƒл€ перехода в ручной режим зажмите ESC."
+	Print
+	Color 15
+
+	Dim As Integer auto
+
+	auto = 1
 
 	For he = 0 To he_max Step he_step
+
+		If MultiKey(FB.SC_ESCAPE) And auto = 1 Then
+			auto = 0
+			Color 11
+			Print "¬ключЄн ручной режим."
+			Color 15
+		EndIf
+
 
 		heCurrent = he
 
@@ -765,12 +795,33 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 		ranges_reset(h)
 
 
+		If MultiKey(FB.SC_ESCAPE) And auto = 1 Then
+			auto = 0
+			Color 11
+			Print "¬ключЄн ручной режим."
+			Color 15
+		EndIf
+
 		' 1 шаг
 		inverse_problem_v1_conv(h, z, Config_step_h_1, Config_step_te_1, Config_step_ti_1)
+
+		If MultiKey(FB.SC_ESCAPE) And auto = 1 Then
+			auto = 0
+			Color 11
+			Print "¬ключЄн ручной режим."
+			Color 15
+		EndIf
 
 		' 2 шаг
 		ranges_set(h, Config_range_h_2, Config_range_te_2, Config_range_ti_2)
 		inverse_problem_v2_conv(h, z, Config_step_h_2, Config_step_te_2, Config_step_ti_2) ' Step_Hyd = 2.5%, Step_Ti = 50K, Step_Te = 50K
+
+		If MultiKey(FB.SC_ESCAPE) And auto = 1 Then
+			auto = 0
+			Color 11
+			Print "¬ключЄн ручной режим."
+			Color 15
+		EndIf
 
 		' 3 шаг
 		ranges_set(h, Config_range_h_3, Config_range_te_3, Config_range_ti_3)
@@ -778,11 +829,59 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 
 		results_write(h, he)
 
+		If MultiKey(FB.SC_ESCAPE) And auto = 1 Then
+			auto = 0
+			Color 11
+			Print "¬ключЄн ручной режим."
+			Color 15
+		EndIf
+
 	Next he
 
 	intervals_input_auto(h)
 
-	draw_all(h, z)
+	If auto = 0 Then
+
+		draw_all(h, z)
+
+	Else
+
+		Dim As Integer wnd = 1
+
+		save(h)
+
+		wnd = analysis_param(h, z, PARAM_TE)
+		If wnd > 1 Then
+			trand_te(h, z, 1, seans_num_out-1, wnd)
+		EndIf
+
+		wnd = analysis_param(h, z, PARAM_TI)
+		If wnd > 1 Then
+			trand_ti(h, z, 1, seans_num_out-1, wnd)
+		EndIf
+
+		If getHydMax(h) < 80 Then
+
+			wnd = analysis_param(h, z, PARAM_H)
+			If wnd > 1 Then
+				trand_hyd(h, z, 1, seans_num_out-1, wnd)
+			EndIf
+
+			inverse_problem_hyd_ti_te(h, z)
+
+		Else
+
+			inverse_problem_ti_te(h, z)
+
+		EndIf
+
+
+
+
+
+	EndIf
+
+
 
 
 	' запись значени€ обработанной высоты в файл
@@ -2922,6 +3021,100 @@ End Sub
 
 ''' ================================================================
 
+Function analysis_param(ByVal h As Integer, ByVal z As Integer, ByVal param As Integer) As Integer
+
+	ReDim As Double param_loaded(0 To seans_num_out-1)
+	ReDim As Double an(0 To seans_num_out-1)
+	ReDim As Double bn(0 To seans_num_out-1)
+
+	Dim As Integer t, f
+	Dim As Integer file
+
+	Dim As String param_str
+
+	Select Case param
+
+		Case PARAM_TI
+			param_str = "Ti."
+
+		Case PARAM_TE
+			param_str = "Te."
+
+		Case PARAM_H
+			param_str = "Hyd."
+
+		Case PARAM_HE
+			param_str = "He."
+
+	End Select
+
+	' загрузка временного хода выбранного параметра
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ param_str +Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, param_loaded(t)
+	Next t
+	Close #file
+
+	For t = 0 To seans_num_out-1
+		an(0) += param_loaded(t)
+	Next t
+	an(0) /= seans_num_out
+	an(0) /= 2
+
+	For f = 1 To seans_num_out\2
+		For t = 0 To seans_num_out-1
+			an(f) += param_loaded(t)*Cos(f*t*2*(4*Atn(1))/seans_num_out)
+			bn(f) += param_loaded(t)*Sin(f*t*2*(4*Atn(1))/seans_num_out)
+		Next t
+		an(f) /= seans_num_out
+		bn(f) /= seans_num_out
+
+	Next f
+
+
+	' запись временного хода
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3/W."+ param_str+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+
+	For f = 0 To seans_num_out\2
+		Print #file, Using "##.####^^^^ "; Sqr(an(f)^2+bn(f)^2)
+	Next f
+	Close #file
+
+	Dim As Double abMax = -1e200
+	Dim As Integer abMaxIndex = 0
+	For f = 0 To seans_num_out\2
+		If Sqr(an(f)^2+bn(f)^2) > abMax Then
+			abMax = Sqr(an(f)^2+bn(f)^2)
+			abMaxIndex = f
+		EndIf
+	Next f
+
+	For f = 0 To seans_num_out\2
+		If Sqr(an(f)^2+bn(f)^2)/Sqr(an(abMaxIndex)^2+bn(abMaxIndex)^2) < 0.05 Then
+
+			file = FreeFile()
+			Open SEANS_DIR_OUT + DirectoryOutput+"/step3/F."+ param_str+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+			Print #file, f
+			Close #file
+
+			file = FreeFile()
+			Open SEANS_DIR_OUT + DirectoryOutput+"/step3/N."+ param_str+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+			Print #file, seans_num_out\f
+			Close #file
+
+			Return seans_num_out\f
+
+		EndIf
+	Next f
+
+
+End Function
+
+''' ================================================================
+
+
 
 Sub interpolate_param(ByVal h As Integer, ByVal z As Integer, ByVal t_start As Integer, ByVal t_end As Integer, ByVal param As Integer)
 
@@ -3009,7 +3202,6 @@ Sub trand_ti(ByVal h As Integer, ByVal z As Integer, ByVal t_start As Integer, B
 		Input #file, param_loaded(t)
 	Next t
 	Close #file
-
 
 	array_trand_d(@param_loaded(0), @trand(0), wnd, seans_num_out)
 
@@ -4567,6 +4759,35 @@ Sub input_param(ByVal h As Integer, ByVal z As Integer, ByVal t_start As Integer
 	param_save(h, @ti_loaded(0), @te_loaded(0), @hyd_loaded(0), @he_loaded(0), @d_loaded(0) )
 
 End Sub
+
+''' ================================================================
+
+Function getHydMax(h As Integer) As Integer
+
+	Dim As Integer t
+	Dim As Integer file
+	ReDim As Double hyd(0 To seans_num_out-1)
+	Dim As Double hydMax
+
+	' загрузка временного хода H+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "Hyd."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+
+	For t = 0 To seans_num_out-1
+		Input #file, hyd(t)
+	Next t
+	Close #file
+
+	hydMax = hyd(0)
+	For t = 1 To seans_num_out-1
+		If hyd(t) > hydMax Then
+			hydMax = hyd(t)
+		EndIf
+	Next t
+
+	Return hydMax
+
+End Function
 
 ''' ================================================================
 
