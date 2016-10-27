@@ -64,6 +64,8 @@ Dim As Integer isVelocityTrap = 0
 
 Dim As Integer isAcf = 0
 
+Dim As Double limit
+
 '''==============================================
 
 Hmin = 55
@@ -108,6 +110,7 @@ Else
 	Input #file, isAcf
 	Input #file, kMin, kMax
 	Input #file, num_algo
+	Input #file, limit
 EndIf
 
 If (Hmin < 0) Or (Hmax < Hmax) Or (Hstep < 1)  Then
@@ -127,6 +130,7 @@ Print "Шаг по высоте Hstep: "; Hstep
 Print
 Print "Номера минимальной и максимальной задержки: kMin = "; kMin; ", kMax = "; kMax
 Print "Номер алгоритма: "; num_algo
+Print "Ограничение: "; limit
 Print
 If isSpectrum <> 0 Then
 	Print "+ Расчёт спектра."
@@ -496,7 +500,7 @@ For t = 0 To seans_num_in-1 ' по времени
 				c = 0
 				drift_d(h, t) = 0
 				For tau = kMin To kMax
-					If Abs(as_file_in.acf[h].rc(tau)/as_file_in.acf[h].rc(0)) > 0.05 Then
+					If Abs(as_file_in.acf[h].rc(tau)/as_file_in.acf[h].rc(0)) > limit Then
 						drift_d(h, t) += Atn( as_file_in.acf[h].rs(tau)/as_file_in.acf[h].rc(tau) ) / (DELTA_TAU * tau)
 						c += 1
 					EndIf
@@ -518,14 +522,14 @@ For t = 0 To seans_num_in-1 ' по времени
 
 				c = 0
 				For tau = kMin To kMax
-					If Abs(as_file_in.acf[h].rc(tau)/as_file_in.acf[h].rc(0)) > 0.05 Then
+					If Abs(as_file_in.acf[h].rc(tau)/as_file_in.acf[h].rc(0)) > limit Then
 						c += Atn( as_file_in.acf[h].rs(tau)/as_file_in.acf[h].rc(tau) ) * r2(tau) * DELTA_TAU * tau
 					EndIf
 				Next tau
 
 				z = 0
 				For tau = kMin To kMax
-					If Abs(as_file_in.acf[h].rc(tau)/as_file_in.acf[h].rc(0)) > 0.05 Then
+					If Abs(as_file_in.acf[h].rc(tau)/as_file_in.acf[h].rc(0)) > limit Then
 						z += r2(tau) * (DELTA_TAU * tau)^2
 					EndIf
 				Next tau
@@ -538,7 +542,7 @@ For t = 0 To seans_num_in-1 ' по времени
 				c = 0
 				drift_d(h, t) = 0
 				For tau = kMin To kMax-1
-					If (Abs(as_file_in.acf[h].rc(tau)/as_file_in.acf[h].rc(0)) > 0.01) And (Abs(as_file_in.acf[h].rc(tau+1)/as_file_in.acf[h].rc(0)) > 0.01) Then
+					If (Abs(as_file_in.acf[h].rc(tau)/as_file_in.acf[h].rc(0)) > limit) And (Abs(as_file_in.acf[h].rc(tau+1)/as_file_in.acf[h].rc(0)) > limit) Then
 						drift_d(h, t) += Atn( as_file_in.acf[h].rs(tau+1)/as_file_in.acf[h].rc(tau+1) ) - Atn( as_file_in.acf[h].rs(tau)/as_file_in.acf[h].rc(tau) )
 						c += 1
 					EndIf
@@ -549,6 +553,44 @@ For t = 0 To seans_num_in-1 ' по времени
 				Else
 					drift_d(h, t) = 0
 				EndIf
+
+			Case 4
+
+				Dim As Double L = 1e200
+				For v As Double = -200 To 200 Step 0.1
+
+					Dim As Double delta = 0
+					For tau = kMin To kMax-1
+						If Abs(as_file_in.acf[h].rc(tau)/as_file_in.acf[h].rc(0)) > limit Then
+							delta += (as_file_in.acf[h].rs(tau)/as_file_in.acf[h].rc(tau) - Sin(-4*M_PI*DELTA_TAU*tau/LAMBDA*v)/Cos(4*M_PI*DELTA_TAU*tau/LAMBDA*v))^2
+						EndIf
+					Next tau
+
+					If delta < L Then
+						L = delta
+						drift_d(h, t) = v
+					EndIf
+
+				Next v
+
+			Case 5
+
+				Dim As Double L = 1e200
+				For v As Double = -200 To 200 Step 0.1
+
+					Dim As Double delta = 0
+					For tau = kMin To kMax-1
+						If Abs(as_file_in.acf[h].rc(tau)/as_file_in.acf[h].rc(0)) > limit Then
+							delta += (Atn(as_file_in.acf[h].rs(tau)/as_file_in.acf[h].rc(tau)) - (-4*M_PI*DELTA_TAU*tau/LAMBDA*v))^2
+						EndIf
+					Next tau
+
+					If delta < L Then
+						L = delta
+						drift_d(h, t) = v
+					EndIf
+
+				Next v
 
 		End Select
 
