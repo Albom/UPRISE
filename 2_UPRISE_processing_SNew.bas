@@ -878,21 +878,16 @@ Dim As Integer seans_current = 0
 t = 0
 Do Until t + tNak > seans_out_num-1
 
-'	Print_process_percent((t*100)/seans_out_num)
-
-
+	Print_process_percent((t*100)/seans_out_num)
 
 	EXT = Str(seans_current+1)
 	If seans_current+1 < 1000 Then EXT = "0" + EXT
 	If seans_current+1 < 100  Then EXT = "0" + EXT
 	If seans_current+1 < 10   Then EXT = "0" + EXT
 
-
 	as_file_str.filename = "AS" + DirectoryOutput + "." + EXT
 	as_file_str.date_ = *seans_str_time.date_[t+tNak\2]
 	as_file_str.time_ = *seans_str_time.time_[t+tNak\2]
-
-
 
 	as_file_str.nseans = seans_current+1
 	as_file_str.tnak = tNak
