@@ -25,6 +25,9 @@ End Type
 
 Type seans_struct_out
 	Dim p(0 To 679)  As Double
+	Dim qh2(0 To 679) As Double
+	Dim hm As Double 
+	Dim qhm As Double 
 	Dim pn  As Double
 	Dim time_decimal As Double
 End Type
@@ -80,6 +83,8 @@ Dim As Integer Y0 = 250 ' начальное значение по оси y
 ReDim Shared vis_array(0 To 1, 0 To 1) As Double ' буфер для отображения графиков
 ReDim Shared vis_array_alt(0 To 1, 0 To 679) As Double ' буфер для отображения графиков
 
+Dim As Integer Config_qh2_hmin, Config_qh2_hmax
+
 ''' =======================================================================
 
 
@@ -102,6 +107,8 @@ Input #file, lev
 Input #file, n2
 Input #file, tnak
 Input #file, tstep
+Input #file, Config_qh2_hmin
+Input #file, Config_qh2_hmax
 Close #file
 
 If razr_load(razr_filename, @razr(0), 330) = 0 Then
@@ -564,6 +571,7 @@ Do Until t + tNak > seans_loaded-1
 
 	t += tStep
 	seans_current += 1
+
 Loop
 
 Print "OK"
@@ -614,22 +622,62 @@ Next t
 
 Print "OK"
 
+Print "Расчёт qh2 и q(qh2max)... ";
+
+For t = 0 To seans_current-1
+	For h = 0 To 679
+		seans_str_out(t).qh2(h) = seans_str_out(t).p(h) * seans2_altS(h)^2
+	Next h
+Next t
+
+For t = 0 To seans_current-1
+	Dim As Double qh2 = -1e200 
+	For h = Config_qh2_hmin To Config_qh2_hmax
+		If seans_str_out(t).qh2(h) > qh2 Then 
+			seans_str_out(t).hm =  seans2_altS(h)
+			seans_str_out(t).qhm = seans_str_out(t).p(h)
+			qh2 = seans_str_out(t).qh2(h) 
+		EndIf
+	Next h
+Next t
+
+
+
+Print "OK"
+
 
 file = FreeFile()
 Open SEANS_DIR_OUT +DirectoryOutput+"/step3/T.txt" For Input As #file
 If Err() <> 0 Then
 
-	Print "Вывод результатов в файл... ";
+	Print "Вывод результатов в файлы... ";
 
 	file = FreeFile()
-	Open SEANS_DIR_OUT +DirectoryOutput+"/step3/PnShort.txt" For Output As #file
+	Open SEANS_DIR_OUT +DirectoryOutput+"/step3/ShortPn.txt" For Output As #file
 	For t = 0 To seans_current-1
-		Print #file, CInt(seans_str_out(t).pn)
+		Print #file, Using " ##.#### ########"; seans_str_out(t).time_decimal; CInt(seans_str_out(t).pn)
 	Next
 	Close #file
 
+
 	file = FreeFile()
-	Open SEANS_DIR_OUT +DirectoryOutput+"/step3/Short.txt" For Output As #file
+	Open SEANS_DIR_OUT +DirectoryOutput+"/step3/ShortHm.txt" For Output As #file
+	For t = 0 To seans_current-1
+		Print #file, Using " ##.#### ########"; seans_str_out(t).time_decimal; CInt(seans_str_out(t).hm)
+	Next
+	Close #file
+
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT +DirectoryOutput+"/step3/ShortQHm.txt" For Output As #file
+	For t = 0 To seans_current-1
+		Print #file, Using " ##.#### #####.#####"; seans_str_out(t).time_decimal; seans_str_out(t).qhm
+	Next
+	Close #file
+
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT +DirectoryOutput+"/step3/ShortQ.txt" For Output As #file
 
 	Print #file, "       0";
 	For h = h_start To h_end Step h_step
@@ -644,9 +692,31 @@ If Err() <> 0 Then
 		Next
 		Print #file,
 	Next t
+
+	Close #file ' "ShortQ.txt"
+
+
+
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT +DirectoryOutput+"/step3/ShortQh2.txt" For Output As #file
+
+	Print #file, "       0";
+	For h = h_start To h_end Step h_step
+		Print #file, Using "        ####"; seans2_altS(h);
+	Next h
+	Print #file,
+
+	For t = 0 To seans_current-1
+		Print #file, Using " ##.####"; seans_str_out(t).time_decimal;
+		For h = h_start To h_end Step h_step
+			Print #file, Using " ##.####^^^^"; seans_str_out(t).qh2(h);
+		Next
+		Print #file,
+	Next t
 	Print "OK"
 
-	Close #file ' "Short.txt"
+	Close #file ' "ShortQh2.txt"
 
 Else
 
@@ -659,11 +729,18 @@ Else
 
 	ReDim As Double out_time(0 To nT-1)
 	ReDim As Double out_q(h_start To h_end, 0 To nT-1)
+	ReDim As Double out_qh2(h_start To h_end, 0 To nT-1)
 	ReDim As Double in_time(0 To seans_current-1)
 	ReDim As Double in_q(0 To seans_current-1)
 
 	ReDim As Double pnIn(0 To seans_current-1)
 	ReDim As Double pnOut(0 To nT-1)
+	
+	ReDim As Double hmIn(0 To seans_current-1)
+	ReDim As Double hmOut(0 To nT-1)
+
+	ReDim As Double qhmIn(0 To seans_current-1)
+	ReDim As Double qhmOut(0 To nT-1)
 
 	For t = 0 To seans_current-1
 		in_time(t) = seans_str_out(t).time_decimal
@@ -691,6 +768,16 @@ Else
 		Next
 	Next
 
+	For h = h_start To h_end Step h_step
+		For t = 0 To seans_current-1
+			in_q(t) = seans_str_out(t).qh2(h)
+		Next
+		For t = 0 To nT-1
+			out_qh2(h, t) = array_linear_d(out_time(t), @in_time(0), @in_q(0), seans_current)
+		Next
+	Next
+
+
 	For t = 0 To seans_current-1
 		pnIn(t) = seans_str_out(t).pn
 	Next
@@ -699,13 +786,30 @@ Else
 		PnOut(t) = array_linear_d(out_time(t), @in_time(0), @pnIn(0), seans_current)
 	Next
 
+	For t = 0 To seans_current-1
+		hmIn(t) = seans_str_out(t).hm
+	Next
+
+	For t = 0 To nT-1
+		hmOut(t) = array_linear_d(out_time(t), @in_time(0), @hmIn(0), seans_current)
+	Next
+
+	For t = 0 To seans_current-1
+		qhmIn(t) = seans_str_out(t).qhm
+	Next
+
+	For t = 0 To nT-1
+		qhmOut(t) = array_linear_d(out_time(t), @in_time(0), @qhmIn(0), seans_current)
+	Next
+
 	time_normalize(@out_time(0), nT)
 
 
-	file = FreeFile()
-	Open SEANS_DIR_OUT +DirectoryOutput+"/step3/Short.txt" For Output As #file
+	Print "Вывод результатов в файлы... ";
 
-	Print "Вывод результатов в файл... ";
+	file = FreeFile()
+	Open SEANS_DIR_OUT +DirectoryOutput+"/step3/ShortQ.txt" For Output As #file
+
 
 	Print #file, "       0";
 	For h = h_start To h_end Step h_step
@@ -720,16 +824,49 @@ Else
 		Next
 		Print #file,
 	Next t
-	Print "OK"
 
 	Close #file ' "Short.txt"
 
 
+	file = FreeFile()
+	Open SEANS_DIR_OUT +DirectoryOutput+"/step3/ShortQh2.txt" For Output As #file
+
+	Print #file, "       0";
+	For h = h_start To h_end Step h_step
+		Print #file, Using "        ####"; seans2_altS(h);
+	Next h
+	Print #file,
+
+	For t = 0 To nT-1
+		Print #file, Using " ##.####"; out_time(t);
+		For h = h_start To h_end Step h_step
+			Print #file, Using " ##.####^^^^"; out_qh2(h, t);
+		Next
+		Print #file,
+	Next t
+	Print "OK"
+
+	Close #file ' "ShortQh2.txt"
+
 
 	file = FreeFile()
-	Open SEANS_DIR_OUT +DirectoryOutput+"/step3/PnShort.txt" For Output As #file
+	Open SEANS_DIR_OUT +DirectoryOutput+"/step3/ShortPn.txt" For Output As #file
 	For t = 0 To nT-1
-		Print #file, CInt(PnOut(t))
+		Print #file, Using " ##.#### ########"; out_time(t); CInt(PnOut(t))
+	Next
+	Close #file
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT +DirectoryOutput+"/step3/ShortHm.txt" For Output As #file
+	For t = 0 To nT-1
+		Print #file, Using " ##.#### ########"; out_time(t); CInt(hmOut(t))
+	Next
+	Close #file
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT +DirectoryOutput+"/step3/ShortQHm.txt" For Output As #file
+	For t = 0 To nT-1
+		Print #file, Using " ##.#### #####.#####"; out_time(t); qhmOut(t)
 	Next
 	Close #file
 
