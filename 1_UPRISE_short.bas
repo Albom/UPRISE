@@ -26,8 +26,8 @@ End Type
 Type seans_struct_out
 	Dim p(0 To 679)  As Double
 	Dim qh2(0 To 679) As Double
-	Dim hm As Double 
-	Dim qhm As Double 
+	Dim hm As Double
+	Dim qhm As Double
 	Dim pn  As Double
 	Dim time_decimal As Double
 End Type
@@ -53,6 +53,8 @@ Declare Sub LoadFiles(ByVal Directory As String)
 Declare Function seans_struct_time_compare cdecl (elem1 as any ptr, elem2 as any ptr) as Integer
 Declare Sub Vis_array_load()
 Declare Sub Filter(wnd_width As Integer, lev As Double, direction As Integer)
+Declare Sub SaveLabels(ByVal Directory As String)
+Declare Sub LoadLabels(ByVal Directory As String)
 
 Dim As Integer d_month, d_year, d_day, d_ndays
 Dim As String s_year, s_month, s_day
@@ -204,6 +206,8 @@ EndIf
 DirectoryOutput += directory
 MkDir(SEANS_DIR_OUT +DirectoryOutput)
 MkDir(SEANS_DIR_OUT +DirectoryOutput+"/step3")
+MkDir(SEANS_DIR_OUT +DirectoryOutput+"/step2")
+
 
 
 Print "OK"
@@ -217,6 +221,7 @@ qsort(@seans_str(0), seans_loaded, SizeOf(seans_struct), @seans_struct_time_comp
 Print "OK"
 
 
+LoadLabels(SEANS_DIR_OUT +DirectoryOutput+"/step2")
 
 
 
@@ -347,6 +352,7 @@ Do
 			Else
 				seans_str(position).m1(hCur) = 0
 			EndIf
+			SaveLabels(SEANS_DIR_OUT +DirectoryOutput+"/step2")
 			Vis_array_load()
 
 		Case KEY_Y
@@ -355,6 +361,7 @@ Do
 			Else
 				seans_str(position).m2(hCur) = 0
 			EndIf
+			SaveLabels(SEANS_DIR_OUT +DirectoryOutput+"/step2")
 			Vis_array_load()
 
 
@@ -374,16 +381,23 @@ Do
 			Input "[0..3]: ", mode
 			Print
 			Select Case mode
+				Case 1
+					For v As Integer = 0 To seans_loaded-1
+						For z As Integer = 0 To 679
+							seans_str(v).m1(z) = 0
+							seans_str(v).m2(z) = 0
+						Next
+					Next
 				Case 2
 					Input "Ўирина окна: ", wnd_width
 					Input "”ровень: ", lev
 					Filter(wnd_width, lev, 0)
-
 				Case 3
 					Input "Ўирина окна: ", wnd_width
 					Input "”ровень: ", lev
 					Filter(wnd_width, lev, 1)
 			End Select
+			SaveLabels(SEANS_DIR_OUT +DirectoryOutput+"/step2")
 			Vis_array_load()
 			/'
 		Case KEY_HOME
@@ -631,12 +645,12 @@ For t = 0 To seans_current-1
 Next t
 
 For t = 0 To seans_current-1
-	Dim As Double qh2 = -1e200 
+	Dim As Double qh2 = -1e200
 	For h = Config_qh2_hmin To Config_qh2_hmax
-		If seans_str_out(t).qh2(h) > qh2 Then 
+		If seans_str_out(t).qh2(h) > qh2 Then
 			seans_str_out(t).hm =  seans2_altS(h)
 			seans_str_out(t).qhm = seans_str_out(t).p(h)
-			qh2 = seans_str_out(t).qh2(h) 
+			qh2 = seans_str_out(t).qh2(h)
 		EndIf
 	Next h
 Next t
@@ -735,7 +749,7 @@ Else
 
 	ReDim As Double pnIn(0 To seans_current-1)
 	ReDim As Double pnOut(0 To nT-1)
-	
+
 	ReDim As Double hmIn(0 To seans_current-1)
 	ReDim As Double hmOut(0 To nT-1)
 
@@ -879,6 +893,54 @@ break
 
 ''' =======================================================================
 
+Sub SaveLabels(ByVal Directory As String)
+	Dim As Integer file, i, h
+
+	file = FreeFile()
+	Open Directory + "/ShortL1.txt" For Output As #file
+	For i = 0 To seans_loaded-1
+		For h = 0 To 679
+			Print #file, Using "# "; seans_str(i).m1(h);
+		Next
+		Print #file,
+	Next
+	Close #file
+
+	file = FreeFile()
+	Open Directory + "/ShortL2.txt" For Output As #file
+	For i = 0 To seans_loaded-1
+		For h = 0 To 679
+			Print #file, Using "# "; seans_str(i).m2(h);
+		Next
+		Print #file,
+	Next
+	Close #file
+
+End Sub
+
+
+Sub LoadLabels(ByVal Directory As String)
+	Dim As Integer file, i, h
+
+	file = FreeFile()
+	Open Directory + "/ShortL1.txt" For Input As #file
+	For i = 0 To seans_loaded-1
+		For h = 0 To 679
+			Input #file, seans_str(i).m1(h)
+		Next
+	Next
+	Close #file
+
+	file = FreeFile()
+	Open Directory + "/ShortL2.txt" For Input As #file
+	For i = 0 To seans_loaded-1
+		For h = 0 To 679
+			Input #file, seans_str(i).m2(h)
+		Next
+	Next
+	Close #file
+
+End Sub
 
 
 Sub LoadFiles(ByVal Directory As String)
