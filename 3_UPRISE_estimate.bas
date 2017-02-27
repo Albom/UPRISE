@@ -141,8 +141,6 @@ Dim Shared As Integer Hmin, Hmax, Hstep
 Dim As as_file_struct	as_file_in
 
 
-
-'ReDim Shared As dat_all_struct dat_all_str(0 To 679, 0 To 99)
 ReDim Shared As Integer Hkm(0 To 679)
 
 
@@ -743,7 +741,6 @@ If Err() <> 0 Then
 	PrintErrorToLog(ErrorNotEnoughMemory, __FILE__, __LINE__)
 	End
 EndIf
-'ReDim Shared As Double noise_acf(0 To seans_num_out-1, 0 To 255)
 
 
 
@@ -851,8 +848,6 @@ For t = 0 To seans_num_out-1 ' по времени
 			Next tau
 		EndIf
 
-		'dat_all_str(h, t).p_corr = as_file_in.acf[h].pcorr' скорректированный профиль мощности
-
 		dat_all_str(h, t).d_c = 1e200
 
 		dat_all_str(h, t).q = as_file_in.acf[h].q
@@ -863,12 +858,6 @@ For t = 0 To seans_num_out-1 ' по времени
 
 	Next h
 
-	/'
-	For tau = 0 To 18
-		noise_acf(t, tau) = as_file_in.rnc(tau)
-	Next tau
-'/
-
 	as_file_close(@as_file_in)
 
 Next t
@@ -876,7 +865,7 @@ Print_process_percent(1000)
 Print "OK"
 
 Print #1, Str(seans_num_out)+" files loaded"
-
+Print #1, "Free memory: "; Fre()\(1024*1024); " MBytes"
 
 
 file = FreeFile()
@@ -996,15 +985,6 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 	Next t
 	Close #file
 
-
-	/'
-	file = FreeFile()
-	Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "Pcorr."+Str(CInt(Hkm(h)))+".txt" For Output As #file
-	For t = 0 To seans_num_out-1 ' по времени
-		Print #file, dat_all_str(h, t).p_corr
-	Next t
-	Close #file
-'/
 
 
 	file = FreeFile()
@@ -1224,8 +1204,6 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 
 		trand_ti (h, z, 1, seans_num_out-1, Config_ti_num)
 		trand_te (h, z, 1, seans_num_out-1, Config_te_num)
-		'trand_hyd(h, z, 1, seans_num_out-1, Config_hyd_num)
-		'inverse_problem_hyd_ti_te(h, z)
 		inverse_problem_ti_te(h, z)
 
 	EndIf

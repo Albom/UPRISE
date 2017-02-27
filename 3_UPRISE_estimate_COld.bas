@@ -313,6 +313,7 @@ Print_process_percent(1000)
 Print "OK"
 
 Print #1, Str(nT)+" files loaded"
+Print #1, "Free memory: "; Fre()\(1024*1024); " MBytes"
 
 
 

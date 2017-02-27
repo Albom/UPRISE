@@ -86,6 +86,7 @@ ReDim Shared vis_array(0 To 1, 0 To 1) As Double ' буфер для отображения графико
 ReDim Shared vis_array_alt(0 To 1, 0 To 679) As Double ' буфер для отображения графиков
 
 Dim As Integer Config_qh2_hmin, Config_qh2_hmax
+Dim As Integer Config_q_01
 
 ''' =======================================================================
 
@@ -111,6 +112,7 @@ Input #file, tnak
 Input #file, tstep
 Input #file, Config_qh2_hmin
 Input #file, Config_qh2_hmax
+Input #file, Config_q_01
 Close #file
 
 If razr_load(razr_filename, @razr(0), 330) = 0 Then
@@ -213,6 +215,7 @@ MkDir(SEANS_DIR_OUT +DirectoryOutput+"/step2")
 Print "OK"
 
 Print #1, Str(seans_loaded)+" files loaded"
+Print #1, "Free memory: "; Fre()\(1024*1024); " MBytes"
 
 
 ' Сортировка сеансов по времени

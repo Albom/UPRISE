@@ -5,6 +5,7 @@
 #Include Once "albom_version.bi"
 
 #Include "crt/stdlib.bi"
+#Include "dir.bi"
 
 '''==============================================
 
@@ -135,6 +136,21 @@ Print "Программа собрана " + Mid(__DATE__, 4, 2)+"."+Mid(__DATE__, 1, 2)+"."+Mid
 Print "================================"
 Print
 
+Color 11
+
+Print "Исходные данные, находящиеся в папке " + Chr(34) + "in" + Chr(34) + ":"
+Color 10
+Dim As String fn
+fn = Dir("./in/*", fbDirectory)
+While Len(fn) > 0 
+	fn = Dir()
+	If Len(fn)=6 Then
+		Print fn;"  ";
+	EndIf
+Wend
+Print
+Print
+
 Color 15
 
 Input "Введите дату начала измерений (день месяц год): ", d_day, d_month, d_year
@@ -219,7 +235,6 @@ Print "OK"
 
 Print #1, Str(seans_loaded)+" files found"
 
-
 MkDir(SEANS_DIR_OUT)
 
 DirectoryOutput += directory
@@ -240,6 +255,7 @@ Print "Сортировка по времени... ";
 qsort(seans_str_in, seans_loaded, SizeOf(seans_struct_in), @seans_struct_time_compare)
 Print "OK"
 
+Print #1, "Free memory: "; Fre()\(1024*1024); " MBytes"
 Print "Загрузка данных... ";
 
 
@@ -434,7 +450,7 @@ Next t
 
 Print "OK"
 
-
+Print #1, "Free memory: "; Fre()\(1024*1024); " MBytes"
 
 
 

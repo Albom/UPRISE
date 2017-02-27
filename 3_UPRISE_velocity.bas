@@ -66,6 +66,8 @@ Dim As Integer isAcf = 0
 
 Dim As Double limit
 
+Dim As Double limit_vz
+
 '''==============================================
 
 Hmin = 55
@@ -76,6 +78,8 @@ SetEnviron("fbgfx=GDI")
 
 Screen 20
 #Include Once "albom_font.bi"
+
+Open Err For Output As #1
 
 Cls
 
@@ -111,6 +115,7 @@ Else
 	Input #file, kMin, kMax
 	Input #file, num_algo
 	Input #file, limit
+	Input #file, limit_vz
 EndIf
 
 If (Hmin < 0) Or (Hmax < Hmax) Or (Hstep < 1)  Then
@@ -132,6 +137,9 @@ Print "Номера минимальной и максимальной задержки: kMin = "; kMin; ", kMax = "; 
 Print "Номер алгоритма: "; num_algo
 Print "Ограничение: "; limit
 Print
+Print "Ограничение при записи в файлы: "; limit_vz
+Print
+
 If isSpectrum <> 0 Then
 	Print "+ Расчёт спектра."
 EndIf
@@ -279,7 +287,8 @@ ReDim Shared As Double drift_d (0 To nh-1, 0 To seans_num_in-1)
 ReDim Shared As Double time_d (0 To seans_num_in-1)
 ReDim Shared As Double drift_d_trap (0 To nh-1, 0 To seans_num_in-1)
 Print "OK"
-
+Print #1, Str(seans_num_in)+" files loaded"
+Print #1, "Free memory: "; Fre()\(1024*1024); " MBytes"
 
 
 
@@ -641,11 +650,11 @@ Close #file
 ' Ограничения скорости снизу и сверху
 For h = Hmin To Hmax Step Hstep ' по высоте
 	For t = 0 To seans_num_in-1
-		If drift_d(h, t) > 200.0 Then
-			drift_d(h, t) = 200.0
+		If drift_d(h, t) > limit_vz Then
+			drift_d(h, t) = limit_vz
 		EndIf
-		If drift_d(h, t) < -200.0 Then
-			drift_d(h, t) = -200.0
+		If drift_d(h, t) < -limit_vz Then
+			drift_d(h, t) = -limit_vz
 		EndIf
 	Next t
 Next h

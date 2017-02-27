@@ -9,6 +9,7 @@
 
 #Include "windows.bi"
 #Include "file.bi"
+#Include "dir.bi"
 
 #Include "window9.bi"
 
@@ -101,6 +102,8 @@ SetEnviron("fbgfx=GDI")
 Screen 20
 #Include Once "albom_font.bi"
 
+Open Err For Output As #1
+
 Cls
 
 Color 11
@@ -169,7 +172,20 @@ EndIf
 temperatures_len = library_oxygen_list_of_temperatures_get(@temperatures(0))
 
 
+Color 11
 
+Print "Результаты обработки, находящиеся в папке " + Chr(34) + "out" + Chr(34) + ":"
+Color 10
+Dim As String fn
+fn = Dir("./out/*", fbDirectory)
+While Len(fn) > 0
+	fn = Dir()
+	If (Len(fn)=13) And (Mid(fn, 7, 1)="-") Then
+		Print fn;"   ";
+	EndIf
+Wend
+Print
+Print
 
 
 Color 15
@@ -344,6 +360,8 @@ For t = 0 To seans_num-1 ' по времени
 Next t
 Print_process_percent(1000)
 Print "OK"
+Print #1, Str(seans_num)+" files loaded"
+Print #1, "Free memory: "; Fre()\(1024*1024); " MBytes"
 
 
 Print

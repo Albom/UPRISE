@@ -142,7 +142,6 @@ Dim As as_file_struct	as_file_in
 
 
 
-'ReDim Shared As dat_all_struct dat_all_str(0 To 679, 0 To 99)
 ReDim Shared As Integer Hkm(0 To 679)
 
 
@@ -849,6 +848,7 @@ Next t
 Print_process_percent(1000)
 Print "OK"
 Print #1, Str(seans_num_out)+" files loaded"
+Print #1, "Free memory: "; Fre()\(1024*1024); " MBytes"
 
 ' Начало работы с файлами FLIP
 

@@ -189,6 +189,7 @@ EndIf
 Print "OK"
 
 Print #1, Str(seans_loaded)+" files loaded"
+Print #1, "Free memory: "; Fre()\(1024*1024); " MBytes"
 
 
 ' Сортировка сеансов по времени
