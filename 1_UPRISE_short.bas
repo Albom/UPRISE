@@ -88,6 +88,14 @@ ReDim Shared vis_array_alt(0 To 1, 0 To 679) As Double ' буфер для отображения г
 Dim As Integer Config_qh2_hmin, Config_qh2_hmax
 Dim As Integer Config_q_01
 
+Dim As Integer start_alt_mark = 0
+Dim As Integer end_alt_mark = -1
+Dim As Integer is_alt_mark = 0
+
+Dim As Integer start_time_mark = 0
+Dim As Integer end_time_mark = -1
+Dim As Integer is_time_mark = 0
+
 ''' =======================================================================
 
 
@@ -239,10 +247,16 @@ Do
 
 	Cls
 
+	If is_time_mark = 1 Then
+		For i = start_time_mark To end_time_mark
+			Line(5+(i-START_X)*DX, 25)-(5+(i-START_X)*DX+DX, Y0), 7, BF
+		Next
+	EndIf
+
 	If seans_str(position).m1(hCur) = 0 And seans_str(position).m2(hCur) = 0 Then
-		Line (5+(position-START_X)*DX, 25)-(5+(position-START_X)*DX, Y0), 7
+		Line (5+(position-START_X)*DX, 25)-(5+(position-START_X)*DX, Y0), 15
 	Else
-		Line (5+(position-START_X)*DX, 25)-(5+(position-START_X)*DX, Y0), 7, , &b0000000011110000
+		Line (5+(position-START_X)*DX, 25)-(5+(position-START_X)*DX, Y0), 15, , &b0000000011110000
 	End If
 
 	Line(0, Y0)-(1023, Y0), 15, , &b0001000100010001
@@ -270,9 +284,13 @@ Do
 			End If
 		End If
 
-
 	Next i
 
+	If is_alt_mark = 1 Then
+		For i = start_alt_mark To end_alt_mark
+			Line(5-55+i, 750)-(5-55+i, 300), 7
+		Next
+	EndIf
 
 	For i = 55 To 679-1
 		If seans_str(position).m1(i) <> 0 Then
@@ -310,7 +328,7 @@ Do
 	Print Using "Время: ###.###  "; seans_str(position).time_decimal;
 
 	Color 10
-	Print Using "Высота: № ###"; hCur+1;
+	Print Using "Высота: № ###"; hCur;
 	Print Using "  #### км"; seans2_altS(hCur);
 	Print
 
@@ -329,10 +347,22 @@ Do
 	Color 15
 
 	Locate 17, 1
-	Print "Left,  Right";
+	Print "Left,  Right",
+	If is_time_mark Then
+		Locate 17, 22
+		Color 11
+		Print Using "Selected from ##### (###.###) to ##### (###.###)"; start_time_mark; seans_str(start_time_mark).time_decimal; end_time_mark; seans_str(end_time_mark).time_decimal;
+		Color 15
+	EndIf
 
 	Locate 48, 1
-	Print "Page Down,  Page Up";
+	Print "Page Down,  Page Up",
+	If is_alt_mark Then
+		Locate 48, 22
+		Color 11
+		Print "Selected from "; start_alt_mark; " ("; seans2_altS(start_alt_mark); " km)"; " to "; end_alt_mark; " ("; seans2_altS(end_alt_mark); " km)";
+		Color 15
+	EndIf
 
 	Locate 4, 1
 
@@ -342,13 +372,14 @@ Do
 
 	key = GetKey()
 	
-	If key = KEY_CTRL_S Then SaveLabels(SEANS_DIR_OUT +DirectoryOutput+"/step2") End If
-
 	If key = KEY_CTRL_N Then Exit Do End If
 
 	If key = KEY_CTRL_Q Then End End If
 
 	Select Case key
+
+		Case KEY_CTRL_S
+			SaveLabels(SEANS_DIR_OUT +DirectoryOutput+"/step2")
 
 		Case KEY_W, KEY_W_CAPITAL
 			If seans_str(position).m1(hCur) = 0 Then
@@ -402,11 +433,15 @@ Do
 			Vis_array_load()
 
 		Case KEY_RIGHT
-			If position < seans_loaded-1 Then position += 1 End If
+			If position < seans_loaded-1 And is_time_mark = 0 Then
+				position += 1
+			EndIf
 			Vis_array_load() ' загрузить данные для отображения
 
 		Case KEY_LEFT
-			If position > 0 Then position -= 1  End If
+			If position > 0 And is_time_mark = 0 Then
+				position -= 1
+			EndIf
 			Vis_array_load() ' загрузить данные для отображения
 
 		Case KEY_DOWN
@@ -422,12 +457,156 @@ Do
 			If DX > 1 Then DX = DX/2 End If
 
 		Case KEY_PAGE_UP
-			If hCur < 679 Then hCur += 1 End If
+			If hCur < 679 And is_alt_mark = 0 Then
+				hCur += 1
+			EndIf
 			Vis_array_load() ' загрузить данные для отображения
 
 		Case KEY_PAGE_DOWN
-			If hCur > 0 Then hCur -= 1 End If
+			If hCur > 0 And is_alt_mark = 0 Then
+				hCur -= 1
+			EndIf
 			Vis_array_load() ' загрузить данные для отображения
+
+		Case KEY_CTRL_PAGE_UP
+			If is_time_mark = 0 Then
+				If is_alt_mark = 0 Then
+					start_alt_mark = hCur
+					end_alt_mark = hCur
+					is_alt_mark = 1
+					If hCur < 679 Then
+						hCur += 1
+					EndIf
+				Else
+					If hCur < 679 Then
+						end_alt_mark += 1
+						hCur += 1
+					EndIf
+				EndIf
+				Vis_array_load()
+			EndIf
+
+		Case KEY_CTRL_PAGE_DOWN
+			If is_time_mark = 0 Then
+				If is_alt_mark = 1 Then
+					If hCur > 0 Then
+						If end_alt_mark = start_alt_mark Then
+							is_alt_mark = 0
+						EndIf
+						end_alt_mark -= 1
+						hCur -= 1
+					EndIf
+				EndIf
+				Vis_array_load()
+			EndIf
+
+		Case KEY_CTRL_RIGHT
+			If is_alt_mark = 0 Then
+				If is_time_mark = 0 Then
+					start_time_mark = position
+					end_time_mark = position
+					is_time_mark = 1
+					If position < seans_loaded-1 Then
+						position += 1
+					EndIf
+				Else
+					If position < seans_loaded-1 Then
+						end_time_mark += 1
+						position += 1
+					EndIf
+				EndIf
+				Vis_array_load()
+			EndIf
+
+		Case KEY_CTRL_LEFT
+			If is_alt_mark = 0 Then
+				If is_time_mark = 1 Then
+					If position > 0 Then
+						If end_time_mark = start_time_mark Then
+							is_time_mark = 0
+						EndIf
+						end_time_mark -= 1
+						position -= 1
+					EndIf
+				EndIf
+				Vis_array_load()
+			EndIf
+
+		Case KEY_DEL
+			If is_alt_mark = 1 Then
+				For i = start_alt_mark To end_alt_mark
+					seans_str(position).m1(i) = 1
+					seans_str(position).m2(i) = 1
+				Next
+				is_alt_mark = 0
+			EndIf
+			If is_time_mark = 1 Then
+				For i = start_time_mark To end_time_mark
+					seans_str(i).m1(hCur) = 1
+					seans_str(i).m2(hCur) = 1
+				Next
+				is_time_mark = 0
+			EndIf
+			Vis_array_load()
+
+		Case KEY_CTRL_DEL
+			If is_alt_mark = 1 Then
+				For i = start_alt_mark To end_alt_mark
+					For j = 0 To seans_loaded-1
+						seans_str(j).m1(i) = 1
+						seans_str(j).m2(i) = 1
+					Next
+				Next
+				is_alt_mark = 0
+			EndIf
+			If is_time_mark = 1 Then
+				For i = start_time_mark To end_time_mark
+					For j = 0 To 679
+						seans_str(i).m1(j) = 1
+						seans_str(i).m2(j) = 1
+					Next
+				Next
+				is_time_mark = 0
+			EndIf
+			Vis_array_load()
+
+		Case KEY_R, KEY_R_CAPITAL
+			If is_alt_mark = 1 Then
+				For i = start_alt_mark To end_alt_mark
+					seans_str(position).m1(i) = 0
+					seans_str(position).m2(i) = 0
+				Next
+				is_alt_mark = 0
+			EndIf
+			If is_time_mark = 1 Then
+				For i = start_time_mark To end_time_mark
+					seans_str(i).m1(hCur) = 0
+					seans_str(i).m2(hCur) = 0
+				Next
+				is_time_mark = 0
+			EndIf
+			Vis_array_load()
+
+		Case KEY_CTRL_R
+			If is_alt_mark = 1 Then
+				For i = start_alt_mark To end_alt_mark
+					For j = 0 To seans_loaded-1
+						seans_str(j).m1(i) = 0
+						seans_str(j).m2(i) = 0
+					Next
+				Next
+				is_alt_mark = 0
+			EndIf
+			If is_time_mark = 1 Then
+				For i = start_time_mark To end_time_mark
+					For j = 0 To 679
+						seans_str(i).m1(j) = 0
+						seans_str(i).m2(j) = 0
+					Next
+				Next
+				is_time_mark = 0
+			EndIf
+			Vis_array_load()
 
 	End Select
 
@@ -905,7 +1084,7 @@ Sub SaveLabels(ByVal Directory As String)
 		Print #file,
 	Next
 	Close #file
-	
+
 	Color 12
 	Print "Labels saved..."
 	Sleep(500)
