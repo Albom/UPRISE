@@ -314,15 +314,15 @@ Do
 	Print Using "  #### км"; seans2_altS(hCur);
 	Print
 
-	Print "A: Автоматическая фильтрация   ";
+	Print "A: Автоматическая фильтрация  ";
 
 	Color 15
 	Print "(W)hite - 1ch ";
 	Color 14
-	Print "(Y)ellow - 2ch   ";
+	Print "(Y)ellow - 2ch  ";
 
 	Color 10
-	Print "Ctrl+N: Продолжить обработку   ";
+	Print "Ctrl+S: Сохранить метки  Ctrl+N: Продолжить обработку  ";
 	Color 12
 	Print "Ctrl+Q: Выход"
 
@@ -341,6 +341,8 @@ Do
 	Dim key As Integer
 
 	key = GetKey()
+	
+	If key = KEY_CTRL_S Then SaveLabels(SEANS_DIR_OUT +DirectoryOutput+"/step2") End If
 
 	If key = KEY_CTRL_N Then Exit Do End If
 
@@ -348,23 +350,20 @@ Do
 
 	Select Case key
 
-
-		Case KEY_W
+		Case KEY_W, KEY_W_CAPITAL
 			If seans_str(position).m1(hCur) = 0 Then
 				seans_str(position).m1(hCur) = 1
 			Else
 				seans_str(position).m1(hCur) = 0
 			EndIf
-			SaveLabels(SEANS_DIR_OUT +DirectoryOutput+"/step2")
 			Vis_array_load()
 
-		Case KEY_Y
+		Case KEY_Y, KEY_Y_CAPITAL
 			If seans_str(position).m2(hCur) = 0 Then
 				seans_str(position).m2(hCur) = 1
 			Else
 				seans_str(position).m2(hCur) = 0
 			EndIf
-			SaveLabels(SEANS_DIR_OUT +DirectoryOutput+"/step2")
 			Vis_array_load()
 
 
@@ -400,19 +399,7 @@ Do
 					Input "Уровень: ", lev
 					Filter(wnd_width, lev, 1)
 			End Select
-			SaveLabels(SEANS_DIR_OUT +DirectoryOutput+"/step2")
 			Vis_array_load()
-			/'
-		Case KEY_HOME
-			position=START_X
-
-		Case KEY_END
-			If START_X+(1024\DX)-1 < seans_loaded Then
-				position += 1024\DX-1
-			Else
-				position=seans_loaded-1
-			End If
-'/
 
 		Case KEY_RIGHT
 			If position < seans_loaded-1 Then position += 1 End If
@@ -918,6 +905,10 @@ Sub SaveLabels(ByVal Directory As String)
 		Print #file,
 	Next
 	Close #file
+	
+	Color 12
+	Print "Labels saved..."
+	Sleep(500)
 
 End Sub
 
