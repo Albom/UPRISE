@@ -941,7 +941,9 @@ For t = 0 To seans_num_out-1
 			For tau = 0 To 50
 				AmbigCoeff(tau, (h-hMin)\hStep, t, lag) = 0
 				For z = 0 To hZero+trapProfile(h)*2
-					AmbigCoeff(tau, (h-hMin)\hStep, t, lag) += dat_all_str(h-z+num_point_acf\2+trapProfile(h), t).acf(0) * Ambig(trapProfile(h), tau, z, lag)
+					If h-z+num_point_acf\2+trapProfile(h) > 0 Then
+						AmbigCoeff(tau, (h-hMin)\hStep, t, lag) += dat_all_str(h-z+num_point_acf\2+trapProfile(h), t).acf(0) * Ambig(trapProfile(h), tau, z, lag)
+					EndIf
 				Next z
 			Next tau
 		Next lag
