@@ -53,6 +53,8 @@ fbc -s console -t 10000 -fpu sse  -arch 686  -O 3 -vec 1 3_UPRISE_estimate_FLIP_
 echo 3_UPRISE_estimate_storm.bas
 fbc -s console -t 10000 -fpu sse  -arch 686  -O 3 -vec 1 3_UPRISE_estimate_storm.bas
 
+echo 3_UPRISE_estimate_newton.bas
+fbc -s console -t 10000 -fpu sse  -arch 686  -O 3 -vec 1 3_UPRISE_estimate_newton.bas
 
 echo 3_UPRISE_velocity.bas
 fbc -s console -t 10000 -fpu sse  -arch 686  -O 3 -vec 1 3_UPRISE_velocity.bas
@@ -83,6 +85,7 @@ copy 3_UPRISE_estimate_COld.exe UPRISE
 copy 3_UPRISE_estimate_FLIP_te_ti.exe UPRISE
 copy 3_UPRISE_estimate_FLIP_te.exe UPRISE
 copy 3_UPRISE_estimate_storm.exe UPRISE
+copy 3_UPRISE_estimate_newton.exe UPRISE
 copy 3_UPRISE_velocity.exe UPRISE
 
 copy albom.dll UPRISE
