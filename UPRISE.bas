@@ -70,13 +70,14 @@ font = Cast(UINT, LoadFont("Verdana", 8))
 hwnd = Cast(UINT, OpenWindow(caption,0,0,530,300, WS_VISIBLE Or WS_CAPTION Or WS_MINIMIZEBOX Or WS_SYSMENU))
 CenterWindow(CPtr(Any Ptr, hwnd))
 
-ImageGadget(IMG_NAME, 0, 0, 550, 80, Catch_Image(@ImageLogo()) )
 
-ButtonImageGadget(BTN_IN,      10,  100, 24, 24, Catch_Image(@FolderIcon()))
-ButtonImageGadget(BTN_OUT,     40,  100, 24, 24, Catch_Image(@SearchIcon()))
-ButtonImageGadget(BTN_SAVE,    70,  100, 24, 24, Catch_Image(@SaveIcon()))
-ButtonImageGadget(BTN_OPTIONS, 100, 100, 24, 24, Catch_Image(@OptionsIcon()))
-ButtonImageGadget(BTN_HELP,    130, 100, 24, 24, Catch_Image(@HelpIcon()))
+ImageGadget(IMG_NAME, 0, 0, 550, 80, Catch_Image( ImageLogo()) )
+
+ButtonImageGadget(BTN_IN,      10,  100, 24, 24, Catch_Image(FolderIcon()))
+ButtonImageGadget(BTN_OUT,     40,  100, 24, 24, Catch_Image(SearchIcon()))
+ButtonImageGadget(BTN_SAVE,    70,  100, 24, 24, Catch_Image(SaveIcon()))
+ButtonImageGadget(BTN_OPTIONS, 100, 100, 24, 24, Catch_Image(OptionsIcon()))
+ButtonImageGadget(BTN_HELP,    130, 100, 24, 24, Catch_Image(HelpIcon()))
 
 GadgetToolTip(BTN_IN, "Открыть папку с исходными данными")
 GadgetToolTip(BTN_OUT, "Открыть папку с результатами обработки")
@@ -108,7 +109,7 @@ AddComboBoxItem(COMBO_TYPE, "Файлы SOld (коррелятор K1)", -1)
 AddComboBoxItem(COMBO_TYPE, "Файлы COld (4-й режим)", -1)
 SetItemComboBox(COMBO_TYPE, 0)
 
-TextGadget (TEXT_COPYRIGHT, 10, 240, 520, 24 ,"© 2013–2016 Богомаз А.В., Котов Д.В. (Институт ионосферы)")
+TextGadget (TEXT_COPYRIGHT, 10, 240, 520, 24 ,"© 2013–2017 Богомаз А.В., Котов Д.В. (Институт ионосферы)")
 
 
 SetGadgetFont(BTN_VIEW,      font)
