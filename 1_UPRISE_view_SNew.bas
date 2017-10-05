@@ -68,6 +68,8 @@ Dim Shared As Integer SEL_START = 0
 Dim Shared As Integer SEL_END = 0
 
 Dim As String Config_driver = "GDI"
+Dim As Integer Config_resolution = 0
+Dim As Integer Config_width, Config_height 
 
 ''' =======================================================================
 
@@ -94,11 +96,18 @@ If Err <> 0 Then
 	End
 EndIf
 Input #file, Config_driver
+Input #file, Config_resolution
+Input #file, Config_width, Config_height
 Close #file
 
 SetEnviron("fbgfx="+Config_driver)
 
-Screen 20
+If Config_resolution = 0 Then
+	Screen 20
+Else
+	ScreenRes Config_width, Config_height, 8
+EndIf
+
 #Include Once "albom_font.bi"
 Dim As String driver
 ScreenInfo ,,,,,,driver
