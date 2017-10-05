@@ -98,6 +98,7 @@ copy config_wave.dat UPRISE
 copy config_velocity.dat UPRISE
 copy config_short.dat UPRISE
 copy config_COld.dat UPRISE
+copy config_screen.dat UPRISE
 
 xcopy ambig UPRISE\ambig /e /i /h
 

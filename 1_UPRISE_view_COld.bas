@@ -60,17 +60,31 @@ Declare Function seans_struct_time_compare cdecl (elem1 as any ptr, elem2 as any
 Dim As Integer d_month, d_year, d_day, d_ndays
 Dim As String s_year, s_month, s_day
 
+Dim As String Config_driver = "GDI"
+
 ''' =======================================================================
-
-
-SetEnviron("fbgfx=GDI")
-
-Screen 20
-#Include Once "albom_font.bi"
 
 Open Err For Output As #1
 
+' Загрузка конфигурационного файла
 Dim As Integer file
+file = FreeFile()
+Open "config_screen.dat" For Input As #file
+If Err <> 0 Then
+	PrintErrorToLog(ErrorFilter, __FILE__, __LINE__)
+	End
+EndIf
+Input #file, Config_driver
+Close #file
+
+SetEnviron("fbgfx="+Config_driver)
+
+Screen 20
+#Include Once "albom_font.bi"
+Dim As String driver
+ScreenInfo ,,,,,,driver
+Print #1, "Screen driver: "; driver
+
 Dim As String  tmp
 'Dim Shared As Integer pulseLength
 file = FreeFile()

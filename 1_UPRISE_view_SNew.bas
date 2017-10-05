@@ -67,7 +67,11 @@ Dim As Integer file
 Dim Shared As Integer SEL_START = 0
 Dim Shared As Integer SEL_END = 0
 
+Dim As String Config_driver = "GDI"
+
 ''' =======================================================================
+
+Open Err For Output As #1
 
 
 ' Загрузка АКФ ИХ фильтра
@@ -82,13 +86,23 @@ For tau = 0 To 18
 Next tau
 Close #file
 
+' Загрузка конфигурационного файла
+file = FreeFile()
+Open "config_screen.dat" For Input As #file
+If Err <> 0 Then
+	PrintErrorToLog(ErrorFilter, __FILE__, __LINE__)
+	End
+EndIf
+Input #file, Config_driver
+Close #file
 
-SetEnviron("fbgfx=GDI")
+SetEnviron("fbgfx="+Config_driver)
 
 Screen 20
 #Include Once "albom_font.bi"
-
-Open Err For Output As #1
+Dim As String driver
+ScreenInfo ,,,,,,driver
+Print #1, "Screen driver: "; driver
 
 
 Cls
