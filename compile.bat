@@ -124,7 +124,7 @@ copy Report.xls UPRISE
 echo =================================================================
 echo Help file generating...
 hhc help\uprise.hhp
-copy help\uprise.chm UPRISE
+move help\uprise.chm UPRISE\urpise.chm
 
 echo =================================================================
 echo =================================================================
