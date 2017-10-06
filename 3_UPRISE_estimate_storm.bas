@@ -1463,7 +1463,7 @@ Sub inverse_problem_v1_ambig_storm(ByVal h As Integer, ByVal z As Integer, ByVal
 						res = acf_library_light_short( libraries_file(hyd), @temperatures(0), temperatures_len, ti, te, @acf_lib(25), num_point_acf)
 					Else
 						If (te/ti <= 5) Then
-							res = acf_3_full(1, 4, 16, hyd/200.0, he/100.0, ti, te, 1, 0,  @acf_lib(25), num_point_acf, 30.555e-6)
+							res = acf_3_kharkiv_22(hyd/200.0, he/100.0, ti, te, @acf_lib(25))
 						Else
 							res = 0
 						EndIf
@@ -1830,7 +1830,6 @@ Sub inverse_problem_v2_ambig_storm(ByVal h As Integer, ByVal z As Integer, ByVal
 	Dim As Double acf_lib(0 To 255)
 	Dim As Double acf_teor(0 To 255)
 
-
 	For hyd = 0 To libraries_num-1 Step step_hyd
 
 		For t = 0 To seans_num_out-1 ' по времени
@@ -1856,7 +1855,7 @@ Sub inverse_problem_v2_ambig_storm(ByVal h As Integer, ByVal z As Integer, ByVal
 												res = acf_library_light_short( libraries_file(hyd), @temperatures(0), temperatures_len, ti, te, @acf_lib(25), num_point_acf)
 											Else
 												If (te/ti <= 5) Then
-													res = acf_3_full(1, 4, 16, hyd/200.0, he/100.0, ti, te, 1, 0,  @acf_lib(25), num_point_acf, 30.555e-6)
+													res = acf_3_kharkiv_22(hyd/200.0, he/100.0, ti, te, @acf_lib(25))
 												Else
 													res = 0
 												EndIf

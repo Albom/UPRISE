@@ -44,9 +44,6 @@ KEY_3 = 51
 KEY_4 = 52
 KEY_A_CAPITAL = 65
 KEY_P_CAPITAL = 80
-KEY_R_CAPITAL = 82
-KEY_W_CAPITAL = 87
-KEY_Y_CAPITAL = 89
 KEY_A = 97
 KEY_B = 98
 KEY_C = 99
@@ -719,9 +716,13 @@ Declare Function acf_3  Alias "acf_3" ( ByVal m1 As Double, ByVal m2 As Double, 
 Declare Function acf_3_full Alias "acf_3_full" ( ByVal m1 As Double, ByVal m2 As Double, ByVal m3 As Double, ByVal g1 As Double, ByVal g2 As Double, ByVal ti As Double, ByVal te As Double, ByVal ne As Double, ByVal iskD As Integer, ByVal acf As Double Ptr, ByVal length As Integer, ByVal dt As Double) As  Integer
 Declare Function spectrum_3_full Alias "spectrum_3_full" ( ByVal m1 As Double, ByVal m2 As Double, ByVal m3 As Double, ByVal g1 As Double, ByVal g2 As Double, ByVal ti As Double, ByVal te As Double, ByVal ne As Double, ByVal iskD As Integer, ByVal freq As Double) As Double
 
+Declare Function acf_3_full_millstone Alias "acf_3_full_millstone" ( ByVal m1 As Double, ByVal m2 As Double, ByVal m3 As Double, ByVal g1 As Double, ByVal g2 As Double, ByVal ti As Double, ByVal te As Double, ByVal ne As Double, ByVal iskD As Integer, ByVal acf As Double Ptr, ByVal length As Integer, ByVal dt As Double) As  Integer
+Declare Function spectrum_3_full_millstone Alias "spectrum_3_full_millstone" ( ByVal m1 As Double, ByVal m2 As Double, ByVal m3 As Double, ByVal g1 As Double, ByVal g2 As Double, ByVal ti As Double, ByVal te As Double, ByVal ne As Double, ByVal iskD As Integer, ByVal freq As Double) As Double
+
 Declare Function acf_library_light_short       Alias "acf_library_light_short"      (ByVal f As FILE Ptr, ByVal temperatures As Integer Ptr, ByVal temperatures_len As Integer, ByVal ti As Double, ByVal te As Double, ByVal acf As Double Ptr, ByVal length As Integer) As  Integer
 Declare Function acf_library_light_short_conv  Alias "acf_library_light_short_conv" (ByVal f As FILE Ptr, ByVal temperatures As Integer Ptr, ByVal temperatures_len As Integer, ByVal ti As Double, ByVal te As Double, ByVal acf As Double Ptr, ByVal length As Integer) As  Integer
 Declare Function library_light_list_of_temperatures_get  Alias "library_light_list_of_temperatures_get" (ByVal list As Integer Ptr ) As Integer
+Declare Function library_light_list_of_temperatures_get2  Alias "library_light_list_of_temperatures_get2" (ByVal list As Integer Ptr ) As Integer
 Declare Function library_light_list_get  Alias "library_light_list_get" (ByVal prefix As ZString Ptr, ByVal he_percent_int As Integer, ByVal list As ZString Ptr ) As  Integer
 Declare Function library_light_list_get_filename  Alias "library_light_list_get_filename" (ByVal filename As ZString Ptr, ByVal filelist As ZString Ptr, ByVal num As Integer) As  Integer
 
@@ -730,6 +731,11 @@ Declare Function acf_library_heavy Alias "acf_library_heavy" (ByVal f As FILE Pt
 
 Declare Function library_oxygen_list_of_temperatures_get  Alias "library_oxygen_list_of_temperatures_get" (ByVal list As Integer Ptr ) As Integer
 Declare Function acf_library_oxygen Alias "acf_library_oxygen" (ByVal f As FILE Ptr, ByVal temperatures As Integer Ptr, ByVal temperatures_len As Integer, ByVal ti As Double, ByVal te As Double, ByVal acf As Double Ptr, ByVal length As Integer) As  Integer
+
+Declare Function library_millstone_list_of_temperatures_get  Alias "library_millstone_list_of_temperatures_get" (ByVal list As Integer Ptr ) As Integer
+Declare Function acf_library_millstone Alias "acf_library_millstone" (ByVal f As FILE Ptr, ByVal temperatures As Integer Ptr, ByVal temperatures_len As Integer, ByVal ti As Double, ByVal te As Double, ByVal acf As Single Ptr, ByVal length As Integer) As  Integer
+
+Declare Function acf_3_kharkiv_22 Alias "acf_3_kharkiv_22" (ByVal g1 As Double, ByVal g2 As Double, ByVal ti As Double, ByVal te As Double, ByVal acf As Double Ptr) As  Integer
 
 End Extern
 
