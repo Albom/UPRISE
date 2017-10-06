@@ -1413,8 +1413,16 @@ Sub inverse_problem_v1_ambig_storm(ByVal h As Integer, ByVal z As Integer, ByVal
 		EndIf
 	Next
 
-	te_min = ( te_min \ 20 ) * 20
-	te_max = ( te_max \ 20 ) * 20
+	te_min = ( te_min \ 100 ) * 100
+	te_max = ( te_max \ 100 ) * 100
+
+	If te_min < 500 Then
+		te_min = 500
+	EndIf
+
+	If te_max > 5000 Then
+		te_max = 5000
+	EndIf
 
 	Dim As Double ti_max = RegRange(3, 0)
 	Dim As Double ti_min = RegRange(2, 0)
@@ -1427,28 +1435,16 @@ Sub inverse_problem_v1_ambig_storm(ByVal h As Integer, ByVal z As Integer, ByVal
 		EndIf
 	Next
 
-	te_min = ( te_min \ 100 ) * 100
-	te_max = ( te_max \ 100 ) * 100
-
 	ti_min = ( ti_min \ 100 ) * 100
 	ti_max = ( ti_max \ 100 ) * 100
-
-	If te_min < 500 Then
-		te_min = 500
-	EndIf
 
 	If ti_min < 500 Then
 		ti_min = 500
 	EndIf
 
-	If te_max > 5000 Then
-		te_max = 5000
-	EndIf
-
 	If ti_max > 5000 Then
 		ti_max = 5000
 	EndIf
-
 
 	For hyd = 0 To libraries_num-1 Step step_hyd
 
@@ -1477,53 +1473,56 @@ Sub inverse_problem_v1_ambig_storm(ByVal h As Integer, ByVal z As Integer, ByVal
 
 						For t = 0 To seans_num_out-1 ' по времени
 
-
 							If ( te >= dat_all_str(h, t).te_start ) And ( te <= dat_all_str(h, t).te_end ) And ( ti >= dat_all_str(h, t).ti_start ) And ( ti <= dat_all_str(h, t).ti_end ) And ( hyd >= dat_all_str(h, t).hyd_start ) And ( hyd <= dat_all_str(h, t).hyd_end ) Then
 
-								For lag = 0 To 18
-									acf_teor(lag) = 0
-									For tau = 0 To 50
-										acf_teor(lag) += acf_lib(tau) * AmbigCoeff(tau, (h-hMin)\hStep, t, lag)
-									Next tau
-								Next lag
+								If ( te >= RegRange(0, t) ) And ( te <= RegRange(1, t) ) And ( ti >= RegRange(2, t) ) And ( ti <= RegRange(3, t) ) And ( hyd >= RegRange(4, t) ) And ( hyd <= RegRange(5, t) ) Then
 
-								d = 0
-								If Config_sigma <> 0 Then
-									For tau = 1 To 18
-										If dat_all_str(h, t).var(tau) <> 0 Then '!!! грязный хак (если дисперсия по каким-то причинам оказалась равна 0)
-											d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2 / dat_all_str(h, t).var(tau)
-										Else
-											d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2
-										EndIf
+									For lag = 0 To 18
+										acf_teor(lag) = 0
+										For tau = 0 To 50
+											acf_teor(lag) += acf_lib(tau) * AmbigCoeff(tau, (h-hMin)\hStep, t, lag)
+										Next tau
+									Next lag
 
-									Next tau
-								Else
-									For tau = 1 To 18
-										d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2
-									Next tau
-								EndIf
+									d = 0
+									If Config_sigma <> 0 Then
+										For tau = 1 To 18
+											If dat_all_str(h, t).var(tau) <> 0 Then '!!! грязный хак (если дисперсия по каким-то причинам оказалась равна 0)
+												d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2 / dat_all_str(h, t).var(tau)
+											Else
+												d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2
+											EndIf
 
-								Dim As Double ratio = 0
-
-								If z < 2 Then
-									dat_all_str(h, t).ratio = 0
-								Else
-									Dim As Double chi2constraint = (te - 2*dat_all_str(h-Hstep, t).te_c + dat_all_str(h-2*Hstep, t).te_c)^2 + _
-									(ti - 2*dat_all_str(h-Hstep, t).ti_c + dat_all_str(h-2*Hstep, t).ti_c)^2
-									If chi2constraint <> 0 Then
-										ratio = chi2constraint/d
-										d += Config_kappa*ratio
+										Next tau
 									Else
-										ratio = 0
+										For tau = 1 To 18
+											d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2
+										Next tau
 									EndIf
-								EndIf
 
-								If d < dat_all_str(h, t).d_c Then
-									dat_all_str(h, t).d_c = d
-									dat_all_str(h, t).ti_c = ti
-									dat_all_str(h, t).te_c = te
-									dat_all_str(h, t).hyd_c = hyd
-									dat_all_str(h, t).ratio = ratio
+									Dim As Double ratio = 0
+
+									If z < 2 Then
+										dat_all_str(h, t).ratio = 0
+									Else
+										Dim As Double chi2constraint = (te - 2*dat_all_str(h-Hstep, t).te_c + dat_all_str(h-2*Hstep, t).te_c)^2 + _
+										(ti - 2*dat_all_str(h-Hstep, t).ti_c + dat_all_str(h-2*Hstep, t).ti_c)^2
+										If chi2constraint <> 0 Then
+											ratio = chi2constraint/d
+											d += Config_kappa*ratio
+										Else
+											ratio = 0
+										EndIf
+									EndIf
+
+									If d < dat_all_str(h, t).d_c Then
+										dat_all_str(h, t).d_c = d
+										dat_all_str(h, t).ti_c = ti
+										dat_all_str(h, t).te_c = te
+										dat_all_str(h, t).hyd_c = hyd
+										dat_all_str(h, t).ratio = ratio
+									EndIf
+
 								EndIf
 
 							EndIf
@@ -1854,7 +1853,7 @@ Sub inverse_problem_v2_ambig_storm(ByVal h As Integer, ByVal z As Integer, ByVal
 											If (te/ti <= 4) And (te <= 4000) And (ti <= 4000) Then
 												res = acf_library_light_short( libraries_file(hyd), @temperatures(0), temperatures_len, ti, te, @acf_lib(25), num_point_acf)
 											Else
-												If (te/ti <= 5) Then
+												If (te/ti <= 5) And (ti >= 500) And (te >= 500) Then
 													res = acf_3_kharkiv_22(hyd/200.0, he/100.0, ti, te, @acf_lib(25))
 												Else
 													res = 0
