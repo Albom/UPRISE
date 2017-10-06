@@ -42,7 +42,7 @@ Dim As Integer DY = 200 ' масштаб по оси y
 Dim As Integer Y0 = 250 ' начальное значение по оси y
 Dim As Integer START_X = 0
 Dim As Integer POINTS_START = 0
-Dim As Integer POINTS_END = 13
+Dim As Integer POINTS_END = 18
 ReDim Shared vis_array(0 To 18, 0 To 10) As Double ' буфер для отображения графиков
 Dim Shared As Integer MAX_Y = 0
 Dim Shared As Integer is_noise = 1 ' вычитать шум? (1 - нет, -1 - да)
@@ -69,7 +69,12 @@ Dim Shared As Integer SEL_END = 0
 
 Dim As String Config_driver = "GDI"
 Dim As Integer Config_resolution = 0
-Dim As Integer Config_width, Config_height 
+Dim As Integer Config_width, Config_height
+
+Dim As Integer screen_width = 1024
+Dim As Integer screen_height = 768
+
+Dim colors(0 To 18) As Integer => {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 15, 14, 13, 12}
 
 ''' =======================================================================
 
@@ -106,6 +111,8 @@ If Config_resolution = 0 Then
 	Screen 20
 Else
 	ScreenRes Config_width, Config_height, 8
+	screen_width = Config_width
+	screen_height = Config_height
 EndIf
 
 #Include Once "albom_font.bi"
@@ -136,7 +143,7 @@ Print "Исходные данные, находящиеся в папке " + Chr(34) + "in" + Chr(34) + ":"
 Color 10
 Dim As String fn
 fn = Dir("./in/*", fbDirectory)
-While Len(fn) > 0 
+While Len(fn) > 0
 	fn = Dir()
 	If Len(fn)=6 Then
 		Print fn;"  ";
@@ -221,41 +228,43 @@ Do
 
 	' рисование выделенной области
 	If SEL_START <> SEL_END Then
-		Line (5+(SEL_START-START_X)*DX, 25)-(5+(SEL_END-START_X)*DX, 768-25), 7, BF
+		Line (5+(SEL_START-START_X)*DX, 25)-(5+(SEL_END-START_X)*DX, screen_height-25), 7, BF
 	EndIf
 	' рисование курсора
 	If seans_str(CUR).seans.m(H) = 0 Then
-		Line (5+(CUR-START_X)*DX, 25)-(5+(CUR-START_X)*DX, 768-25), 7
+		Line (5+(CUR-START_X)*DX, 25)-(5+(CUR-START_X)*DX, screen_height-25), 7
 	Else
-		Line (5+(CUR-START_X)*DX, 25)-(5+(CUR-START_X)*DX, 768-25), 7, , &b0000000011110000
+		Line (5+(CUR-START_X)*DX, 25)-(5+(CUR-START_X)*DX, screen_height-25), 7, , &b0000000011110000
 	End If
 
 	' рисование графиков
 	For j = POINTS_START To POINTS_END
-		Line  (0, Y0+DY*j/6)-(1024, Y0+DY*j/6), 15-j, , &b0000000011110000
-		For i = START_X To (seans_loaded-2)
-			If seans_str(i).seans.m(H) <> 0 Then
-				If VISIBLE = 1 Then Line(5+(i-START_X)*DX, Y0-DY*(vis_array(j, i))+DY*j/6)-(5+(i+1-START_X)*DX, Y0-DY*(vis_array(j, i+1))+DY*j/6),  15, , &b0001000100010001 End If
-			Else
-				If seans_str(i+1).seans.m(H) <> 0 Then
-					If VISIBLE = 1 Then Line(5+(i-START_X)*DX, Y0-DY*(vis_array(j, i))+DY*j/6)-(5+(i+1-START_X)*DX, Y0-DY*(vis_array(j, i+1))+DY*j/6), 15, , &b0001000100010001 End If
+		If Y0+DY*j/6+25 < screen_height Then
+			Line  (0, Y0+DY*j/6)-(screen_width, Y0+DY*j/6), colors(j), , &b0000000011110000
+			For i = START_X To (seans_loaded-2)
+				If seans_str(i).seans.m(H) <> 0 Then
+					If VISIBLE = 1 Then Line(5+(i-START_X)*DX, Y0-DY*(vis_array(j, i))+DY*j/6)-(5+(i+1-START_X)*DX, Y0-DY*(vis_array(j, i+1))+DY*j/6),  15, , &b0001000100010001 End If
 				Else
-					Line(5+(i-START_X)*DX, Y0-DY*(vis_array(j, i))+DY*j/6)-(5+(i+1-START_X)*DX, Y0-DY*(vis_array(j, i+1))+DY*j/6),  15-j'+1
-				End If
-			End if
-		Next i
+					If seans_str(i+1).seans.m(H) <> 0 Then
+						If VISIBLE = 1 Then Line(5+(i-START_X)*DX, Y0-DY*(vis_array(j, i))+DY*j/6)-(5+(i+1-START_X)*DX, Y0-DY*(vis_array(j, i+1))+DY*j/6), 15, , &b0001000100010001 End If
+					Else
+						Line(5+(i-START_X)*DX, Y0-DY*(vis_array(j, i))+DY*j/6)-(5+(i+1-START_X)*DX, Y0-DY*(vis_array(j, i+1))+DY*j/6), colors(j)
+					End If
+				End if
+			Next i
+		EndIf
 	Next j
 
 
 	' рисование карты вырезанных сеансов
 	For i = START_X To (seans_loaded-2)
 		If seans_str(i).seans.m(H) <> 0 Then
-			Line(5+(i-START_X)*DX, 768-24)-(5+(i+1-START_X)*DX, 768-21),  15, bf
+			Line(5+(i-START_X)*DX, screen_height-6)-(5+(i+1-START_X)*DX, screen_height-2),  15, bf
 		End If
 	Next i
 
 	' метка максимального значения, на которое нормируются значения АКФ
-	Line(5+(MAX_Y-START_X)*DX, 768-24)-(5+(1+MAX_Y-START_X)*DX, 768-21),  12, bf
+	Line(5+(MAX_Y-START_X)*DX, screen_height-6)-(5+(1+MAX_Y-START_X)*DX, screen_height-2),  12, bf
 
 
 
@@ -263,27 +272,21 @@ Do
 	Print seans_str(CUR).filename;
 
 	If seans_str(CUR).isM = 2 Then
-		Print  "*",
+		Print  "* ";
 	Else
-		Print " ",
+		Print "  ";
 	End If
 	Color 14
-	Print Using "Время: ###.###  "; seans_str(CUR).time_decimal;
+	Print Using "###.###  "; seans_str(CUR).time_decimal;
 	time_2str(seans_str(CUR).seans.Hour1, seans_str(CUR).seans.Minute1, seans_str(CUR).seans.Second1, @timestr)
-	Print timestr,
+	Print timestr; "  ";
 	Color 11
-	Print Using "Высота: № ###"; H+1;
-	If H > HMAX-100 Then
-		Print  "*";
-	Else
-		Print " ";
-	End If
-	Print Using "  #### км"; seans2_altL(H);
+	Print Using "### "; H;
+	Print Using "#### км  "; seans2_altL(H);
 	Color 10
-	Print ,CHANNEL;
+	Print CHANNEL; "  ";
 	Color 12
-	Print ,,
-	Print "F1: Помощь     Ctrl+Q: Выход"
+	Print "F1: Помощь  Ctrl+Q: Выход"
 	Print
 
 
@@ -292,9 +295,9 @@ Do
 
 	key = GetKey()
 
-'			Cls
-'			Print key
-'			Sleep 1000
+	'			Cls
+	'			Print key
+	'			Sleep 1000
 
 	Select Case key
 
@@ -359,13 +362,13 @@ Do
 
 		Case KEY_O
 			Color 15
-			Input "O ( 0 ... 13): ", POINTS_START
+			Input "O ( 0 ... 18): ", POINTS_START
 			If POINTS_START < 0 Then POINTS_START = 0 End If
-			If POINTS_START > 13 Then POINTS_START = 13 End If
-			Print Using "O (## ... 13)"; POINTS_START;
+			If POINTS_START > 18 Then POINTS_START = 18 End If
+			Print Using "O (## ... 18)"; POINTS_START;
 			Input ": ", POINTS_END
 			If POINTS_END < POINTS_START Then POINTS_END = POINTS_START End If
-			If POINTS_END > 13 Then POINTS_END = 13 End If
+			If POINTS_END > 18 Then POINTS_END = 18 End If
 
 		Case KEY_PAGE_UP
 			SEL_START = 0
@@ -414,8 +417,8 @@ Do
 
 		Case KEY_END
 			If SEL_START = SEL_END Then
-				If START_X+(1024\DX)-1 < seans_loaded Then
-					CUR = START_X+(1024\DX)-1
+				If START_X+(screen_width\DX)-1 < seans_loaded Then
+					CUR = START_X+(screen_width\DX)-1
 				Else
 					CUR=seans_loaded-1
 				EndIf
@@ -603,7 +606,7 @@ Sub Vis_array_load()
 
 	Dim As Integer i, j
 	Dim As Double d
-	Dim As Integer NUM = 15
+	Dim As Integer NUM = 18
 
 	ReDim As Double max_a(0 To seans_loaded-1) ' массив для поиска max (с учётом меток)
 	ReDim As Double noise(0 To seans_loaded-1, 0 To 18) ' массив АКФ шума
@@ -636,7 +639,6 @@ Sub Vis_array_load()
 		Next
 	EndIf
 
-
 	For j = 0 To NUM ' Загружаем ординаты для отображения
 		For i = 0 To seans_loaded-1
 			Select Case CHANNEL
@@ -652,7 +654,6 @@ Sub Vis_array_load()
 		Next i
 	Next j
 
-
 	If is_noise < 0 Then
 		For i = 0 To seans_loaded-1
 			For j = 18 To 0 Step -1
@@ -664,7 +665,8 @@ Sub Vis_array_load()
 	d = -1e200
 	For i = 0 To seans_loaded-1
 		If vis_array(0, i) > d And seans_str(i).seans.m(H) = 0 Then
-			d = vis_array(0, i) : MAX_Y = i
+			d = vis_array(0, i)
+			MAX_Y = i
 		EndIf
 	Next i
 
@@ -723,7 +725,7 @@ Sub AutomaticClear()
 			Input "Ширина окна: ", wnd_width
 			Input "Уровень: ", lev
 
-			For ord = 0 To 12 ' по ординатам
+			For ord = 0 To 18 ' по ординатам
 				For h As Integer = 0 To 679 ' по высоте
 					For t = seans_loaded-1-wnd_width To 1 Step -1 ' по времени
 
@@ -768,7 +770,7 @@ Sub AutomaticClear()
 			Input "Ширина окна: ", wnd_width
 			Input "Уровень: ", lev
 
-			For ord = 0 To 12 ' по ординатам
+			For ord = 0 To 18 ' по ординатам
 				For h As Integer = 0 To 679 ' по высоте
 					For t = 0 To seans_loaded-1-wnd_width ' по времени
 
