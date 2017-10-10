@@ -6,6 +6,7 @@
 
 #Include  "crt/stdlib.bi"
 #Include "dir.bi"
+#include "string.bi"
 
 #If __FB_LANG__ = "fb"
 Using FB 'для перехода в полноэкранный режим монитора
@@ -96,12 +97,41 @@ Dim As Integer start_time_mark = 0
 Dim As Integer end_time_mark = -1
 Dim As Integer is_time_mark = 0
 
+Dim As String Config_driver = "GDI"
+Dim As Integer Config_resolution = 0
+Dim As Integer Config_width, Config_height
+
+Dim As Integer screen_width = 1024
+Dim As Integer screen_height = 768
+
 ''' =======================================================================
 
 
-SetEnviron("fbgfx=GDI")
+' Загрузка конфигурационного файла
+file = FreeFile()
+Open "config_screen.dat" For Input As #file
+If Err <> 0 Then
+	PrintErrorToLog(ErrorFilter, __FILE__, __LINE__)
+	End
+EndIf
+Input #file, Config_driver
+Input #file, Config_resolution
+Input #file, Config_width, Config_height
+Close #file
 
-Screen 20
+SetEnviron("fbgfx="+Config_driver)
+
+If Config_resolution = 0 Then
+	Screen 20
+Else
+	ScreenRes Config_width, Config_height, 8
+	screen_width = Config_width
+	screen_height = Config_height
+EndIf
+
+Y0 = screen_height / 2
+DY = Y0 * 0.8
+
 #Include Once "albom_font.bi"
 
 Open Err For Output As #1
@@ -249,17 +279,17 @@ Do
 
 	If is_time_mark = 1 Then
 		For i = start_time_mark To end_time_mark
-			Line(5+(i-START_X)*DX, 25)-(5+(i-START_X)*DX+DX, Y0), 7, BF
+			Line(5+(i-START_X)*DX, 25)-(5+(i-START_X)*DX+DX, Y0-16), 7, BF
 		Next
 	EndIf
 
 	If seans_str(position).m1(hCur) = 0 And seans_str(position).m2(hCur) = 0 Then
-		Line (5+(position-START_X)*DX, 25)-(5+(position-START_X)*DX, Y0), 15
+		Line (5+(position-START_X)*DX, 25)-(5+(position-START_X)*DX, Y0-16), 15
 	Else
-		Line (5+(position-START_X)*DX, 25)-(5+(position-START_X)*DX, Y0), 15, , &b0000000011110000
+		Line (5+(position-START_X)*DX, 25)-(5+(position-START_X)*DX, Y0-16), 15, , &b0000000011110000
 	End If
 
-	Line(0, Y0)-(1023, Y0), 15, , &b0001000100010001
+	Line(0, Y0)-(screen_width, Y0), 15, , &b0001000100010001
 
 	For i = START_X To (seans_loaded-2)
 
@@ -288,18 +318,18 @@ Do
 
 	If is_alt_mark = 1 Then
 		For i = start_alt_mark To end_alt_mark
-			Line(5-55+i, 750)-(5-55+i, 300), 7
+			Line(5-55+i, screen_height-16)-(5-55+i, Y0), 7
 		Next
 	EndIf
 
 	For i = 55 To 679-1
 		If seans_str(position).m1(i) <> 0 Then
-			Line(5+i-55, 600-DY*vis_array_alt(0, i))-(5+i+1-55, 600-DY*vis_array_alt(0, i+1)), 15, , &b0001000100010001
+			Line(5+i-55, screen_height-16-DY*vis_array_alt(0, i))-(5+i+1-55, screen_height-16-DY*vis_array_alt(0, i+1)), 15, , &b0001000100010001
 		Else
 			If seans_str(position).m1(i+1) <> 0 Then
-				Line(5+i-55, 600-DY*vis_array_alt(0, i))-(5+i+1-55, 600-DY*vis_array_alt(0, i+1)), 15, , &b0001000100010001
+				Line(5+i-55, screen_height-16-DY*vis_array_alt(0, i))-(5+i+1-55, screen_height-16-DY*vis_array_alt(0, i+1)), 15, , &b0001000100010001
 			Else
-				Line(5+i-55, 600-DY*vis_array_alt(0, i))-(5+i+1-55, 600-DY*vis_array_alt(0, i+1)), 15
+				Line(5+i-55, screen_height-16-DY*vis_array_alt(0, i))-(5+i+1-55, screen_height-16-DY*vis_array_alt(0, i+1)), 15
 			EndIf
 		EndIf
 	Next
@@ -307,60 +337,65 @@ Do
 
 	For i = 55 To 679-1
 		If seans_str(position).m2(i) <> 0 Then
-			Line(5+i-55, 600-DY*vis_array_alt(1, i))-(5+i+1-55, 600-DY*vis_array_alt(1, i+1)), 14, , &b0001000100010001
+			Line(5+i-55, screen_height-16-DY*vis_array_alt(1, i))-(5+i+1-55, screen_height-16-DY*vis_array_alt(1, i+1)), 14, , &b0001000100010001
 		Else
 			If seans_str(position).m2(i+1) <> 0 Then
-				Line(5+i-55, 600-DY*vis_array_alt(1, i))-(5+i+1-55, 600-DY*vis_array_alt(1, i+1)), 14, , &b0001000100010001
+				Line(5+i-55, screen_height-16-DY*vis_array_alt(1, i))-(5+i+1-55, screen_height-16-DY*vis_array_alt(1, i+1)), 14, , &b0001000100010001
 			Else
-				Line(5+i-55, 600-DY*vis_array_alt(1, i))-(5+i+1-55, 600-DY*vis_array_alt(1, i+1)), 14
+				Line(5+i-55, screen_height-16-DY*vis_array_alt(1, i))-(5+i+1-55, screen_height-16-DY*vis_array_alt(1, i+1)), 14
 			EndIf
 		EndIf
 	Next
 
 
 	If seans_str(position).m1(hCur) = 0 Then
-		Line(5+hCur-55, 765)-(5+hCur-55, 300), 15
+		Line(5+hCur-55, screen_height-16)-(5+hCur-55, screen_height/2), 15
 	Else
-		Line(5+hCur-55, 765)-(5+hCur-55, 300), 15, , &b0000000011110000
+		Line(5+hCur-55, screen_height-16)-(5+hCur-55, screen_height/2), 15, , &b0000000011110000
 	EndIf
 
 	Color 14
-	Print Using "Время: ###.###  "; seans_str(position).time_decimal;
+	Print Using "###.###  "; seans_str(position).time_decimal;
 
 	Color 10
-	Print Using "Высота: № ###"; hCur;
-	Print Using "  #### км"; seans2_altS(hCur);
+	Print Using " ###"; hCur;
+	Print Using " #### км"; seans2_altS(hCur);
+
 	Print
 
-	Print "A: Автоматическая фильтрация  ";
+	Color 11
+	Print "A: Фильтрация  ";
 
 	Color 15
 	Print "(W)hite - 1ch ";
 	Color 14
-	Print "(Y)ellow - 2ch  ";
+	Print "(Y)ellow - 2ch ";
 
 	Color 10
-	Print "Ctrl+S: Сохранить метки  Ctrl+N: Продолжить обработку  ";
+	Print "Ctrl+S: Сохранить ";
+	Color 13
+	Print "Ctrl+N: Продолжить ";
 	Color 12
 	Print "Ctrl+Q: Выход"
 
 	Color 15
 
-	Locate 17, 1
-	Print "Left,  Right",
+	Draw String (0, screen_height/2-16), "Left,  Right",
 	If is_time_mark Then
-		Locate 17, 22
 		Color 11
-		Print Using "Selected from ##### (###.###) to ##### (###.###)"; start_time_mark; seans_str(start_time_mark).time_decimal; end_time_mark; seans_str(end_time_mark).time_decimal;
+		Draw String (screen_height/2, screen_height/2-16), _
+		"Selected from " + Format(CDbl(start_time_mark), "#####") + Format(seans_str(start_time_mark).time_decimal, " (###.###)") _
+		+ " to " + Format (CDbl(end_time_mark), "#####") + Format (seans_str(end_time_mark).time_decimal, " (###.###)")
 		Color 15
 	EndIf
 
-	Locate 48, 1
-	Print "Page Down,  Page Up",
+
+	Draw String (0, screen_height-14),  "Page Down,  Page Up",
 	If is_alt_mark Then
-		Locate 48, 22
 		Color 11
-		Print "Selected from "; start_alt_mark; " ("; seans2_altS(start_alt_mark); " km)"; " to "; end_alt_mark; " ("; seans2_altS(end_alt_mark); " km)";
+		Draw String (screen_height/2, screen_height-14), _
+		"Selected from " + Format(CDbl(start_alt_mark), "#####") + Format(seans2_altS(start_alt_mark), " (####.# km)") _
+		+ " to " + Format (CDbl(end_alt_mark), "#####") + Format (seans2_altS(end_alt_mark), " (####.# km)")
 		Color 15
 	EndIf
 
@@ -371,7 +406,7 @@ Do
 	Dim key As Integer
 
 	key = GetKey()
-	
+
 	If key = KEY_CTRL_N Then Exit Do End If
 
 	If key = KEY_CTRL_Q Then End End If
