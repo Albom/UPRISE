@@ -66,6 +66,10 @@ echo 3_UPRISE_estimate_FLIP_te.bas
 fbc -s console -t 10000 -fpu sse  -arch 686  -O 3 -vec 1 3_UPRISE_estimate_FLIP_te.bas
 IF %errorlevel% equ 1 Goto :Error
 
+echo 3_UPRISE_estimate_FLIP_te_storm.bas
+fbc -s console -t 10000 -fpu sse  -arch 686  -O 3 -vec 1 3_UPRISE_estimate_FLIP_te_storm.bas
+IF %errorlevel% equ 1 Goto :Error
+
 echo 3_UPRISE_estimate_storm.bas
 fbc -s console -t 10000 -fpu sse  -arch 686  -O 3 -vec 1 3_UPRISE_estimate_storm.bas
 IF %errorlevel% equ 1 Goto :Error
@@ -101,6 +105,7 @@ copy 3_UPRISE_estimate_wave.exe UPRISE
 copy 3_UPRISE_estimate_COld.exe UPRISE
 copy 3_UPRISE_estimate_FLIP_te_ti.exe UPRISE
 copy 3_UPRISE_estimate_FLIP_te.exe UPRISE
+copy 3_UPRISE_estimate_FLIP_te_storm.exe UPRISE
 copy 3_UPRISE_estimate_storm.exe UPRISE
 copy 3_UPRISE_estimate_newton.exe UPRISE
 copy 3_UPRISE_velocity.exe UPRISE

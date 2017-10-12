@@ -1,0 +1,6782 @@
+
+#Include Once "albom_lib.bi"	   ' Описание библиотеки "albom.dll"
+#Include Once "albom_log.bi"		' Подключение лога
+#Include Once "albom_as_file.bi"	' Описание структур и процедур для работы с AS-файлами
+#Include Once "albom_version.bi"
+
+#Include "crt/stdlib.bi"
+#Include "fbgfx.bi"			'Подключение графической библиотеки
+
+#Include "windows.bi"
+#Include "file.bi"
+
+#Include "window9.bi"
+#Include "dir.bi"
+
+'''==============================================
+
+#If __FB_LANG__ = "fb"
+Using FB 'для перехода в полноэкранный режим монитора
+#EndIf
+
+'''==============================================
+
+Type dat_all_struct
+
+	Dim	acf(0 To 18)	As Double
+	'	Dim	p_corr			As Double
+	Dim	q					As Double
+
+	Dim	d_c				As Double
+	Dim	ti_c				As Double	' температура ионов
+	Dim	te_c				As Double	' температура электронов
+	Dim	hyd_c				As Double	' относительное содержание ионов водорода
+	Dim	he_c				As Double	' относительное содержание ионов гелия
+
+	Dim	ti_start			As Double
+	Dim	te_start			As Double
+	Dim	hyd_start		As Double
+
+	Dim	ti_end			As Double
+	Dim	te_end			As Double
+	Dim	hyd_end			As Double
+
+	Dim	var(0 To 18)	As Double
+	Dim	ratio				As Double
+
+End Type
+
+'''==============================================
+
+Const As Double delta_tau = 30.555
+
+'''==============================================
+
+Dim Shared  As String LIBRARY_PATH
+Dim Shared  As Integer pulse_length '663 ' или 795
+Dim Shared  As Integer isConv
+Dim Shared	As Integer num_point_acf ' 22 или 26, вычисляется автоматически (pulse_length/delta_tau)
+
+Dim Shared As Double DeltaTePlus   ' максимальный градиент температуры электронов
+Dim Shared As Double DeltaTeMinus  ' максимальный градиент температуры электронов
+Dim Shared As Double DeltaTiPlus   ' максимальный градиент температуры ионов
+Dim Shared As Double DeltaTiMinus  ' максимальный градиент температуры ионов
+Dim Shared As Double DeltaHydPlus  ' максимальный градиент Hyd (60 - это 30%)
+Dim Shared As Double DeltaHydMinus ' максимальный градиент Hyd (60 - это 30%)
+
+Dim Shared As Double  RegN
+Dim Shared As Integer RegWnd			' окно для расчёта СКО
+
+Dim Shared As Integer  Config_step_h_1,  Config_step_ti_1,  Config_step_te_1
+Dim Shared As Integer Config_range_h_2, Config_range_ti_2, Config_range_te_2
+Dim Shared As Integer  Config_step_h_2,  Config_step_ti_2,  Config_step_te_2
+Dim Shared As Integer Config_range_h_3, Config_range_ti_3, Config_range_te_3
+Dim Shared As Integer  Config_step_h_3,  Config_step_ti_3,  Config_step_te_3
+Dim Shared As Integer  Config_oxygen
+Dim Shared As Integer  Config_auto
+Dim Shared As Double  Config_coeff(0 To 18)
+Dim Shared As Integer  Config_triangle
+Dim Shared As Integer Config_ti_num
+Dim Shared As Integer Config_te_num
+Dim Shared As Integer Config_hyd_num
+
+Dim Shared As Integer he_step
+
+Dim Shared As Integer Config_sinus
+
+Dim Shared As Integer ConfigAmbig
+
+Dim Shared As Integer Config_h_min_q
+
+Dim Shared As Integer isTrapVar
+
+Dim Shared As Integer Config_hyd_not_decrease_hyd_plus_he
+
+Dim Shared As Integer Config_Overlap_prohibition
+
+Dim Shared As Integer Config_ti_interpolate, Config_ti_interpolate_num, Config_ti_interpolate_points, Config_ti_interpolate_dev
+
+Dim Shared As Integer Config_wave
+
+Dim Shared As Double Config_kappa
+
+Dim Shared As Integer Config_sigma
+
+Dim Shared As Integer Config_filter
+
+Dim Shared As Double Config_alt_oxygen
+
+'''==============================================
+
+Dim Shared As Integer START_X = 0
+Dim Shared As Integer CUR = 0
+
+Dim Shared As Integer He_max
+Dim Shared As Integer He_grad
+Dim Shared As Integer He_maxLib
+
+Dim As Integer i, j
+
+Dim As Integer d_month, d_year, d_day, d_ndays
+Dim As String s_year, s_month, s_day
+
+Dim Shared As String SEANS_DIR_OUT
+Dim As String filename
+Dim As String ext
+
+Dim As String Directory
+Dim Shared As String DirectoryOutput
+
+Dim As Integer seans_num_in
+Dim Shared As Integer seans_num_out
+
+Dim As Integer t, tau, h, lag
+Dim As Integer z
+
+
+Dim As Integer nh'число высот
+
+Dim Shared As Integer Hmin, Hmax, Hstep
+
+Dim As as_file_struct	as_file_in
+
+
+
+ReDim Shared As Integer Hkm(0 To 679)
+
+
+
+Dim Shared As Integer temperatures(0 To 200000)
+Dim Shared As Integer temperatures_len
+
+Dim As Integer file
+
+Dim As Double ti, te
+Dim As Integer hyd
+
+Dim Shared As ZString*256 zfilename
+
+Dim Shared libraries_filelist As ZString*200000
+
+Dim As Double d
+
+Dim Shared As Integer libraries_num = 0
+Dim Shared As FILE Ptr libraries_file(0 To 300)
+
+
+ReDim Shared As Double RegRange(0 To 5, 0 To 1500) ' диапазон для регуляризации
+
+Dim As Integer He
+Dim Shared As Integer heCurrent
+
+Dim Shared As Double  acf_filter(0 To 100) ' АКФ фильтра
+
+Enum Params
+	PARAM_TI
+	PARAM_TE
+	PARAM_H
+	PARAM_HE
+End Enum
+
+Dim Shared As Integer trapProfile(0 To 679)
+
+'''==============================================
+
+Declare Sub inverse_problem_v1_conv(ByVal h As Integer, ByVal z As Integer, ByVal step_hyd As Integer, ByVal step_te As Integer, ByVal step_ti As Integer)
+Declare Sub inverse_problem_v2_conv(ByVal h As Integer, ByVal z As Integer, ByVal step_hyd As Integer, ByVal step_te As Integer, ByVal step_ti As Integer)
+Declare Sub inverse_problem_v1(ByVal h As Integer, ByVal z As Integer, ByVal step_hyd As Integer, ByVal step_te As Integer, ByVal step_ti As Integer)
+Declare Sub inverse_problem_v2(ByVal h As Integer, ByVal z As Integer, ByVal step_hyd As Integer, ByVal step_te As Integer, ByVal step_ti As Integer)
+Declare Sub inverse_problem_v1_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_hyd As Integer, ByVal step_te As Integer, ByVal step_ti As Integer)
+Declare Sub inverse_problem_v2_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_hyd As Integer, ByVal step_te As Integer, ByVal step_ti As Integer)
+Declare Sub inverse_problem_v2_ambig_storm(ByVal h As Integer, ByVal z As Integer, ByVal step_hyd As Integer, ByVal step_te As Integer, ByVal step_ti As Integer, ByVal he As Integer)
+
+Declare Sub inverse_problem_he(ByVal h As Integer, ByVal z As Integer, ByVal t_start As Integer, ByVal t_end As Integer)
+Declare Sub inverse_problem_ti(ByVal h As Integer, ByVal z As Integer)
+Declare Sub inverse_problem_te(ByVal h As Integer, ByVal z As Integer)
+Declare Sub inverse_problem_hyd(ByVal h As Integer, ByVal z As Integer)
+Declare Sub inverse_problem_ti_te(ByVal h As Integer, ByVal z As Integer)
+Declare Sub inverse_problem_hyd_ti_te(ByVal h As Integer, ByVal z As Integer)
+
+Declare Sub ranges_set(ByVal h As Integer, ByVal delta_hyd As Integer, ByVal delta_te As Integer, ByVal delta_ti As Integer)
+Declare Sub ranges_reset(ByVal h As Integer, t_start As Integer = -1 , t_end As Integer = -1)
+Declare Sub ranges_reg_set(ByVal h As Integer)
+Declare Sub ranges_set_FLIP(ByVal h As Integer)
+
+Declare Sub results_write(ByVal h As Integer, ByVal He As Integer)
+Declare Sub intervals_input(ByVal h As Integer)
+Declare Sub intervals_input_auto(ByVal h As Integer)
+Declare Sub input_param(ByVal h As Integer, ByVal z As Integer, ByVal t_start As Integer, ByVal t_end As Integer, ByVal param As Integer)
+
+Declare Sub draw_all(ByVal h As Integer, ByVal z As Integer)
+Declare Sub draw_d(ByVal h As Integer, ByVal z As Integer)
+Declare Sub draw_help()
+
+Declare Sub interpolate_param(ByVal h As Integer, ByVal z As Integer, ByVal t_start As Integer, ByVal t_end As Integer, ByVal param As Integer)
+
+Declare Sub undo(ByVal h As Integer)
+Declare Sub save(ByVal h As Integer)
+
+Declare Sub param_load(ByVal h As Integer, ByVal ti As Double Ptr, ByVal te As Double Ptr, ByVal hyd As Double Ptr, ByVal he As Double Ptr, ByVal d As Double Ptr)
+Declare Sub param_save(ByVal h As Integer, ByVal ti As Double Ptr, ByVal te As Double Ptr, ByVal hyd As Double Ptr, ByVal he As Double Ptr, ByVal d As Double Ptr)
+Declare Sub param_load2(ByVal h As Integer, ByVal ti As Double Ptr, ByVal te As Double Ptr, ByVal hyd As Double Ptr, ByVal he As Double Ptr, ByVal d As Double Ptr)
+
+Declare Sub trand_ti(ByVal h As Integer, ByVal z As Integer, ByVal t_start As Integer, ByVal t_end As Integer, wnd As Integer)
+Declare Sub trand_te(ByVal h As Integer, ByVal z As Integer, ByVal t_start As Integer, ByVal t_end As Integer, wnd As Integer)
+Declare Sub trand_hyd(ByVal h As Integer, ByVal z As Integer, ByVal t_start As Integer, ByVal t_end As Integer, wnd As Integer)
+
+Declare Sub level_ti(ByVal h As Integer, ByVal z As Integer, ByVal t_start As Integer, ByVal t_end As Integer, level As Integer)
+Declare Sub level_te(ByVal h As Integer, ByVal z As Integer, ByVal t_start As Integer, ByVal t_end As Integer, level As Integer)
+Declare Sub level_hyd(ByVal h As Integer, ByVal z As Integer, ByVal t_start As Integer, ByVal t_end As Integer, level As Integer)
+
+Declare Sub equate_ti(ByVal h As Integer, ByVal z As Integer, ByVal t_start As Integer, ByVal t_end As Integer)
+
+Declare Sub poly_ti(ByVal h As Integer, ByVal z As Integer, ByVal t_start As Integer, ByVal t_end As Integer, degree As Integer)
+Declare Sub poly_te(ByVal h As Integer, ByVal z As Integer, ByVal t_start As Integer, ByVal t_end As Integer, degree As Integer)
+Declare Sub poly_hyd(ByVal h As Integer, ByVal z As Integer, ByVal t_start As Integer, ByVal t_end As Integer, degree As Integer)
+
+Declare Sub spline_wnd_ti(ByVal h As Integer, ByVal z As Integer, ByVal t_start As Integer, ByVal t_end As Integer, wnd As Integer, degree As Integer)
+Declare Sub spline_wnd_te(ByVal h As Integer, ByVal z As Integer, ByVal t_start As Integer, ByVal t_end As Integer, wnd As Integer, degree As Integer)
+
+Declare Sub gradient_te(ByVal h As Integer, ByVal z As Integer, ByVal t_start As Integer, ByVal t_end As Integer)
+
+Declare Function getHeMax(h As Integer) As Integer
+Declare Function getHydMax(h As Integer) As Integer
+
+Declare Function analysis_param(ByVal h As Integer, ByVal z As Integer, ByVal param As Integer) As Integer
+
+Declare Sub libraries_list_load(He As Integer)
+
+Declare Sub save_and_exit()
+
+Declare Sub interpolate_ti(ByVal h As Integer, ByVal z As Integer)
+
+
+'''==============================================
+
+SEANS_DIR_OUT = "./out/"
+
+
+SetEnviron("fbgfx=GDI")
+Screen 20
+#Include Once "albom_font.bi"
+
+Open Err For Output As #1
+
+
+Cls
+
+Color 11
+Print "UPRISE version " + UPRISE_VERSION
+Print "(Unified Processing of the Results of Incoherent Scatter Experiments)"
+Print
+Color 7
+Print "Estimate - программа оценки параметров ионосферы (решение обратной задачи рассеяния)"
+Print "(c) Богомаз А.В., Котов Д.В. (Институт ионосферы)"
+Color 8
+Print
+Print "================================"
+Print "Программа собрана " + Mid(__DATE__, 4, 2)+"."+Mid(__DATE__, 1, 2)+"."+Mid(__DATE__, 7, 4)
+Print "================================"
+
+
+Color 15
+
+
+file = FreeFile()
+Open "config.dat" For Input As #file
+If Err() > 0 Then
+
+	isTrapVar = 0
+
+	Input "Введите длительность зондирующего импульса (мкс): ", pulse_length
+	LIBRARY_PATH = "d:/lib/"
+	isConv = 0
+
+	Input "Hmin: ", Hmin
+	Input "Hmax: ", Hmax
+	Input "Hstep: ", Hstep
+
+	Input "He max на первой высоте: ", He_max
+
+	Input "|+deltaTe|: ",   DeltaTePlus   ' максимальный градиент температуры электронов
+	Input "|-deltaTe|: ",   DeltaTeMinus  ' максимальный градиент температуры электронов
+	Input "|+deltaTi|: ",   DeltaTiPlus   ' максимальный градиент температуры ионов
+	Input "|-deltaTi|: ",   DeltaTiMinus  ' максимальный градиент температуры ионов
+	Input "|+deltaHyd|: ",  DeltaHydPlus  ' максимальный градиент Hyd (60 - это 30%)
+	Input "|-deltaHyd|: ",  DeltaHydMinus
+	Input "N СКО: ",   RegN
+	Input "Ширина окна для расчёта СКО: ",   RegWnd
+
+	Config_step_h_1  = 10 : Config_step_ti_1  = 100 :  Config_step_te_1 = 100
+	Config_range_h_2 = 20 : Config_range_ti_2 = 200 : Config_range_te_2 = 200
+	Config_step_h_2  = 5  :  Config_step_ti_2 = 50  :  Config_step_te_2 = 50
+	Config_range_h_3 = 10 : Config_range_ti_3 = 100 : Config_range_te_3 = 100
+	Config_step_h_3  = 2  : Config_step_ti_3  = 20  : Config_step_te_3  = 20
+
+	Config_oxygen = 0
+
+	he_step = 1
+
+	Config_sinus = 1
+
+	Config_auto = 1
+
+	For i = 0 To 18
+		Config_coeff(i) = 1
+	Next i
+
+	Config_triangle = 1
+
+	ConfigAmbig = 0
+
+	Config_h_min_q = 45
+
+	Config_filter = 9
+
+	Config_alt_oxygen = 0
+
+Else
+
+	Dim As String tmp_string
+
+	' 1
+	Input #file, tmp_string ' в первой строке записано имя файла характеристики разрядника, в данной программе она не используется
+
+	' 2
+	Input #file, isTrapVar
+
+	' 3
+	Input #file, isConv
+
+	' 4
+	Input #file, LIBRARY_PATH
+
+	' 5
+	Input #file, pulse_length
+
+	' 6
+	Input #file, Hmin
+
+	' 7
+	Input #file, Hmax
+
+	' 8
+	Input #file, Hstep
+
+	' 9
+	Input #file, He_max
+
+	' 10
+	Input #file, DeltaTePlus, DeltaTeMinus   ' максимальный градиент температуры электронов
+
+	' 11
+	Input #file, DeltaTiPlus, DeltaTiMinus   ' максимальный градиент температуры ионов
+
+	' 12
+	Input #file, DeltaHydPlus, DeltaHydMinus  ' максимальный градиент Hyd (60 - это 30%)
+
+	' 13
+	Input #file, RegN
+
+	' 14
+	Input #file, RegWnd
+
+	' 15
+	Input #file, Config_step_h_1,  Config_step_ti_1,  Config_step_te_1
+
+	' 16
+	Input #file, Config_range_h_2, Config_range_ti_2, Config_range_te_2
+
+	' 17
+	Input #file, Config_step_h_2,  Config_step_ti_2,  Config_step_te_2
+
+	' 18
+	Input #file, Config_range_h_3, Config_range_ti_3, Config_range_te_3
+
+	' 19
+	Input #file, Config_step_h_3,  Config_step_ti_3,  Config_step_te_3
+
+	' 20
+	Input #file, he_step
+
+	' 21
+	Input #file, Config_oxygen
+
+	' 22
+	Input #file, Config_sinus
+
+	' 23
+	Input #file, He_grad
+
+	' 24
+	Input #file, He_maxLib
+
+	' 25
+	Input #file, Config_auto
+
+	' 26
+	For i = 0 To 18
+		Input #file, Config_coeff(i)
+	Next i
+
+	' 27
+	Input #file, Config_triangle
+
+	' 28
+	Input #file, Config_ti_num
+
+	' 29
+	Input #file, Config_te_num
+
+	' 30
+	Input #file, Config_hyd_num
+
+	' 31
+	Input #file, ConfigAmbig
+
+	' 32
+	Input #file, Config_h_min_q
+
+	' 33
+	Input #file, Config_hyd_not_decrease_hyd_plus_he
+
+	' 34
+	Input #file, Config_Overlap_prohibition
+
+	' 35
+	Input #file, Config_ti_interpolate, Config_ti_interpolate_num, Config_ti_interpolate_points, Config_ti_interpolate_dev
+
+	'36
+	Input #file, Config_wave
+
+	'37
+	Input #file, Config_kappa
+
+	'38
+	Input #file, Config_sigma
+
+	'39
+	Input #file, Config_filter
+
+	'40
+	Input #file, Config_alt_oxygen
+
+	Close #file
+
+EndIf
+
+
+DeltaTePlus   = Abs(DeltaTePlus)
+DeltaTeMinus  = Abs(DeltaTeMinus)
+DeltaTiPlus   = Abs(DeltaTiPlus)
+DeltaTiMinus  = Abs(DeltaTiMinus)
+DeltaHydPlus  = Abs(DeltaHydPlus)
+DeltaHydMinus = Abs(DeltaHydMinus)
+
+Print
+Color 12
+Print "Проверьте параметры программы. При необходимости внесите исправления в config.dat и перезапустите программу."
+Print
+Color 15
+Print "Длительность зондирующего импульса: "; pulse_length; " мкс. ";
+If Config_triangle <> 0 Then
+	Print "Уменьшение коррелирующего объёма учитывается. "
+Else
+	Print "Уменьшение коррелирующего объёма не учитывается. "
+EndIf
+
+If ConfigAmbig <> 0 Then
+	Print "Расчёт параметров с использованием ДФН. ";
+Else
+	Print "Расчёт параметров без использования ДФН. ";
+EndIf
+
+
+Print "Путь к библиотекам АКФ: "; LIBRARY_PATH
+Print
+Print "Номер минимальной высоты Hmin: "; Hmin
+Print "Номер максимальной высоты Hmax: "; Hmax
+Print "Шаг по высоте Hstep: "; Hstep
+
+If Config_oxygen = 0 Then
+	Print
+	Print "He max на первой высоте: ";  He_max; " %"; "       He max: "; He_maxLib; " %"
+EndIf
+
+Print
+Print "Градиенты по Te (на 4.5 км): +"; DeltaTePlus; " K, -"; DeltaTeMinus; " K"
+Print "Градиенты по Ti (на 4.5 км): +"; DeltaTiPlus; " K, -"; DeltaTiMinus; " K"
+
+If Config_oxygen = 0 Then
+	Print "Градиенты по H+ (на 4.5 км): +"; DeltaHydPlus; ", -"; DeltaHydMinus, "("; DeltaHydPlus/2; " %, -"; DeltaHydMinus/2; " % )"
+EndIf
+
+
+Print "Количество СКО: "; RegN
+Print "Ширина окна для расчёта СКО: "; RegWnd
+
+Print
+
+If Config_oxygen = 0 Then
+
+	Print "Шаги при 1-м приближении (H+, Ti, Te):      ";  Config_step_h_1; " ("; Config_step_h_1/2;" % ), " ; Config_step_ti_1; " K, "; Config_step_te_1; " K"
+	Print
+	Print "Интервалы при 2-м приближении (H+, Ti, Te):   +-";  Config_range_h_2; " (+-"; Config_range_h_2/2;" % ), +-" ; Config_range_ti_2; " K, +-"; Config_range_te_2; " K"
+	Print "Шаги при 2-м приближении (H+, Ti, Te):      ";  Config_step_h_2; " ("; Config_step_h_2/2;" % ), " ; Config_step_ti_2; " K, "; Config_step_te_2; " K"
+	Print
+	Print "Интервалы при 3-м приближении (H+, Ti, Te):   +-";  Config_range_h_3; " (+-"; Config_range_h_3/2;" % ), +-" ; Config_range_ti_3; " K, +-"; Config_range_te_3; " K"
+	Print "Шаги при 3-м приближении (H+, Ti, Te):      ";  Config_step_h_3; " ("; Config_step_h_3/2;" % ), " ; Config_step_ti_3; " K, "; Config_step_te_3; " K"
+	Print
+	Print "Шаг по He+: ", he_step; "%"
+	Print "Градиент по He+ (на 4.5 км): "; he_grad; "%"
+Else
+	Print "Шаги при 1-м приближении (Ti, Te):      ";   Config_step_ti_1; " K, "; Config_step_te_1; " K"
+	Print
+	Print "Интервалы при 2-м приближении (Ti, Te):   +-";  Config_range_ti_2; " K, +-"; Config_range_te_2; " K"
+	Print "Шаги при 2-м приближении (Ti, Te):      ";  Config_step_ti_2; " K, "; Config_step_te_2; " K"
+	Print
+	Print "Интервалы при 3-м приближении (Ti, Te):   +-";  Config_range_ti_3; " K, +-"; Config_range_te_3; " K"
+	Print "Шаги при 3-м приближении (Ti, Te):      "; Config_step_ti_3; " K, "; Config_step_te_3; " K"
+EndIf
+
+If Config_oxygen <> 0 Then
+	Color 12
+	Print
+	Print "Внимение! Используется кислородное приближение."
+EndIf
+
+Color 15
+Print
+If Config_sinus <> 0 Then
+	Print "Синусная составляющая учитывается."
+Else
+	Print "Синусная составляющая не учитывается."
+EndIf
+
+If Config_auto <> 0 Then
+	Print
+	Print "Включён автоматический режим."
+EndIf
+
+
+Print
+Print "Весовые коэффициенты: ";
+For i = 0 To 18
+	Print Using "##.# "; Config_coeff(i);
+Next i
+
+Print
+Print
+Print "Количество точек для сглаживание временных рядов (по Ti, Te и H+): "; Config_ti_num; " "; Config_te_num; " "; Config_hyd_num
+
+Print
+Color 12
+Print "Нажмите Enter"
+
+Dim As Integer key
+Do
+	key = GetKey()
+Loop Until key = KEY_ENTER
+
+
+
+DeltaTePlus   *= Hstep
+DeltaTeMinus  *= Hstep
+DeltaTiPlus   *= Hstep
+DeltaTiMinus  *= Hstep
+DeltaHydPlus  *= Hstep
+DeltaHydMinus *= Hstep
+
+He_grad *= Hstep
+
+If Config_Overlap_prohibition <> 0 Then
+	Config_Overlap_prohibition = 1
+EndIf
+
+If Config_ti_interpolate <> 0 Then
+	Config_ti_interpolate = 1
+EndIf
+
+Cls
+Color 15
+
+Dim Shared As Integer Start_storm_time, End_storm_time
+Input "Введите начальный номер сеанса (для Te > 4000 K): ", Start_storm_time
+Input "Введите конечный номер сеанса (для Te > 4000 K): ", End_storm_time
+Dim Shared As Integer te_max_global = 5000
+Input "Введите максимально возможное значение Te: ", te_max_global
+Cls()
+
+Color 11
+
+Print "Результаты обработки, находящиеся в папке " + Chr(34) + "out" + Chr(34) + ":"
+Color 10
+Dim As String fn
+fn = Dir("./out/*", fbDirectory)
+While Len(fn) > 0
+	fn = Dir()
+	If (Len(fn)=13) And (Mid(fn, 7, 1)="-") Then
+		Print fn;"   ";
+	EndIf
+Wend
+Print
+
+Color 15
+
+
+
+num_point_acf = CDbl(pulse_length)/delta_tau
+
+Print
+Input "Введите дату начала измерений (день месяц год): ", d_day, d_month, d_year
+Input "Введите количество суток: ", d_ndays
+
+If (d_day < 1) Or (d_month < 1) Or (d_year < 1996) Or (d_ndays < 1) Then
+	PrintErrorToLog(ErrorInputData, __FILE__, __LINE__)
+	End
+EndIf
+
+SEANS_DIR_OUT = "./out/"
+DirectoryOutput = ""
+
+For i = 0 To d_ndays-1
+	If date_valid(d_day, d_month, d_year) = 1 Then
+
+		If d_day < 10 Then
+			s_day = "0"+Str(d_day)
+		Else
+			s_day = Str(d_day)
+		EndIf
+
+		If d_month < 10 Then
+			s_month = "0"+Str(d_month)
+		Else
+			s_month = Str(d_month)
+		EndIf
+
+		s_year = Mid(Str(d_year), 3, 2)
+
+		directory = s_day+s_month+s_year
+
+		date_next(@d_day, @d_month, @d_year)
+
+		If i = 0 Then
+			DirectoryOutput += directory + "-"
+		EndIf
+	EndIf
+Next i
+DirectoryOutput += directory
+
+
+
+Print
+
+
+
+
+Print
+Print "Подсчёт количества входных файлов... ";
+
+
+seans_num_in = AS_File_Num(SEANS_DIR_OUT+DirectoryOutput+"/step2")
+If seans_num_in < 1 Then
+	PrintErrorToLog(ErrorSeansNotLoaded, __FILE__, __LINE__)
+	End
+EndIf
+
+Print "OK"
+
+
+
+seans_num_out = seans_num_in
+
+DeleteDir(SEANS_DIR_OUT + DirectoryOutput+"/step5", /'FOF_ALLOWUNDO Or '/FOF_NOCONFIRMATION Or FOF_SILENT)
+MkDir(SEANS_DIR_OUT + DirectoryOutput+"/step5")
+
+FileCopy("config.dat", SEANS_DIR_OUT + DirectoryOutput+"/step5/config.dat")
+
+If isConv = 0 Then
+
+	' загрузка АКФ ИХ фильтра
+	file = FreeFile()
+	Open "filter.dat" For Input As #file
+	If Err <> 0 Then
+		PrintErrorToLog(ErrorFilter, __FILE__, __LINE__)
+		End
+	EndIf
+	For tau = 0 To num_point_acf-1
+		Input #file, acf_filter(tau)
+	Next tau
+	Close #file
+
+EndIf
+
+
+
+
+If as_file_load(SEANS_DIR_OUT+DirectoryOutput+"/step2/AS"+DirectoryOutput+".0001", @as_file_in) = 0 Then ' загружаем файл (при этом выделяется память, поэтому её необходимо после освобождать)
+	PrintErrorToLog(ErrorLoadASFile, __FILE__, __LINE__)
+	End
+EndIf
+
+nh = as_file_in.nh ' получаем число высот
+
+
+ReDim Shared As Integer Hkm(0 To nh-1)
+
+For h = 0 To nh-1
+	Hkm(h) = as_file_in.acf[h].h
+Next h
+
+as_file_close( @as_file_in ) ' освобождаем память, выделенную на сеанс
+
+
+
+
+' создаём файл для значений высот
+file = FreeFile()
+Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+"H.txt" For Output As #file
+Close #file
+
+
+
+
+' загружаем массив температур (для которых рассчитаны библиотеки)
+temperatures_len = library_light_list_of_temperatures_get(@temperatures(0))
+
+
+
+' Выделяем память для данных
+Print "Выделение памяти для данных... ";
+ReDim Shared As dat_all_struct dat_all_str(0 To nh-1, 0 To seans_num_out-1)
+If Err() <> 0 Then
+	PrintErrorToLog(ErrorNotEnoughMemory, __FILE__, __LINE__)
+	End
+EndIf
+
+ReDim Shared As Double heRange(0 To seans_num_out-1)
+For t = 0 To seans_num_out-1
+	heRange(t) = He_max
+Next t
+
+
+
+ReDim Shared As Double RegRange(0 To 5, 0 To seans_num_out-1)
+For t = 0 To seans_num_out-1
+	RegRange(0, t) = 0
+	RegRange(1, t) = 10000
+	RegRange(2, t) = 0
+	RegRange(3, t) = 10000
+	RegRange(4, t) = -1
+	RegRange(5, t) = 300
+Next t
+
+Print "OK"
+
+
+
+
+ReDim As Double time_decimal_all(0 To seans_num_out-1)
+
+'file = FreeFile()
+'Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+"T.txt" For Input As #file
+'For t = 0 To seans_num_out-1 ' по времени
+'	Input #file, time_decimal_all(t)
+'Next
+'Close #file
+
+
+
+
+' Загружаем АКФ в ОЗУ
+Print "Загрузка данных... ";
+For t = 0 To seans_num_out-1 ' по времени
+	Print_process_percent((t*100)/seans_num_out)
+
+	ext = Str(t+1)
+	If t+1 < 1000 Then ext = "0" + ext
+	If t+1 < 100  Then ext = "0" + ext
+	If t+1 < 10   Then ext = "0" + ext
+
+	filename = SEANS_DIR_OUT+DirectoryOutput+"/step2/AS"+DirectoryOutput+"."+ext
+
+	If as_file_load(filename, @as_file_in) = 0 Then ' загружаем файлы (при этом выделяется память, поэтому её необходимо после освобождать)
+		PrintErrorToLog(ErrorLoadASFile, __FILE__, __LINE__)
+		End
+	EndIf
+
+
+	Print #1, "AS"+DirectoryOutput+"."+ext
+
+	Dim As Integer hh, mm, ss
+	Dim As Double time_decimal
+
+	time_from_str(@hh, @mm, @ss, @as_file_in.time_ )
+	time_decimal = time_2decimal(hh, mm, ss)
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+"T.txt" For Append As #file
+	Print #file, Using "####.####"; time_decimal
+	Close #file
+
+	Dim As Integer day1, month1, year1
+	date_from_str(@day1, @month1, @year1, @as_file_in.date_ )
+	time_decimal_all(t) = date_2unixtime(day1, month1, year1, hh, mm, ss)
+	'	Print #1, time_decimal_all(t)
+
+	For h = 0 To nh-1
+
+		If Config_sinus <> 0 Then
+			For tau = 0 To 18
+				dat_all_str(h, t).acf(tau) = Sqr(as_file_in.acf[h].rc(tau)^2 + as_file_in.acf[h].rs(tau)^2)*Sgn( as_file_in.acf[h].rc(tau) )
+			Next tau
+		Else
+			For tau = 0 To 18
+				dat_all_str(h, t).acf(tau) = as_file_in.acf[h].rc(tau)
+			Next tau
+		EndIf
+
+
+		dat_all_str(h, t).d_c = 1e200
+
+		dat_all_str(h, t).q = as_file_in.acf[h].q
+
+		For tau = 0 To 18
+			dat_all_str(h, t).var(tau) = as_file_in.acf[h].var(tau)
+		Next tau
+
+	Next h
+
+	as_file_close(@as_file_in)
+
+Next t
+Print_process_percent(1000)
+Print "OK"
+Print #1, Str(seans_num_out)+" files loaded"
+Print #1, "Free memory: "; Fre()\(1024*1024); " MBytes"
+
+' Начало работы с файлами FLIP
+
+Dim As Integer nHeader = 4 ' 4 строки на заголовок (год, месяц, день, часы)
+
+ReDim As Double temp_flip(0 To 100000)
+Dim As Integer nRow, nColumn, temp_flip_length
+
+
+' ti
+filename = SEANS_DIR_OUT+DirectoryOutput+"/step2/FLIP_TI_"+DirectoryOutput+".txt"
+temp_flip_length = file_table_load(filename, @nColumn, @nRow, @temp_flip(0))
+If ( (temp_flip_length <> nRow*nColumn) Or (temp_flip_length = 0) ) Then
+	PrintErrorToLog(ErrorFlip, __FILE__, __LINE__)
+	End
+EndIf
+
+ReDim As Double ti_flip(0 To nRow-1-nHeader, 0 To nColumn-1-1)
+For r As Integer = 0 To nRow-1-nHeader
+	For c As Integer = 0 To nColumn-1-1
+		ti_flip(r, c) = temp_flip( (r+nHeader)*nColumn + c + 1 )
+	Next
+Next
+
+
+' te
+filename = SEANS_DIR_OUT+DirectoryOutput+"/step2/FLIP_TE_"+DirectoryOutput+".txt"
+temp_flip_length = file_table_load(filename, @nColumn, @nRow, @temp_flip(0))
+If ( (temp_flip_length <> nRow*nColumn) Or (temp_flip_length = 0) ) Then
+	PrintErrorToLog(ErrorFlip, __FILE__, __LINE__)
+	End
+EndIf
+
+ReDim As Double te_flip(0 To nRow-1-nHeader, 0 To nColumn-1-1)
+For r As Integer = 0 To nRow-1-nHeader
+	For c As Integer = 0 To nColumn-1-1
+		te_flip(r, c) = temp_flip( (r+nHeader)*nColumn + c + 1 )
+	Next
+Next
+
+
+' hyd
+filename = SEANS_DIR_OUT+DirectoryOutput+"/step2/FLIP_[H+]_"+DirectoryOutput+".txt"
+temp_flip_length = file_table_load(filename, @nColumn, @nRow, @temp_flip(0))
+If ( (temp_flip_length <> nRow*nColumn) Or (temp_flip_length = 0) ) Then
+	PrintErrorToLog(ErrorFlip, __FILE__, __LINE__)
+	End
+EndIf
+
+ReDim As Double hyd_flip(0 To nRow-1-nHeader, 0 To nColumn-1-1)
+For r As Integer = 0 To nRow-1-nHeader
+	For c As Integer = 0 To nColumn-1-1
+		hyd_flip(r, c) = temp_flip( (r+nHeader)*nColumn + c + 1 )
+	Next
+Next
+
+' he
+filename = SEANS_DIR_OUT+DirectoryOutput+"/step2/FLIP_[He+]_"+DirectoryOutput+".txt"
+temp_flip_length = file_table_load(filename, @nColumn, @nRow, @temp_flip(0))
+If ( (temp_flip_length <> nRow*nColumn) Or (temp_flip_length = 0) ) Then
+	PrintErrorToLog(ErrorFlip, __FILE__, __LINE__)
+	End
+EndIf
+
+ReDim As Double he_flip(0 To nRow-1-nHeader, 0 To nColumn-1-1)
+For r As Integer = 0 To nRow-1-nHeader
+	For c As Integer = 0 To nColumn-1-1
+		he_flip(r, c) = temp_flip( (r+nHeader)*nColumn + c + 1 )
+	Next
+Next
+
+
+' ox
+filename = SEANS_DIR_OUT+DirectoryOutput+"/step2/FLIP_[O+]_"+DirectoryOutput+".txt"
+temp_flip_length = file_table_load(filename, @nColumn, @nRow, @temp_flip(0))
+If ( (temp_flip_length <> nRow*nColumn) Or (temp_flip_length = 0) ) Then
+	PrintErrorToLog(ErrorFlip, __FILE__, __LINE__)
+	End
+EndIf
+
+ReDim As Double ox_flip(0 To nRow-1-nHeader, 0 To nColumn-1-1)
+For r As Integer = 0 To nRow-1-nHeader
+	For c As Integer = 0 To nColumn-1-1
+		ox_flip(r, c) = temp_flip( (r+nHeader)*nColumn + c + 1 )
+	Next
+Next
+
+
+' ne
+filename = SEANS_DIR_OUT+DirectoryOutput+"/step2/FLIP_[E]_"+DirectoryOutput+".txt"
+temp_flip_length = file_table_load(filename, @nColumn, @nRow, @temp_flip(0))
+If ( (temp_flip_length <> nRow*nColumn) Or (temp_flip_length = 0) ) Then
+	PrintErrorToLog(ErrorFlip, __FILE__, __LINE__)
+	End
+EndIf
+
+ReDim As Double ne_flip(0 To nRow-1-nHeader, 0 To nColumn-1-1)
+For r As Integer = 0 To nRow-1-nHeader
+	For c As Integer = 0 To nColumn-1-1
+		ne_flip(r, c) = temp_flip( (r+nHeader)*nColumn + c + 1 )
+	Next
+Next
+
+
+ReDim As Double time_flip(0 To nColumn-1-1)
+
+For c As Integer = 0 To nColumn-1-1
+
+	Dim As Integer day1, month1, year1
+	Dim As Double hour1
+
+	year1 = temp_flip( c+1 )
+	month1 = temp_flip( 1*nColumn + c+1 )
+	day1 = temp_flip( 2*nColumn + c+1 )
+	hour1 = temp_flip( 3*nColumn + c+1 )
+
+	time_flip(c) = date_2unixtime( day1, month1, year1, Int(hour1), Int((hour1-Int(hour1))*60), ((hour1-Int(hour1))*60 - Int((hour1-Int(hour1))*60) )*60 )
+
+Next
+
+
+ReDim As Double alt_flip(0 To nRow-1-nHeader)
+For r As Integer = 0 To nRow-1-nHeader
+	alt_flip(r) = temp_flip( (r+nHeader)*nColumn )
+Next
+
+
+nRow -= nHeader
+nColumn -= 1
+
+
+ReDim As Double ti_flip_time(0 To nRow-1, 0 To seans_num_out-1)
+ReDim As Double te_flip_time(0 To nRow-1, 0 To seans_num_out-1)
+ReDim As Double hyd_flip_time(0 To nRow-1, 0 To seans_num_out-1)
+ReDim As Double he_flip_time(0 To nRow-1, 0 To seans_num_out-1)
+ReDim As Double ox_flip_time(0 To nRow-1, 0 To seans_num_out-1)
+ReDim As Double ne_flip_time(0 To nRow-1, 0 To seans_num_out-1)
+
+For r As Integer = 0 To nRow-1
+
+	Dim As Double temperatures_flip_time(0 To nColumn-1)
+
+	' ti
+	For t = 0 To nColumn-1
+		temperatures_flip_time(t) = ti_flip(r, t)
+	Next t
+
+	For t = 0 To seans_num_out-1
+		ti_flip_time(r, t) = array_linear_d(time_decimal_all(t), @time_flip(0), @temperatures_flip_time(0), nColumn)
+		If ti_flip_time(r, t) < 0 Then
+			ti_flip_time(r, t) = 0
+		EndIf
+	Next t
+
+	' te
+	For t = 0 To nColumn-1
+		temperatures_flip_time(t) = te_flip(r, t)
+	Next t
+
+	For t = 0 To seans_num_out-1
+		te_flip_time(r, t) = array_linear_d(time_decimal_all(t), @time_flip(0), @temperatures_flip_time(0), nColumn)
+		If te_flip_time(r, t) < 0 Then
+			te_flip_time(r, t) = 0
+		EndIf
+	Next t
+
+	' hyd
+	For t = 0 To nColumn-1
+		temperatures_flip_time(t) = hyd_flip(r, t)
+	Next t
+
+	For t = 0 To seans_num_out-1
+		hyd_flip_time(r, t) = array_linear_d(time_decimal_all(t), @time_flip(0), @temperatures_flip_time(0), nColumn)
+		If hyd_flip_time(r, t) < 0 Then
+			hyd_flip_time(r, t) = 0
+		EndIf
+	Next t
+
+	' he
+	For t = 0 To nColumn-1
+		temperatures_flip_time(t) = he_flip(r, t)
+	Next t
+
+	For t = 0 To seans_num_out-1
+		he_flip_time(r, t) = array_linear_d(time_decimal_all(t), @time_flip(0), @temperatures_flip_time(0), nColumn)
+		If he_flip_time(r, t) < 0 Then
+			he_flip_time(r, t) = 0
+		EndIf
+	Next t
+
+	' ox
+	For t = 0 To nColumn-1
+		temperatures_flip_time(t) = ox_flip(r, t)
+	Next t
+
+	For t = 0 To seans_num_out-1
+		ox_flip_time(r, t) = array_linear_d(time_decimal_all(t), @time_flip(0), @temperatures_flip_time(0), nColumn)
+		If ox_flip_time(r, t) < 0 Then
+			ox_flip_time(r, t) = 0
+		EndIf
+	Next t
+
+	' ne
+	For t = 0 To nColumn-1
+		temperatures_flip_time(t) = ne_flip(r, t)
+	Next t
+
+	For t = 0 To seans_num_out-1
+		ne_flip_time(r, t) = array_linear_d(time_decimal_all(t), @time_flip(0), @temperatures_flip_time(0), nColumn)
+		If ne_flip_time(r, t) < 0 Then
+			ne_flip_time(r, t) = 0
+		EndIf
+	Next t
+
+Next r
+
+
+
+ReDim Shared As Double ti_flip_all(0 To nh-1, 0 To seans_num_out-1)
+ReDim Shared As Double te_flip_all(0 To nh-1, 0 To seans_num_out-1)
+ReDim Shared As Double hyd_flip_all(0 To nh-1, 0 To seans_num_out-1)
+ReDim Shared As Double he_flip_all(0 To nh-1, 0 To seans_num_out-1)
+ReDim Shared As Double ox_flip_all(0 To nh-1, 0 To seans_num_out-1)
+ReDim Shared As Double ne_flip_all(0 To nh-1, 0 To seans_num_out-1)
+
+
+For t = 0 To seans_num_out-1
+
+	Dim As Double temperatures_flip_alt(0 To nRow-1)
+
+	' ti
+	For r As Integer = 0 To nRow-1
+		temperatures_flip_alt(r) = ti_flip_time(r, t)
+	Next
+
+	For r As Integer = 0 To nH-1
+		ti_flip_all(r, t) = array_linear_d(Hkm(r), @alt_flip(0), @temperatures_flip_alt(0), nRow)
+		ti_flip_all(r, t) = (CInt(ti_flip_all(r, t))\20)*20
+		If ti_flip_all(r, t) < 500 Then
+			ti_flip_all(r, t) = 500
+		EndIf
+		If ti_flip_all(r, t) > 5000 Then
+			ti_flip_all(r, t) = 5000
+		EndIf
+	Next
+
+	' te
+	For r As Integer = 0 To nRow-1
+		temperatures_flip_alt(r) = te_flip_time(r, t)
+	Next
+
+	For r As Integer = 0 To nH-1
+		te_flip_all(r, t) = array_linear_d(Hkm(r), @alt_flip(0), @temperatures_flip_alt(0), nRow)
+		te_flip_all(r, t) = (CInt(te_flip_all(r, t))\20)*20
+		If te_flip_all(r, t) < 500 Then
+			te_flip_all(r, t) = 500
+		EndIf
+		If te_flip_all(r, t) > te_max_global Then
+			te_flip_all(r, t) = te_max_global
+		EndIf
+	Next
+
+	' hyd
+	For r As Integer = 0 To nRow-1
+		temperatures_flip_alt(r) = hyd_flip_time(r, t)
+	Next
+
+	For r As Integer = 0 To nH-1
+		hyd_flip_all(r, t) = array_linear_d(Hkm(r), @alt_flip(0), @temperatures_flip_alt(0), nRow)
+		If hyd_flip_all(r, t) < 0 Then
+			hyd_flip_all(r, t) = 0
+		EndIf
+	Next
+
+	' he
+	For r As Integer = 0 To nRow-1
+		temperatures_flip_alt(r) = he_flip_time(r, t)
+	Next
+
+	For r As Integer = 0 To nH-1
+		he_flip_all(r, t) = array_linear_d(Hkm(r), @alt_flip(0), @temperatures_flip_alt(0), nRow)
+		If he_flip_all(r, t) < 0 Then
+			he_flip_all(r, t) = 0
+		EndIf
+	Next
+
+	' ox
+	For r As Integer = 0 To nRow-1
+		temperatures_flip_alt(r) = ox_flip_time(r, t)
+	Next
+
+	For r As Integer = 0 To nH-1
+		ox_flip_all(r, t) = array_linear_d(Hkm(r), @alt_flip(0), @temperatures_flip_alt(0), nRow)
+		If ox_flip_all(r, t) < 0 Then
+			ox_flip_all(r, t) = 0
+		EndIf
+	Next
+
+	' ne
+	For r As Integer = 0 To nRow-1
+		temperatures_flip_alt(r) = ne_flip_time(r, t)
+	Next
+
+	For r As Integer = 0 To nH-1
+		ne_flip_all(r, t) = array_linear_d(Hkm(r), @alt_flip(0), @temperatures_flip_alt(0), nRow)
+		If ne_flip_all(r, t) < 0 Then
+			ne_flip_all(r, t) = 0
+		EndIf
+	Next
+
+Next t
+
+
+file = FreeFile()
+Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+"T.txt" For Input As #file
+For t = 0 To seans_num_out-1
+	Input #file, time_decimal_all(t)
+Next t
+Close #file
+
+
+' ti
+file = FreeFile()
+Open SEANS_DIR_OUT+DirectoryOutput+"/step5/Ti.F.txt" For Output As #file
+
+Print #file, "      0 ";
+
+For h = hMin To hMax Step hStep
+	Print #file, Using "###### "; Hkm(h);
+Next h
+
+For t = 0 To seans_num_out-1
+	Print #file,
+	Print #file, Using "##.#### "; time_decimal_all(t);
+	For h = hMin To hMax Step hStep
+		Print #file, Using "###### "; ti_flip_all(h, t);
+	Next h
+Next t
+
+Close #file
+
+
+' te
+file = FreeFile()
+Open SEANS_DIR_OUT+DirectoryOutput+"/step5/Te.F.txt" For Output As #file
+
+Print #file, "      0 ";
+
+For h = hMin To hMax Step hStep
+	Print #file, Using "###### "; Hkm(h);
+Next h
+
+For t = 0 To seans_num_out-1
+	Print #file,
+	Print #file, Using "##.#### "; time_decimal_all(t);
+	For h = hMin To hMax Step hStep
+		Print #file, Using "###### "; te_flip_all(h, t);
+	Next h
+Next t
+
+Close #file
+
+
+' hyd
+file = FreeFile()
+Open SEANS_DIR_OUT+DirectoryOutput+"/step5/Hyd.F.txt" For Output As #file
+
+Print #file, "      0 ";
+
+For h = hMin To hMax Step hStep
+	Print #file, Using "######     "; Hkm(h);
+Next h
+
+For t = 0 To seans_num_out-1
+	Print #file,
+	Print #file, Using "##.#### "; time_decimal_all(t);
+	For h = hMin To hMax Step hStep
+		Print #file, Using "##.####^^^ "; hyd_flip_all(h, t);
+	Next h
+Next t
+
+Close #file
+
+
+' he
+file = FreeFile()
+Open SEANS_DIR_OUT+DirectoryOutput+"/step5/He.F.txt" For Output As #file
+
+Print #file, "      0 ";
+
+For h = hMin To hMax Step hStep
+	Print #file, Using "######     "; Hkm(h);
+Next h
+
+For t = 0 To seans_num_out-1
+	Print #file,
+	Print #file, Using "##.#### "; time_decimal_all(t);
+	For h = hMin To hMax Step hStep
+		Print #file, Using "##.####^^^ "; he_flip_all(h, t);
+	Next h
+Next t
+
+Close #file
+
+
+' ox
+file = FreeFile()
+Open SEANS_DIR_OUT+DirectoryOutput+"/step5/O.F.txt" For Output As #file
+
+Print #file, "      0 ";
+
+For h = hMin To hMax Step hStep
+	Print #file, Using "######     "; Hkm(h);
+Next h
+
+For t = 0 To seans_num_out-1
+	Print #file,
+	Print #file, Using "##.#### "; time_decimal_all(t);
+	For h = hMin To hMax Step hStep
+		Print #file, Using "##.####^^^ "; ox_flip_all(h, t);
+	Next h
+Next t
+
+Close #file
+
+
+' ne
+file = FreeFile()
+Open SEANS_DIR_OUT+DirectoryOutput+"/step5/Ne.F.txt" For Output As #file
+
+Print #file, "      0 ";
+
+For h = hMin To hMax Step hStep
+	Print #file, Using "######     "; Hkm(h);
+Next h
+
+For t = 0 To seans_num_out-1
+	Print #file,
+	Print #file, Using "##.#### "; time_decimal_all(t);
+	For h = hMin To hMax Step hStep
+		Print #file, Using "##.####^^^ "; ne_flip_all(h, t);
+	Next h
+Next t
+
+Close #file
+
+' Конец работы с файлами FLIP
+
+
+file = FreeFile()
+Open SEANS_DIR_OUT+DirectoryOutput+"/step2/profileTrap.txt" For Input As #file
+
+For h = 0 To 679
+	Dim As Double tmp
+	Input #file, tmp, trapProfile(h)
+Next h
+
+Close #file
+
+
+
+
+' выделяем память для коэффициентов
+Dim As Integer hZero = 60
+ReDim Shared As Single Ambig(0 To 20, 0 To 50, 0 To hZero, 0 To 18)' partrap, tau, h, lag
+ReDim Shared As Single AmbigCoeff(0 To 50, 0 To (hMax-hMin)\hStep+1, 0 To seans_num_out-1, 0 To 18)'tau, h, t, lag
+
+
+' Загрузка ДФН
+Print "Загрузка ДФН... ";
+For partrap As Integer = 0 To 0'20
+
+	Print_process_percent((lag*100)/21)
+
+	Dim As String DirNum
+
+	If partrap < 10 Then
+		DirNum = "0" + Str(partrap)
+	Else
+		DirNum = Str(partrap)
+	EndIf
+
+
+	For lag = 0 To 18
+		file = FreeFile()
+		ext = Str(lag)
+		If lag < 10 Then ext = "0"+ext
+		If pulse_length = 663 Then
+			filename = "./ambig/663-"+Str(Config_filter)+"/"+ DirNum +"/ambig"+ext+".dat"
+		Else
+			If pulse_length = 795 Then
+				filename = "./ambig/795-"+Str(Config_filter)+"/"+"00/ambig"+ext+".dat"
+			EndIf
+		EndIf
+
+		Print #1, filename
+		Open filename For Input As #file
+		If Err() <> 0 Then
+			PrintErrorToLog(ErrorAFunction, __FILE__, __LINE__)
+			End
+		EndIf
+		For h = 0 To hZero
+			For tau = 0 To 50
+				Input #file, Ambig(partrap, tau, h, lag)
+			Next tau
+		Next h
+		Close #file
+	Next lag
+Next partrap
+Print_process_percent(1000)
+Print "OK"
+
+Print "Расчёт коэффициентов... ";
+For t = 0 To seans_num_out-1
+
+	Print_process_percent((t*100)/seans_num_out)
+
+	For h = hMin To hMax Step hStep
+		For lag = 0 To 18
+			For tau = 0 To 50
+				AmbigCoeff(tau, (h-hMin)\hStep, t, lag) = 0
+				For z = 0 To hZero+trapProfile(h)*2
+					If h-z+num_point_acf\2+trapProfile(h) > 0 Then
+						AmbigCoeff(tau, (h-hMin)\hStep, t, lag) += dat_all_str(h-z+num_point_acf\2+trapProfile(h), t).acf(0) * Ambig(trapProfile(h), tau, z, lag)
+					EndIf
+				Next z
+			Next tau
+		Next lag
+	Next h
+
+Next t
+Print_process_percent(1000)
+Print "OK"
+
+
+
+' Решение обратной задачи
+
+If Config_oxygen <> 0 Then
+	he_max = 0
+EndIf
+
+
+
+z = 0
+For h = Hmin To Hmax Step Hstep ' по высоте
+
+	Cls
+	Print "Решение обратной задачи... "
+	Print #1, "Inverse problem solving... h="+Str(CInt(Hkm(h)))+" km"
+
+	Color 11
+	Print "Для остановки обработки и сохранения результатов зажмите Q."
+	Print
+	Color 15
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Q."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+	For t = 0 To seans_num_out-1 ' по времени
+		Print #file, dat_all_str(h, t).q
+	Next t
+	Close #file
+
+
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "P."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+	For t = 0 To seans_num_out-1 ' по времени
+		Print #file, dat_all_str(h, t).acf(0)
+	Next t
+	Close #file
+
+
+
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "He."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+	Close #file
+
+	Dim As Integer auto
+
+	auto = 1
+
+	If Hkm(h) < Config_alt_oxygen Then
+		he_max = 0
+	EndIf
+
+	For he = 0 To he_max Step he_step
+
+
+		If MultiKey(FB.SC_Q) Then
+			Color 10
+			Print
+			Print "Сохранить результаты и выйти из программы? (Y/N) "
+			If GetKey_YN() <> 0 Then
+				save_and_exit()
+				End
+			EndIf
+			Color 15
+		EndIf
+
+
+		heCurrent = he
+
+		Dim As Double qMin = 1e200
+		For t = 0 To seans_num_out-1 ' по времени
+			if dat_all_str(h, t).q < qMin Then
+				qMin = dat_all_str(h, t).q
+			EndIf
+		Next t
+
+		Dim As Double qMax = -1e200
+		For t = 0 To seans_num_out-1 ' по времени
+			If dat_all_str(h, t).q > qMax Then
+				qMax = dat_all_str(h, t).q
+			EndIf
+		Next t
+
+		Print Using "n = ###   h = ####   He+ = ##   Qmin = ####.##   Qmax = ####.##   "; h; Hkm(h); he; qMin; qMax;
+		Print ,
+
+
+		' вывод в файл значения гелия
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "He."+Str(CInt(Hkm(h)))+".txt" For Append As #file
+		Print #file, He
+		Close #file
+
+		' Загружаем библиотеки АКФ
+		Print "Загрузка библиотек АКФ... ";
+
+		If libraries_num > 0 Then
+			For hyd = 0 To libraries_num-1
+				fclose ( libraries_file(hyd) )
+			Next hyd
+		EndIf
+
+		libraries_list_load(He)
+
+		If Config_oxygen <> 0 Then
+			libraries_num = 1
+		EndIf
+
+		If Hkm(h) < Config_alt_oxygen Then
+			libraries_num = 1
+		EndIf
+
+		For hyd = 0 To libraries_num-1
+			Print_process_percent((hyd*100)/libraries_num)
+			library_light_list_get_filename(@zfilename, @libraries_filelist, hyd)
+			zfilename = LIBRARY_PATH + zfilename
+			libraries_file(hyd) = fopen (zfilename, "rb")
+			If libraries_file(hyd) = NULL Then
+				PrintErrorToLog(ErrorFortranLib, __FILE__, __LINE__)
+				End
+			EndIf
+		Next hyd
+
+		Print_process_percent(1000)
+		Print "OK"
+
+
+		ranges_set_FLIP(h) ' установка температур согласно FLIP и очистка погрешностей
+
+		If z = 0 Then
+			inverse_problem_v2_ambig(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_1)
+			ranges_set(h, 0, 0, Config_range_ti_2)
+			inverse_problem_v2_ambig(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_2)
+			ranges_set(h, 0, 0, Config_range_ti_3)
+			inverse_problem_v2_ambig(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_3)
+		Else
+			inverse_problem_v2_ambig_storm(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_1, he)
+			ranges_set(h, 0, 0, Config_range_ti_2)
+			inverse_problem_v2_ambig_storm(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_2, he)
+			ranges_set(h, 0, 0, Config_range_ti_3)
+			inverse_problem_v2_ambig_storm(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_3, he)
+		EndIf
+
+		results_write(h, he)
+
+	Next he
+
+	intervals_input_auto(h)
+
+
+
+	' запись значения обработанной высоты в файл
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+"H.txt" For Append As #file
+	Print #file, Str(CInt(Hkm(h)))
+	Close #file
+
+
+	'ranges_reg_set(h) ' регуляризация
+
+	z += 1
+
+	He_max = getHeMax( CInt(Hkm(h)) ) ' He_max2
+
+	If Config_oxygen <> 0 Then
+		he_max = 0
+	EndIf
+
+	If Hkm(h) < Config_alt_oxygen Then
+		he_max = 0
+	EndIf
+
+Next h ' !!!!
+
+
+save_and_exit()
+
+
+Print
+Print "OK"
+break
+
+'''==============================================
+
+
+
+
+Sub inverse_problem_v1_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_hyd As Integer, ByVal step_te As Integer, ByVal step_ti As Integer)
+
+	Dim As Integer hyd
+	Dim As Double  ti, te
+	Dim As Integer tau
+	Dim As Integer t
+	Dim As Integer lag
+	Dim As Double  d
+
+	Dim As Double acf_lib(0 To 255)
+	Dim As Double acf_teor(0 To 255)
+
+
+
+	For hyd = 0 To libraries_num-1 Step step_hyd
+
+		For te = 500 To 4000 Step step_te
+
+			For ti = 500 To 4000 Step step_ti
+
+				If (te >= ti And Config_Overlap_prohibition = 1) Or (Config_Overlap_prohibition = 0) Then
+
+					If (te/ti <= 4) And (te/ti >= 0.7) Then
+
+						If acf_library_light_short( libraries_file(hyd), @temperatures(0), temperatures_len, ti, te, @acf_lib(25), num_point_acf) <> 0 Then
+
+							For tau = 0 To 24
+								acf_lib(tau) = acf_lib(50-tau)
+							Next tau
+
+							For t = 0 To seans_num_out-1 ' по времени
+
+
+								If ( te >= dat_all_str(h, t).te_start ) And ( te <= dat_all_str(h, t).te_end ) And ( ti >= dat_all_str(h, t).ti_start ) And ( ti <= dat_all_str(h, t).ti_end ) And ( hyd >= dat_all_str(h, t).hyd_start ) And ( hyd <= dat_all_str(h, t).hyd_end ) Then
+
+									If ( te >= RegRange(0, t) ) And ( te <= RegRange(1, t) ) And ( ti >= RegRange(2, t) ) And ( ti <= RegRange(3, t) ) And ( hyd >= RegRange(4, t) ) And ( hyd <= RegRange(5, t) ) Then
+
+										'If heCurrent <= heRange(t) Then
+
+										For lag = 0 To 18
+											acf_teor(lag) = 0
+											For tau = 0 To 50
+												acf_teor(lag) += acf_lib(tau) * AmbigCoeff(tau, (h-hMin)\hStep, t, lag)
+											Next tau
+										Next lag
+
+										'!									For lag = 0 To 18
+										'!										acf_teor(lag) /= lag+1
+										'!									Next lag
+
+										d = 0
+										If Config_sigma <> 0 Then
+											For tau = 1 To 18
+												If dat_all_str(h, t).var(tau) <> 0 Then '!!! грязный хак (если дисперсия по каким-то причинам оказалась равна 0)
+													d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2 / dat_all_str(h, t).var(tau)
+												Else
+													d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2
+												EndIf
+
+											Next tau
+										Else
+											For tau = 1 To 18
+												d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2
+											Next tau
+										EndIf
+
+										Dim As Double ratio = 0
+
+										If z < 2 Then
+											dat_all_str(h, t).ratio = 0
+										Else
+											Dim As Double chi2constraint = (te - 2*dat_all_str(h-Hstep, t).te_c + dat_all_str(h-2*Hstep, t).te_c)^2 + _
+											(ti - 2*dat_all_str(h-Hstep, t).ti_c + dat_all_str(h-2*Hstep, t).ti_c)^2
+											If chi2constraint <> 0 Then
+												ratio = chi2constraint/d
+												d += Config_kappa*ratio
+											Else
+												ratio = 0
+											EndIf
+										EndIf
+
+										If d < dat_all_str(h, t).d_c Then
+											dat_all_str(h, t).d_c = d
+											dat_all_str(h, t).ti_c = ti
+											dat_all_str(h, t).te_c = te
+											dat_all_str(h, t).hyd_c = hyd
+											dat_all_str(h, t).ratio = ratio
+										EndIf
+
+										'EndIf
+
+									EndIf
+
+								EndIf
+
+
+							Next t
+
+						EndIf
+
+					EndIf
+
+				EndIf
+
+
+
+			Next ti
+
+		Next te
+
+	Next hyd
+
+
+End Sub
+
+''' ================================================================
+
+
+
+
+
+
+Sub inverse_problem_v1_conv(ByVal h As Integer, ByVal z As Integer, ByVal step_hyd As Integer, ByVal step_te As Integer, ByVal step_ti As Integer)
+
+	Dim As Integer hyd
+	Dim As Double  ti, te
+	Dim As Integer tau
+	Dim As Integer t
+	Dim As Integer lag
+	Dim As Double  d
+
+	Dim As Double acf_lib(0 To 255)
+	Dim As Double acf_teor(0 To 255)
+
+
+
+	For hyd = 0 To libraries_num-1 Step step_hyd
+
+		For te = 500 To 4000 Step step_te
+
+			For ti = 500 To 4000 Step step_ti
+
+				If (te/ti <= 3.5) And (te/ti >= 0.7) Then
+
+					If acf_library_light_short_conv( libraries_file(hyd), @temperatures(0), temperatures_len, ti, te, @acf_teor(0), 19) <> 0 Then
+
+						For t = 0 To seans_num_out-1 ' по времени
+
+							If ( te >= dat_all_str(h, t).te_start ) And ( te <= dat_all_str(h, t).te_end ) And ( ti >= dat_all_str(h, t).ti_start ) And ( ti <= dat_all_str(h, t).ti_end ) And ( hyd >= dat_all_str(h, t).hyd_start ) And ( hyd <= dat_all_str(h, t).hyd_end ) Then
+
+								If ( te >= RegRange(0, t) ) And ( te <= RegRange(1, t) ) And ( ti >= RegRange(2, t) ) And ( ti <= RegRange(3, t) ) And ( hyd >= RegRange(4, t) ) And ( hyd <= RegRange(5, t) ) Then
+
+									'									If heCurrent <= heRange(t) Then
+
+									d = 0
+									For tau = 1 To 18
+										d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - dat_all_str(h, t).acf(0)*acf_teor(tau) )^2
+									Next tau
+
+									If d < dat_all_str(h, t).d_c Then
+										dat_all_str(h, t).d_c = d
+										dat_all_str(h, t).ti_c = ti
+										dat_all_str(h, t).te_c = te
+										dat_all_str(h, t).hyd_c = hyd
+									EndIf
+
+									'									Endif
+
+								EndIf
+
+							EndIf
+
+						Next t
+
+					EndIf
+
+				EndIf
+
+			Next ti
+
+		Next te
+
+	Next hyd
+
+
+End Sub
+
+
+''' ================================================================
+
+
+
+Sub inverse_problem_v1(ByVal h As Integer, ByVal z As Integer, ByVal step_hyd As Integer, ByVal step_te As Integer, ByVal step_ti As Integer)
+
+	Dim As Integer hyd
+	Dim As Double  ti, te
+	Dim As Integer tau
+	Dim As Integer t
+	Dim As Integer lag
+	Dim As Double  d
+
+	Dim As Double acf_lib(0 To 255)
+	Dim As Double acf_teor(0 To 255)
+
+
+
+	For hyd = 0 To libraries_num-1 Step step_hyd
+
+		For te = 500 To 4000 Step step_te
+
+			For ti = 500 To 4000 Step step_ti
+
+				If (te/ti <= 3.5) And (te/ti >= 0.7) Then
+
+					If acf_library_light_short( libraries_file(hyd), @temperatures(0), temperatures_len, ti, te, @acf_teor(0), num_point_acf) <> 0 Then
+
+						If Config_triangle <> 0 Then
+							For tau = 0 To num_point_acf-1
+								acf_teor(tau) *= 1-tau*delta_tau/pulse_length
+							Next tau
+						EndIf
+
+						func_conv_d(@acf_teor(0), @acf_filter(0), @acf_teor(0), num_point_acf)
+						array_norm0_d(@acf_teor(0), @acf_teor(0), num_point_acf)
+
+						For t = 0 To seans_num_out-1 ' по времени
+
+							If ( te >= dat_all_str(h, t).te_start ) And ( te <= dat_all_str(h, t).te_end ) And ( ti >= dat_all_str(h, t).ti_start ) And ( ti <= dat_all_str(h, t).ti_end ) And ( hyd >= dat_all_str(h, t).hyd_start ) And ( hyd <= dat_all_str(h, t).hyd_end ) Then
+
+								If ( te >= RegRange(0, t) ) And ( te <= RegRange(1, t) ) And ( ti >= RegRange(2, t) ) And ( ti <= RegRange(3, t) ) And ( hyd >= RegRange(4, t) ) And ( hyd <= RegRange(5, t) ) Then
+
+									If heCurrent <= heRange(t) Then
+
+										d = 0
+										For tau = 1 To 18
+											d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - dat_all_str(h, t).acf(0)*acf_teor(tau) )^2
+										Next tau
+
+										If d < dat_all_str(h, t).d_c Then
+											dat_all_str(h, t).d_c = d
+											dat_all_str(h, t).ti_c = ti
+											dat_all_str(h, t).te_c = te
+											dat_all_str(h, t).hyd_c = hyd
+										EndIf
+
+									EndIf
+
+								EndIf
+
+							EndIf
+
+						Next t
+
+					EndIf
+
+				EndIf
+
+			Next ti
+
+		Next te
+
+	Next hyd
+
+
+End Sub
+
+''' ================================================================
+
+
+
+Sub inverse_problem_v2_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_hyd As Integer, ByVal step_te As Integer, ByVal step_ti As Integer)
+
+	Dim As Integer hyd
+	Dim As Double  ti, te
+	Dim As Integer tau
+	Dim As Integer t
+	Dim As Integer lag
+	Dim As Double  d
+
+	Dim As Double acf_lib(0 To 255)
+	Dim As Double acf_teor(0 To 255)
+
+	For hyd = 0 To libraries_num-1 Step step_hyd
+
+		For t = 0 To seans_num_out-1 ' по времени
+
+			'If heCurrent <= heRange(t) Then
+
+			If ( hyd >= RegRange(4, t) ) And ( hyd <= RegRange(5, t) ) Then
+
+				If (hyd >= dat_all_str(h, t).hyd_start) And (hyd <= dat_all_str(h, t).hyd_end) Then
+
+					For te = dat_all_str(h, t).te_start To dat_all_str(h, t).te_end Step step_te
+
+						'If ( te >= RegRange(0, t) ) And ( te <= RegRange(1, t) ) Then
+
+						For ti = dat_all_str(h, t).ti_start To dat_all_str(h, t).ti_end Step step_ti
+
+							'			If ( ti >= RegRange(2, t) ) And ( ti <= RegRange(3, t) ) Then
+
+							If (te >= ti And Config_Overlap_prohibition = 1) Or (Config_Overlap_prohibition = 0) Then
+								If (te/ti <= 4) And (te/ti >= 0.7) Then
+
+									If acf_library_light_short( libraries_file(hyd), @temperatures(0), temperatures_len, ti, te, @acf_lib(25), num_point_acf) <> 0 Then
+
+
+										For tau = 0 To 24
+											acf_lib(tau) = acf_lib(50-tau)
+										Next tau
+
+
+										For lag = 0 To 18
+											acf_teor(lag) = 0
+											For tau = 0 To 50
+												acf_teor(lag) += acf_lib(tau) * AmbigCoeff(tau, (h-hMin)\hStep, t, lag)
+											Next tau
+										Next lag
+
+										'!											For lag = 0 To 18
+										'!												acf_teor(lag) /= lag+1
+										'!											Next lag
+
+										d = 0
+										If Config_sigma <> 0 Then
+											For tau = 1 To 18
+												If dat_all_str(h, t).var(tau) <> 0 Then
+													d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2 / dat_all_str(h, t).var(tau)
+												Else
+													d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2
+												EndIf
+
+											Next tau
+										Else
+											For tau = 1 To 18
+												d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2
+											Next tau
+										EndIf
+
+										Dim As Double ratio = 0
+
+										If z < 2 Then
+											dat_all_str(h, t).ratio = 0
+										Else
+											Dim As Double chi2constraint = (te - 2*dat_all_str(h-Hstep, t).te_c + dat_all_str(h-2*Hstep, t).te_c)^2 + _
+											(ti - 2*dat_all_str(h-Hstep, t).ti_c + dat_all_str(h-2*Hstep, t).ti_c)^2
+											If chi2constraint <> 0 Then
+												ratio = chi2constraint/d
+												d += Config_kappa*ratio
+											Else
+												ratio = 0
+											EndIf
+										EndIf
+
+										If d < dat_all_str(h, t).d_c Then
+											dat_all_str(h, t).d_c = d
+											dat_all_str(h, t).ti_c = ti
+											dat_all_str(h, t).te_c = te
+											dat_all_str(h, t).hyd_c = hyd
+											dat_all_str(h, t).ratio = ratio
+										EndIf
+
+										'											Else
+										'												Print t, ti, te
+									EndIf
+
+								EndIf
+
+							EndIf
+
+							'			EndIf
+
+						Next ti
+
+						'	EndIf
+
+					Next te
+
+				EndIf
+
+			EndIf
+
+			'EndIf
+
+		Next t
+
+	Next hyd
+
+End Sub
+
+
+
+''' ================================================================
+
+Sub inverse_problem_v2_ambig_storm(ByVal h As Integer, ByVal z As Integer, ByVal step_hyd As Integer, ByVal step_te As Integer, ByVal step_ti As Integer, ByVal he As Integer)
+
+	Dim As Integer hyd
+	Dim As Double  ti, te
+	Dim As Integer tau
+	Dim As Integer t
+	Dim As Integer lag
+	Dim As Double  d
+
+	Dim As Double acf_lib(0 To 255)
+	Dim As Double acf_teor(0 To 255)
+
+	For hyd = 0 To libraries_num-1 Step step_hyd
+
+		For t = 0 To seans_num_out-1 ' по времени
+
+			If ( hyd >= RegRange(4, t) ) And ( hyd <= RegRange(5, t) ) Then
+
+				If (hyd >= dat_all_str(h, t).hyd_start) And (hyd <= dat_all_str(h, t).hyd_end) Then
+
+					For te = dat_all_str(h, t).te_start To dat_all_str(h, t).te_end Step step_te
+
+						For ti = dat_all_str(h, t).ti_start To dat_all_str(h, t).ti_end Step step_ti
+
+							If (te/ti <= 5) And (te/ti >= 1) Then
+
+								Dim As Integer res = 0
+
+								If t >= Start_storm_time And t <= End_storm_time Then
+									If (te/ti <= 4) And (te <= 4000) And (ti <= 4000) Then
+										res = acf_library_light_short( libraries_file(hyd), @temperatures(0), temperatures_len, ti, te, @acf_lib(25), num_point_acf)
+									Else
+										If (te/ti <= 5) Then
+											res = acf_3_full(1, 4, 16, hyd/200.0, he/100.0, ti, te, 1, 0,  @acf_lib(25), num_point_acf, 30.555e-6)
+										Else
+											res = 0
+										EndIf
+									EndIf
+								Else
+									If (te/ti <= 4) And (te <= 4000) And (ti <= 4000) Then
+										res = acf_library_light_short( libraries_file(hyd), @temperatures(0), temperatures_len, ti, te, @acf_lib(25), num_point_acf)
+									EndIf
+								EndIf
+
+								If res <> 0 Then
+
+									For tau = 0 To 24
+										acf_lib(tau) = acf_lib(50-tau)
+									Next tau
+
+									For lag = 0 To 18
+										acf_teor(lag) = 0
+										For tau = 0 To 50
+											acf_teor(lag) += acf_lib(tau) * AmbigCoeff(tau, (h-hMin)\hStep, t, lag)
+										Next tau
+									Next lag
+
+									d = 0
+									If Config_sigma <> 0 Then
+										For tau = 1 To 18
+											If dat_all_str(h, t).var(tau) <> 0 Then
+												d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2 / dat_all_str(h, t).var(tau)
+											Else
+												d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2
+											EndIf
+
+										Next tau
+									Else
+										For tau = 1 To 18
+											d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2
+										Next tau
+									EndIf
+
+									Dim As Double ratio = 0
+
+									If z < 2 Then
+										dat_all_str(h, t).ratio = 0
+									Else
+										Dim As Double chi2constraint = (te - 2*dat_all_str(h-Hstep, t).te_c + dat_all_str(h-2*Hstep, t).te_c)^2 + _
+										(ti - 2*dat_all_str(h-Hstep, t).ti_c + dat_all_str(h-2*Hstep, t).ti_c)^2
+										If chi2constraint <> 0 Then
+											ratio = chi2constraint/d
+											d += Config_kappa*ratio
+										Else
+											ratio = 0
+										EndIf
+									EndIf
+
+									If d < dat_all_str(h, t).d_c Then
+										dat_all_str(h, t).d_c = d
+										dat_all_str(h, t).ti_c = ti
+										dat_all_str(h, t).te_c = te
+										dat_all_str(h, t).hyd_c = hyd
+										dat_all_str(h, t).ratio = ratio
+									EndIf
+
+								EndIf
+
+							EndIf
+
+						Next ti
+
+					Next te
+
+				EndIf
+
+			EndIf
+
+		Next t
+
+	Next hyd
+
+End Sub
+
+
+
+''' ================================================================
+
+
+
+
+Sub inverse_problem_v2_conv(ByVal h As Integer, ByVal z As Integer, ByVal step_hyd As Integer, ByVal step_te As Integer, ByVal step_ti As Integer)
+
+	Dim As Integer hyd
+	Dim As Double  ti, te
+	Dim As Integer tau
+	Dim As Integer t
+	Dim As Integer lag
+	Dim As Double  d
+
+	Dim As Double acf_lib(0 To 255)
+	Dim As Double acf_teor(0 To 255)
+
+	For hyd = 0 To libraries_num-1 Step step_hyd
+
+		For t = 0 To seans_num_out-1 ' по времени
+
+			'			If heCurrent <= heRange(t) Then
+
+			If ( hyd >= RegRange(4, t) ) And ( hyd <= RegRange(5, t) ) Then
+
+				If (hyd >= dat_all_str(h, t).hyd_start) And (hyd <= dat_all_str(h, t).hyd_end) Then
+
+					For te = dat_all_str(h, t).te_start To dat_all_str(h, t).te_end Step step_te
+
+						If ( te >= RegRange(0, t) ) And ( te <= RegRange(1, t) ) Then
+
+							For ti = dat_all_str(h, t).ti_start To dat_all_str(h, t).ti_end Step step_ti
+
+								If ( ti >= RegRange(2, t) ) And ( ti <= RegRange(3, t) ) Then
+
+									If (te/ti <= 3.5) And (te/ti >= 0.7) Then
+
+										If acf_library_light_short_conv( libraries_file(hyd), @temperatures(0), temperatures_len, ti, te, @acf_teor(0), 19) <> 0 Then
+
+											d = 0
+											For tau = 1 To 18
+												d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - dat_all_str(h, t).acf(0)*acf_teor(tau) )^2
+											Next tau
+
+											If d < dat_all_str(h, t).d_c Then
+												dat_all_str(h, t).d_c = d
+												dat_all_str(h, t).ti_c = ti
+												dat_all_str(h, t).te_c = te
+												dat_all_str(h, t).hyd_c = hyd
+											EndIf
+
+										EndIf
+
+									EndIf
+
+								EndIf
+
+							Next ti
+
+						EndIf
+
+					Next te
+
+				EndIf
+
+			EndIf
+
+			'			EndIf
+
+		Next t
+
+	Next hyd
+
+End Sub
+
+
+''' ================================================================
+
+Sub inverse_problem_v2(ByVal h As Integer, ByVal z As Integer, ByVal step_hyd As Integer, ByVal step_te As Integer, ByVal step_ti As Integer)
+
+	Dim As Integer hyd
+	Dim As Double  ti, te
+	Dim As Integer tau
+	Dim As Integer t
+	Dim As Integer lag
+	Dim As Double  d
+
+	Dim As Double acf_lib(0 To 255)
+	Dim As Double acf_teor(0 To 255)
+
+
+	For hyd = 0 To libraries_num-1 Step step_hyd
+
+		For t = 0 To seans_num_out-1 ' по времени
+
+			If heCurrent <= heRange(t) Then
+
+				If ( hyd >= RegRange(4, t) ) And ( hyd <= RegRange(5, t) ) Then
+
+					If (hyd >= dat_all_str(h, t).hyd_start) And (hyd <= dat_all_str(h, t).hyd_end) Then
+
+						For te = dat_all_str(h, t).te_start To dat_all_str(h, t).te_end Step step_te
+
+							If ( te >= RegRange(0, t) ) And ( te <= RegRange(1, t) ) Then
+
+								For ti = dat_all_str(h, t).ti_start To dat_all_str(h, t).ti_end Step step_ti
+
+									If ( ti >= RegRange(2, t) ) And ( ti <= RegRange(3, t) ) Then
+
+										If (te/ti <= 3.5) And (te/ti >= 0.7) Then
+
+											If acf_library_light_short( libraries_file(hyd), @temperatures(0), temperatures_len, ti, te, @acf_teor(0), num_point_acf) <> 0 Then
+
+												If Config_triangle <> 0 Then
+													For tau = 0 To num_point_acf-1
+														acf_teor(tau) *= 1-tau*delta_tau/pulse_length
+													Next tau
+												EndIf
+
+												func_conv_d(@acf_teor(0), @acf_filter(0), @acf_teor(0), num_point_acf)
+												array_norm0_d(@acf_teor(0), @acf_teor(0), num_point_acf)
+
+												d = 0
+												For tau = 1 To 18
+													d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - dat_all_str(h, t).acf(0)*acf_teor(tau) )^2
+												Next tau
+
+												If d < dat_all_str(h, t).d_c Then
+													dat_all_str(h, t).d_c = d
+													dat_all_str(h, t).ti_c = ti
+													dat_all_str(h, t).te_c = te
+													dat_all_str(h, t).hyd_c = hyd
+												EndIf
+
+											EndIf
+
+										EndIf
+
+									EndIf
+
+								Next ti
+
+							EndIf
+
+						Next te
+
+					EndIf
+
+				EndIf
+
+			EndIf
+
+		Next t
+
+	Next hyd
+
+End Sub
+
+
+
+''' ================================================================
+
+
+Sub ranges_set(ByVal h As Integer, ByVal delta_hyd As Integer, ByVal delta_te As Integer, ByVal delta_ti As Integer)
+
+	Dim As Integer t
+
+	For t = 0 To seans_num_out-1
+		dat_all_str(h, t).te_start = dat_all_str(h, t).te_c-delta_te
+		dat_all_str(h, t).te_end = dat_all_str(h, t).te_c+delta_te
+
+		dat_all_str(h, t).ti_start = dat_all_str(h, t).ti_c-delta_ti
+		dat_all_str(h, t).ti_end = dat_all_str(h, t).ti_c+delta_ti
+
+		dat_all_str(h, t).hyd_start = dat_all_str(h, t).hyd_c-delta_hyd
+		dat_all_str(h, t).hyd_end = dat_all_str(h, t).hyd_c+delta_hyd
+	Next t
+
+End Sub
+
+
+''' ================================================================
+
+Sub ranges_reset(ByVal h As Integer, t_start As Integer = -1 , t_end As Integer = -1)
+
+	Dim As Integer t
+
+	If t_start = -1 And t_end = -1 Then
+		t_start = 0
+		t_end = seans_num_out-1
+	EndIf
+
+	For t = t_start To t_end
+		dat_all_str(h, t).te_start = 500
+		dat_all_str(h, t).te_end = 4000
+
+		dat_all_str(h, t).ti_start = 500
+		dat_all_str(h, t).ti_end = 4000
+
+		dat_all_str(h, t).hyd_start = 0
+		dat_all_str(h, t).hyd_end = libraries_num-1
+
+		dat_all_str(h, t).d_c = 1e200
+	Next t
+
+End Sub
+
+''' ================================================================
+
+Sub ranges_set_FLIP(ByVal h As Integer)
+
+	Dim As Integer t
+
+	For t = 0 To seans_num_out-1
+		dat_all_str(h, t).te_start = te_flip_all(h, t)
+		dat_all_str(h, t).te_end = te_flip_all(h, t)
+
+		dat_all_str(h, t).ti_start = 500'ti_flip_all(h, t)
+		dat_all_str(h, t).ti_end = 4000'ti_flip_all(h, t)
+
+		dat_all_str(h, t).hyd_start = 0
+		dat_all_str(h, t).hyd_end = libraries_num-1
+
+		dat_all_str(h, t).d_c = 1e200
+	Next t
+
+End Sub
+
+
+''' ================================================================
+
+Sub ranges_reg_set(ByVal h As Integer)
+
+	Dim As Double RegMx
+	Dim As Double RegSigma
+	Dim As Double RegArray(0 To RegWnd-1)
+
+	Dim As Integer t
+	Dim As Integer i
+
+
+	' пересчёт диапазона регуляризации для Te
+	For t = 0 To seans_num_out-1-RegWnd+1
+
+		For i = 0 To RegWnd-1
+			RegArray(i) = dat_all_str(h, t+i).te_c
+		Next i
+
+		RegMx = stat_mean_d(@RegArray(0), RegWnd)
+		RegSigma = stat_deviation_d(@RegArray(0), RegWnd)
+		RegRange(0, t+RegWnd/2) = RegMx - DeltaTeMinus - RegN*RegSigma
+		RegRange(1, t+RegWnd/2) = RegMx + DeltaTePlus  + RegN*RegSigma
+
+	Next t
+
+	' заполнение начала массива
+	For t = 0 To RegWnd/2-1
+		RegRange(0, t) = RegRange(0, RegWnd/2)
+		RegRange(1, t) = RegRange(1, RegWnd/2)
+	Next t
+
+	' заполнение конца массива
+	For i = 0 To RegWnd/2-1
+		RegRange(0, seans_num_out-1-i) = RegRange(0, seans_num_out-1-RegWnd/2)
+		RegRange(1, seans_num_out-1-i) = RegRange(1, seans_num_out-1-RegWnd/2)
+	Next i
+
+
+
+
+
+	' пересчёт диапазона регуляризации для Ti
+	For t = 0 To seans_num_out-1-RegWnd+1
+
+		For i = 0 To RegWnd-1
+			RegArray(i) = dat_all_str(h, t+i).ti_c
+		Next i
+
+		RegMx = stat_mean_d(@RegArray(0), RegWnd)
+		RegSigma = stat_deviation_d(@RegArray(0), RegWnd)
+		RegRange(2, t+RegWnd/2) = RegMx - DeltaTiMinus - RegN*RegSigma
+		RegRange(3, t+RegWnd/2) = RegMx + DeltaTiPlus  + RegN*RegSigma
+	Next t
+
+	' заполнение начала массива
+	For t = 0 To RegWnd/2-1
+		RegRange(2, t) = RegRange(2, RegWnd/2)
+		RegRange(3, t) = RegRange(3, RegWnd/2)
+	Next t
+
+	' заполнение конца массива
+	For i = 0 To RegWnd/2-1
+		RegRange(2, seans_num_out-1-i) = RegRange(2, seans_num_out-1-RegWnd/2)
+		RegRange(3, seans_num_out-1-i) = RegRange(3, seans_num_out-1-RegWnd/2)
+	Next i
+
+
+
+
+	' пересчёт диапазона регуляризации для Hyd
+	For t = 0 To seans_num_out-1-RegWnd+1
+
+		For i = 0 To RegWnd-1
+			RegArray(i) = dat_all_str(h, t+i).hyd_c
+		Next i
+
+		RegMx = stat_mean_d(@RegArray(0), RegWnd)
+		RegSigma = stat_deviation_d(@RegArray(0), RegWnd)
+		RegRange(4, t+RegWnd/2) = RegMx - DeltaHydMinus - RegN*RegSigma
+		RegRange(5, t+RegWnd/2) = RegMx + DeltaHydPlus  + RegN*RegSigma
+	Next t
+
+	' заполнение начала массива
+	For t = 0 To RegWnd/2-1
+		RegRange(4, t) = RegRange(4, RegWnd/2)
+		RegRange(5, t) = RegRange(5, RegWnd/2)
+	Next t
+
+	' заполнение конца массива
+	For i = 0 To RegWnd/2-1
+		RegRange(4, seans_num_out-1-i) = RegRange(4, seans_num_out-1-RegWnd/2)
+		RegRange(5, seans_num_out-1-i) = RegRange(5, seans_num_out-1-RegWnd/2)
+	Next i
+
+End Sub
+
+''' ================================================================
+
+Sub results_write(ByVal h As Integer, ByVal He As Integer)
+
+	Dim As Integer file
+	Dim As Integer t
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Hyd."+Str(He)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+	For t = 0 To seans_num_out-1
+		Print #file, Using "###.# "; dat_all_str(h, t).hyd_c
+	Next t
+	Close #file
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Ti."+Str(He)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+	For t = 0 To seans_num_out-1
+		Print #file, Using "####.# "; dat_all_str(h, t).ti_c
+	Next t
+	Close #file
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Te."+Str(He)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+	For t = 0 To seans_num_out-1
+		Print #file, Using "####.# "; dat_all_str(h, t).te_c
+	Next t
+	Close #file
+
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "D."+Str(He)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+	For t = 0 To seans_num_out-1
+		Print #file, Using "##.#####^^^^^ "; dat_all_str(h, t).d_c
+	Next t
+	Close #file
+
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Ratio."+Str(He)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+	For t = 0 To seans_num_out-1
+		Print #file, Using "##.#####^^^^^ "; dat_all_str(h, t).ratio
+	Next t
+	Close #file
+
+
+	If He = -1 Then
+
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "He."+Str(He)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+		For t = 0 To seans_num_out-1
+			Print #file, Using "###.# "; dat_all_str(h, t).he_c
+		Next t
+		Close #file
+
+	EndIf
+
+
+End Sub
+
+
+''' ================================================================
+
+
+Sub results_write2(ByVal h As Integer, ByVal He As Integer)
+
+	Dim As Integer file
+	Dim As Integer t
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Hyd2."+Str(He)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+	For t = 0 To seans_num_out-1
+		Print #file, Using "###.# "; dat_all_str(h, t).hyd_c
+	Next t
+	Close #file
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Ti2."+Str(He)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+	For t = 0 To seans_num_out-1
+		Print #file, Using "####.# "; dat_all_str(h, t).ti_c
+	Next t
+	Close #file
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Te2."+Str(He)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+	For t = 0 To seans_num_out-1
+		Print #file, Using "####.# "; dat_all_str(h, t).te_c
+	Next t
+	Close #file
+
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "D2."+Str(He)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+	For t = 0 To seans_num_out-1
+		Print #file, Using "##.#####^^^^^ "; dat_all_str(h, t).d_c
+	Next t
+	Close #file
+
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Ratio."+Str(He)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+	For t = 0 To seans_num_out-1
+		Print #file, Using "##.#####^^^^^ "; dat_all_str(h, t).ratio
+	Next t
+	Close #file
+
+
+	If He = -1 Then
+
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "He2."+Str(He)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+		For t = 0 To seans_num_out-1
+			Print #file, Using "###.# "; dat_all_str(h, t).he_c
+		Next t
+		Close #file
+
+	EndIf
+
+
+End Sub
+
+
+
+
+
+''' ================================================================
+
+
+
+Sub intervals_input(ByVal h As Integer)
+
+	Dim As Integer i_left, i_right, He
+	Dim As Integer file
+	Dim As Integer t
+	Dim As Double tmp_d
+
+	Cls
+	Print "Ввод интервалов..."
+
+	Do
+
+		Print
+		Print h, Hkm(h)
+		Print "Введите левую границу интервала (от 0 до "; seans_num_out-1; " ): ";
+		Input "", i_left
+
+		Print "Введите правую границу интервала (от "; i_left;" до "; seans_num_out-1; " ): ";
+		Input "", i_right
+
+		Print "Введите значение He+ (в %): ";
+		Input "", He
+
+		If (i_right >= i_left) And (i_left >= 0) And (i_right <= (seans_num_out-1) ) Then
+
+			If (He >= 0) And (He <= 100) Then
+
+				' заполнить He
+				For t = i_left To i_right
+					dat_all_str(h, t).he_c = He
+				Next t
+
+				' считать Te
+				file = FreeFile()
+				Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Te."+Str(He)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+
+				For t = 0 To i_left-1
+					Input #file, tmp_d
+				Next
+
+				For t = i_left To i_right
+					Input #file, dat_all_str(h, t).te_c
+				Next t
+
+				Close #file
+
+				' считать Ti
+				file = FreeFile()
+				Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Ti."+Str(He)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+
+				For t = 0 To i_left-1
+					Input #file, tmp_d
+				Next
+
+				For t = i_left To i_right
+					Input #file, dat_all_str(h, t).ti_c
+				Next t
+
+				Close #file
+
+				' считать Hyd
+				file = FreeFile()
+				Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Hyd."+Str(He)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+
+				For t = 0 To i_left-1
+					Input #file, tmp_d
+				Next
+
+				For t = i_left To i_right
+					Input #file, dat_all_str(h, t).hyd_c
+				Next t
+
+				Close #file
+
+				' считать d_c
+				file = FreeFile()
+				Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "D."+Str(He)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+
+				For t = 0 To i_left-1
+					Input #file, tmp_d
+				Next
+
+				For t = i_left To i_right
+					Input #file, dat_all_str(h, t).d_c
+				Next t
+
+				Close #file
+
+
+			Else
+
+				Color 12
+				Print "Значение He+ должно быть в пределах от 0 до 100%!"
+				Color 15
+
+			EndIf
+
+		Else
+
+			Color 12
+			Print "Неверно введены границы интервала!"
+			Color 15
+
+		EndIf
+
+		Print "Продолжить ввод интервалов? (y/n) ";
+
+	Loop Until GetKey_YN() = 0
+
+	results_write(h, -1)
+
+End Sub
+
+
+
+''' ================================================================
+
+
+
+Sub intervals_input_auto2(ByVal h As Integer)
+
+	Dim As Integer t
+	ReDim As Integer He_num(0 To He_max)
+	Dim As Integer he, he_c
+	Dim As Integer file
+	Dim As Double d_c
+
+	ReDim As Double d_loaded(0 To He_max, 0 To seans_num_out-1)
+	ReDim As Double Ti_loaded(0 To He_max, 0 To seans_num_out-1)
+	ReDim As Double Te_loaded(0 To He_max, 0 To seans_num_out-1)
+	ReDim As Double Hyd_loaded(0 To He_max, 0 To seans_num_out-1)
+
+
+	' загрузка временного хода Ti
+	For he = 0 To He_max Step he_step
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Ti2."+Str(He)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+		For t = 0 To seans_num_out-1
+			Input #file, ti_loaded(he, t)
+		Next t
+		Close #file
+	Next he
+
+	' загрузка временного хода Te
+	For he = 0 To He_max Step he_step
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Te2."+Str(He)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+		For t = 0 To seans_num_out-1
+			Input #file, te_loaded(he, t)
+		Next t
+		Close #file
+	Next he
+
+	' загрузка временного хода H+
+	For he = 0 To He_max Step he_step
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Hyd2."+Str(He)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+		For t = 0 To seans_num_out-1
+			Input #file, hyd_loaded(he, t)
+		Next t
+		Close #file
+	Next he
+
+	' загрузка временного хода погрешностей
+	For he = 0 To He_max Step he_step
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "D2."+Str(He)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+		For t = 0 To seans_num_out-1
+			Input #file, d_loaded(he, t)
+		Next t
+		Close #file
+	Next he
+
+
+	For t = 0 To seans_num_out-1
+
+		d_c = 1e200
+		For he = 0 To He_max Step he_step
+			If d_loaded(he, t) < d_c Then
+				d_c = d_loaded(he, t)
+				he_c = he
+			EndIf
+		Next he
+
+		dat_all_str(h, t).he_c  = he_c
+		dat_all_str(h, t).hyd_c = Hyd_loaded(he_c, t)
+		dat_all_str(h, t).ti_c  = Ti_loaded(he_c, t)
+		dat_all_str(h, t).te_c  = Te_loaded(he_c, t)
+		dat_all_str(h, t).d_c   =  d_loaded(he_c, t)
+
+	Next t
+
+	results_write2(h, -1)
+
+End Sub
+
+
+
+
+''' ================================================================
+
+
+
+
+Sub intervals_input_auto(ByVal h As Integer)
+
+	Dim As Integer t, offset
+	ReDim As Integer He_num(0 To He_max)
+	Dim As Integer he, he_c
+	Dim As Integer file
+	Dim As Double d_c
+
+	ReDim As Double d_loaded(0 To He_max, 0 To seans_num_out-1)
+	ReDim As Double Ti_loaded(0 To He_max, 0 To seans_num_out-1)
+	ReDim As Double Te_loaded(0 To He_max, 0 To seans_num_out-1)
+	ReDim As Double Hyd_loaded(0 To He_max, 0 To seans_num_out-1)
+
+
+	' загрузка временного хода Ti
+	For he = 0 To He_max Step he_step
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Ti."+Str(He)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+		For t = 0 To seans_num_out-1
+			Input #file, ti_loaded(he, t)
+		Next t
+		Close #file
+	Next he
+
+	' загрузка временного хода Te
+	For he = 0 To He_max Step he_step
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Te."+Str(He)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+		For t = 0 To seans_num_out-1
+			Input #file, te_loaded(he, t)
+		Next t
+		Close #file
+	Next he
+
+	' загрузка временного хода H+
+	For he = 0 To He_max Step he_step
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Hyd."+Str(He)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+		For t = 0 To seans_num_out-1
+			Input #file, hyd_loaded(he, t)
+		Next t
+		Close #file
+	Next he
+
+	' загрузка временного хода погрешностей
+	For he = 0 To He_max Step he_step
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "D."+Str(He)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+		For t = 0 To seans_num_out-1
+			Input #file, d_loaded(he, t)
+		Next t
+		Close #file
+	Next he
+
+
+	For t = 0 To seans_num_out-1
+
+		d_c = 1e200
+		For he = 0 To He_max Step he_step
+			If d_loaded(he, t) < d_c Then
+				d_c = d_loaded(he, t)
+				he_c = he
+			EndIf
+		Next he
+
+		dat_all_str(h, t).he_c  = he_c
+		dat_all_str(h, t).hyd_c = Hyd_loaded(he_c, t)
+		dat_all_str(h, t).ti_c  = Ti_loaded(he_c, t)
+		dat_all_str(h, t).te_c  = Te_loaded(he_c, t)
+		dat_all_str(h, t).d_c   =  d_loaded(he_c, t)
+
+	Next t
+
+	results_write(h, -1)
+
+End Sub
+
+
+''' ================================================================
+
+Sub draw_all(ByVal h As Integer, ByVal z As Integer)
+
+	Dim As Integer wnd_trand_width = 21
+	Dim As Integer offset
+
+	Dim As Integer he, t, file
+
+	ReDim As Double   t_loaded(0 To seans_num_out-1)
+
+	ReDim As Double   d_he(0 To He_max, 0 To seans_num_out-1)
+
+	ReDim As Double   d_loaded(0 To seans_num_out-1)
+	ReDim As Double  ti_loaded(0 To seans_num_out-1)
+	ReDim As Double  te_loaded(0 To seans_num_out-1)
+	ReDim As Double hyd_loaded(0 To seans_num_out-1)
+	ReDim As Double  he_loaded(0 To seans_num_out-1)
+
+
+	ReDim As Double  ti_loaded_prev(0 To seans_num_out-1)
+	ReDim As Double  te_loaded_prev(0 To seans_num_out-1)
+	ReDim As Double hyd_loaded_prev(0 To seans_num_out-1)
+	ReDim As Double  he_loaded_prev(0 To seans_num_out-1)
+
+	ReDim As Double  ti_loaded_saved(0 To seans_num_out-1)
+	ReDim As Double  te_loaded_saved(0 To seans_num_out-1)
+	ReDim As Double hyd_loaded_saved(0 To seans_num_out-1)
+	ReDim As Double  he_loaded_saved(0 To seans_num_out-1)
+
+	Dim As Integer isSaved = 0
+
+	ReDim As Double  tmp_d(0 To seans_num_out-1)
+	ReDim As Double  tmp_d_d(0 To He_max+1, 0 To seans_num_out-1)
+
+	Dim As Double SCALE_Y = 140
+
+	Dim As Integer key
+	Dim As Integer SEL = 0
+
+	Dim As Double max_val, min_val
+
+	Dim As Integer wnd, point_start, point_end
+
+
+	' загрузка времени
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "T.txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, t_loaded(t)
+	Next t
+	Close #file
+
+
+	' загрузка временного хода погрешностей
+	For he = 0 To He_max Step he_step
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "D."+Str(He)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+		For t = 0 To seans_num_out-1
+			Input #file, d_he(he, t)
+		Next t
+		Close #file
+	Next he
+
+	param_load(h, @ti_loaded(0), @te_loaded(0), @hyd_loaded(0), @he_loaded(0), @d_loaded(0) )
+
+	If z <> 0 Then
+
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Ti2."+Str(-1)+"."+Str(CInt(Hkm(h-Hstep)))+".txt" For Input As #file
+
+		If Err() > 0 Then
+			file = FreeFile()
+			Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Ti."+Str(-1)+"."+Str(CInt(Hkm(h-Hstep)))+".txt" For Input As #file
+		EndIf
+
+		For t = 0 To seans_num_out-1
+			Input #file, tmp_d(t)
+		Next t
+		Close #file
+
+		array_trand_d(@tmp_d(0), @ti_loaded_prev(0), wnd_trand_width, seans_num_out)
+
+
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Te2."+Str(-1)+"."+Str(CInt(Hkm(h-Hstep)))+".txt" For Input As #file
+
+		If Err() > 0 Then
+			file = FreeFile()
+			Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Te."+Str(-1)+"."+Str(CInt(Hkm(h-Hstep)))+".txt" For Input As #file
+		EndIf
+
+		For t = 0 To seans_num_out-1
+			Input #file, tmp_d(t)
+		Next t
+		Close #file
+
+		array_trand_d(@tmp_d(0), @te_loaded_prev(0), wnd_trand_width, seans_num_out)
+
+
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Hyd2."+Str(-1)+"."+Str(CInt(Hkm(h-Hstep)))+".txt" For Input As #file
+
+		If Err() > 0 Then
+			file = FreeFile()
+			Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Hyd."+Str(-1)+"."+Str(CInt(Hkm(h-Hstep)))+".txt" For Input As #file
+		EndIf
+
+		For t = 0 To seans_num_out-1
+			Input #file, tmp_d(t)
+		Next t
+		Close #file
+
+		array_trand_d(@tmp_d(0), @hyd_loaded_prev(0), wnd_trand_width, seans_num_out)
+
+
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "He2."+Str(-1)+"."+Str(CInt(Hkm(h-Hstep)))+".txt" For Input As #file
+
+		If Err() > 0 Then
+			file = FreeFile()
+			Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "He."+Str(-1)+"."+Str(CInt(Hkm(h-Hstep)))+".txt" For Input As #file
+		EndIf
+
+		For t = 0 To seans_num_out-1
+			Input #file, tmp_d(t)
+		Next t
+		Close #file
+
+		array_trand_d(@tmp_d(0), @he_loaded_prev(0), wnd_trand_width, seans_num_out)
+
+	EndIf
+
+
+
+	Do
+
+		ScreenLock
+
+		Cls
+
+
+		If SEL = 1 Then
+			For t = START_X To seans_num_out-1-1
+				If t >= point_start And t <= point_end Then
+					Line (1+t-START_X, 25 )-(1+t-START_X, 768-25 ), 8
+				EndIf
+			Next t
+		EndIf
+
+		' вывод погрешностей
+
+		For he = 0 To He_max Step he_step
+			For t = 0 To seans_num_out-1
+				tmp_d_d(he, t) = d_he(he, t)-d_loaded(t)
+			Next t
+		Next he
+
+		' поиск глобального минимума
+		min_val = 1e200
+		For he = 0 To He_max Step he_step
+			For t = 0 To seans_num_out-1
+				If tmp_d_d(he, t) < min_val Then min_val = tmp_d_d(he, t)
+			Next t
+		Next he
+
+		For he = 0 To He_max Step he_step
+			For t = 0 To seans_num_out-1
+				tmp_d_d(he, t) -= min_val
+			Next t
+		Next he
+
+		' поиск глобального максимума
+		max_val = -1e200
+		For he = 0 To He_max Step he_step
+			For t = 0 To seans_num_out-1
+				If tmp_d_d(he, t) > max_val Then max_val = tmp_d_d(he, t)
+			Next t
+		Next he
+
+		If max_val <> 0 Then
+			For he = 0 To He_max Step he_step
+				For t = 0 To seans_num_out-1
+					tmp_d_d(he, t) /= max_val
+				Next t
+			Next he
+		EndIf
+
+		Line (0, 150 )-(1024, 150 ), 7, , &b0000000011110000
+		For he = 0 To He_max Step he_step
+			For t = START_X To seans_num_out-1-1
+				Line (1+t-START_X, 150-SCALE_Y*tmp_d_d(he, t) )-(1+t+1-START_X, 150-SCALE_Y*tmp_d_d(he, t+1) ), 15-he\2
+			Next t
+		Next he
+		Draw String (950, 135), Left( Str(d_loaded(CUR)), 12), 15
+
+
+
+		' вывод Te
+
+		If isSaved = 1 Then
+
+			For t = 0 To seans_num_out-1
+				tmp_d(t) = te_loaded_saved(t)
+			Next t
+
+			min_val = array_min_d (@tmp_d(0), seans_num_out)
+
+			For t = 0 To seans_num_out-1
+				tmp_d(t) -= min_val
+			Next t
+
+			max_val = array_max_d (@tmp_d(0), seans_num_out)
+			If max_val <> 0 Then
+				array_norm_d(@tmp_d(0), @tmp_d(0), max_val, seans_num_out)
+			EndIf
+
+			For t = START_X To seans_num_out-1-1
+				Line (1+t-START_X, 300-SCALE_Y*tmp_d(t) )-(1+t+1-START_X, 300-SCALE_Y*tmp_d(t+1) ), 7
+			Next t
+
+			For t = 0 To seans_num_out-1
+				tmp_d(t) = te_loaded(t)
+			Next t
+
+			For t = 0 To seans_num_out-1
+				tmp_d(t) -= min_val
+			Next t
+
+			If max_val <> 0 Then
+				array_norm_d(@tmp_d(0), @tmp_d(0), max_val, seans_num_out)
+			EndIf
+
+			Line (0, 300 )-(1024, 300 ), 7, , &b0000000011110000
+			For t = START_X To seans_num_out-1-1
+				Line (1+t-START_X, 300-SCALE_Y*tmp_d(t) )-(1+t+1-START_X, 300-SCALE_Y*tmp_d(t+1) ), 12
+			Next t
+			Draw String (950, 285), Left( Str(te_loaded(CUR)), 12), 12
+
+		Else
+
+			For t = 0 To seans_num_out-1
+				tmp_d(t) = te_loaded(t)
+			Next t
+
+			min_val = array_min_d (@tmp_d(0), seans_num_out)
+
+			For t = 0 To seans_num_out-1
+				tmp_d(t) -= min_val
+			Next t
+
+			max_val = array_max_d (@tmp_d(0), seans_num_out)
+			If max_val <> 0 Then
+				array_norm_d(@tmp_d(0), @tmp_d(0), max_val, seans_num_out)
+			EndIf
+
+			Line (0, 300 )-(1024, 300 ), 7, , &b0000000011110000
+			For t = START_X To seans_num_out-1-1
+				Line (1+t-START_X, 300-SCALE_Y*tmp_d(t) )-(1+t+1-START_X, 300-SCALE_Y*tmp_d(t+1) ), 12
+			Next t
+			Draw String (950, 285), Left( Str(te_loaded(CUR)), 12), 12
+
+		EndIf
+
+		If z <> 0 Then
+
+			For t = 0 To seans_num_out-1
+				tmp_d(t) = (te_loaded_prev(t)-min_val)
+				If max_val <> 0 Then
+					tmp_d(t) /= max_val
+				EndIf
+			Next t
+
+			For t = START_X To seans_num_out-1-1
+				Line (1+t-START_X, 300-SCALE_Y*tmp_d(t) )-(1+t+1-START_X, 300-SCALE_Y*tmp_d(t+1) ), 4
+			Next t
+			Draw String (950, 305), Left( Str(Int(te_loaded_prev(CUR))), 12), 4
+
+		EndIf
+
+
+		' вывод H+
+
+		If isSaved = 1 Then
+
+			For t = 0 To seans_num_out-1
+				tmp_d(t) = hyd_loaded_saved(t)
+			Next t
+
+			min_val = array_min_d (@tmp_d(0), seans_num_out)
+
+			For t = 0 To seans_num_out-1
+				tmp_d(t) -= min_val
+			Next t
+
+			max_val = array_max_d (@tmp_d(0), seans_num_out)
+			If max_val <> 0 Then
+				array_norm_d(@tmp_d(0), @tmp_d(0), max_val, seans_num_out)
+			EndIf
+
+			For t = START_X To seans_num_out-1-1
+				Line (1+t-START_X, 450-SCALE_Y*tmp_d(t) )-(1+t+1-START_X, 450-SCALE_Y*tmp_d(t+1) ), 7
+			Next t
+
+			For t = 0 To seans_num_out-1
+				tmp_d(t) = hyd_loaded(t)
+			Next t
+
+			For t = 0 To seans_num_out-1
+				tmp_d(t) -= min_val
+			Next t
+
+			If max_val <> 0 Then
+				array_norm_d(@tmp_d(0), @tmp_d(0), max_val, seans_num_out)
+			EndIf
+
+			Line (0, 450 )-(1024, 450 ), 7, , &b0000000011110000
+			For t = START_X To seans_num_out-1-1
+				Line (1+t-START_X, 450-SCALE_Y*tmp_d(t) )-(1+t+1-START_X, 450-SCALE_Y*tmp_d(t+1) ), 13
+			Next t
+			Draw String (950, 435), Left( Str(hyd_loaded(CUR)/2.0), 12), 13
+
+		Else
+
+			For t = 0 To seans_num_out-1
+				tmp_d(t) = hyd_loaded(t)
+			Next t
+
+			min_val = array_min_d (@tmp_d(0), seans_num_out)
+
+			For t = 0 To seans_num_out-1
+				tmp_d(t) -= min_val
+			Next t
+
+			max_val = array_max_d (@tmp_d(0), seans_num_out)
+			If max_val <> 0 Then
+				array_norm_d(@tmp_d(0), @tmp_d(0), max_val, seans_num_out)
+			EndIf
+
+			Line (0, 450 )-(1024, 450 ), 7, , &b0000000011110000
+			For t = START_X To seans_num_out-1-1
+				Line (1+t-START_X, 450-SCALE_Y*tmp_d(t) )-(1+t+1-START_X, 450-SCALE_Y*tmp_d(t+1) ), 13
+			Next t
+			Draw String (950, 435), Left( Str(hyd_loaded(CUR)/2.0), 12), 13
+
+		EndIf
+
+		If z <> 0 Then
+
+			For t = 0 To seans_num_out-1
+				tmp_d(t) = (hyd_loaded_prev(t)-min_val)
+				If max_val <> 0 Then
+					tmp_d(t) /= max_val
+				EndIf
+			Next t
+
+			For t = START_X To seans_num_out-1-1
+				Line (1+t-START_X, 450-SCALE_Y*tmp_d(t) )-(1+t+1-START_X, 450-SCALE_Y*tmp_d(t+1) ), 5
+			Next t
+			Draw String (950, 455), Left( Str(hyd_loaded_prev(CUR)/2.0), 4), 5
+
+		EndIf
+
+
+		' вывод He+
+
+
+		If isSaved = 1 Then
+
+			For t = 0 To seans_num_out-1
+				tmp_d(t) = he_loaded_saved(t)
+			Next t
+
+			min_val = array_min_d (@tmp_d(0), seans_num_out)
+
+			For t = 0 To seans_num_out-1
+				tmp_d(t) -= min_val
+			Next t
+
+			max_val = array_max_d (@tmp_d(0), seans_num_out)
+			If max_val <> 0 Then
+				array_norm_d(@tmp_d(0), @tmp_d(0), max_val, seans_num_out)
+			EndIf
+
+			For t = START_X To seans_num_out-1-1
+				Line (1+t-START_X, 600-SCALE_Y*tmp_d(t) )-(1+t+1-START_X, 600-SCALE_Y*tmp_d(t+1) ), 7
+			Next t
+
+			For t = 0 To seans_num_out-1
+				tmp_d(t) = he_loaded(t)
+			Next t
+
+			For t = 0 To seans_num_out-1
+				tmp_d(t) -= min_val
+			Next t
+
+			If max_val <> 0 Then
+				array_norm_d(@tmp_d(0), @tmp_d(0), max_val, seans_num_out)
+			EndIf
+
+			Line (0, 600 )-(1024, 600 ), 7, , &b0000000011110000
+			For t = START_X To seans_num_out-1-1
+				Line (1+t-START_X, 600-SCALE_Y*tmp_d(t) )-(1+t+1-START_X, 600-SCALE_Y*tmp_d(t+1) ), 14
+			Next t
+			Draw String (950, 585), Left( Str(he_loaded(CUR)), 12), 14
+
+		Else
+
+			For t = 0 To seans_num_out-1
+				tmp_d(t) = he_loaded(t)
+			Next t
+
+			min_val = array_min_d (@tmp_d(0), seans_num_out)
+
+			For t = 0 To seans_num_out-1
+				tmp_d(t) -= min_val
+			Next t
+
+			max_val = array_max_d (@tmp_d(0), seans_num_out)
+			If max_val <> 0 Then
+				array_norm_d(@tmp_d(0), @tmp_d(0), max_val, seans_num_out)
+			EndIf
+
+			Line (0, 600 )-(1024, 600 ), 7, , &b0000000011110000
+			For t = START_X To seans_num_out-1-1
+				Line (1+t-START_X, 600-SCALE_Y*tmp_d(t) )-(1+t+1-START_X, 600-SCALE_Y*tmp_d(t+1) ), 14
+			Next t
+			Draw String (950, 585), Left( Str(he_loaded(CUR)), 12), 14
+
+		EndIf
+
+		If z <> 0 Then
+
+			For t = 0 To seans_num_out-1
+				tmp_d(t) = (he_loaded_prev(t)-min_val)
+				If max_val <> 0 Then
+					tmp_d(t) /= max_val
+				EndIf
+			Next t
+
+			For t = START_X To seans_num_out-1-1
+				Line (1+t-START_X, 600-SCALE_Y*tmp_d(t) )-(1+t+1-START_X, 600-SCALE_Y*tmp_d(t+1) ), 6
+			Next t
+			Draw String (950, 605), Left( Str( he_loaded_prev(CUR) ), 4), 6
+
+		EndIf
+
+
+		' вывод Ti
+
+		If isSaved = 1 Then
+
+			For t = 0 To seans_num_out-1
+				tmp_d(t) = ti_loaded_saved(t)
+			Next t
+
+			min_val = array_min_d (@tmp_d(0), seans_num_out)
+
+			For t = 0 To seans_num_out-1
+				tmp_d(t) -= min_val
+			Next t
+
+			max_val = array_max_d (@tmp_d(0), seans_num_out)
+			If max_val <> 0 Then
+				array_norm_d(@tmp_d(0), @tmp_d(0), max_val, seans_num_out)
+			EndIf
+
+			For t = START_X To seans_num_out-1-1
+				Line (1+t-START_X, 750-SCALE_Y*tmp_d(t) )-(1+t+1-START_X, 750-SCALE_Y*tmp_d(t+1) ), 7
+			Next t
+
+			For t = 0 To seans_num_out-1
+				tmp_d(t) = ti_loaded(t)
+			Next t
+
+			For t = 0 To seans_num_out-1
+				tmp_d(t) -= min_val
+			Next t
+
+			If max_val <> 0 Then
+				array_norm_d(@tmp_d(0), @tmp_d(0), max_val, seans_num_out)
+			EndIf
+
+			Line (0, 750 )-(1024, 750 ), 7, , &b0000000011110000
+			For t = START_X To seans_num_out-1-1
+				Line (1+t-START_X, 750-SCALE_Y*tmp_d(t) )-(1+t+1-START_X, 750-SCALE_Y*tmp_d(t+1) ), 11
+			Next t
+			Draw String (950, 735), Left( Str(ti_loaded(CUR)), 12), 11
+
+		Else
+
+			For t = 0 To seans_num_out-1
+				tmp_d(t) = ti_loaded(t)
+			Next t
+
+			min_val = array_min_d (@tmp_d(0), seans_num_out)
+
+			For t = 0 To seans_num_out-1
+				tmp_d(t) -= min_val
+			Next t
+
+			max_val = array_max_d (@tmp_d(0), seans_num_out)
+			If max_val <> 0 Then
+				array_norm_d(@tmp_d(0), @tmp_d(0), max_val, seans_num_out)
+			EndIf
+
+			Line (0, 750 )-(1024, 750 ), 7, , &b0000000011110000
+			For t = START_X To seans_num_out-1-1
+				Line (1+t-START_X, 750-SCALE_Y*tmp_d(t) )-(1+t+1-START_X, 750-SCALE_Y*tmp_d(t+1) ), 11
+			Next t
+			Draw String (950, 735), Left( Str(ti_loaded(CUR)), 12), 11
+
+		EndIf
+
+
+		If z <> 0 Then
+
+			For t = 0 To seans_num_out-1
+				tmp_d(t) = (ti_loaded_prev(t)-min_val)
+				If max_val <> 0 Then
+					tmp_d(t) /= max_val
+				EndIf
+			Next t
+
+			For t = START_X To seans_num_out-1-1
+				Line (1+t-START_X, 750-SCALE_Y*tmp_d(t) )-(1+t+1-START_X, 750-SCALE_Y*tmp_d(t+1) ), 2
+			Next t
+			Draw String (950, 755), Left( Str(Int(ti_loaded_prev(CUR))), 12), 2
+
+		EndIf
+
+
+		Line (1+CUR-START_X, 25)-(1+CUR-START_X, 768-25), 7
+
+		Draw String (5, 5),   "n="+Left( Str(CUR ), 6), 14
+		Draw String (100, 5), "t="+Left( Str(t_loaded(CUR)), 6), 15
+
+
+		Draw String (200, 5), "q="+Left(Str(dat_all_str(h, CUR).q), 6), 11
+
+		Draw String (300, 5), "h="+Left(Str( CInt(Hkm(h)) ), 4)+" км", 12
+
+		If isSaved = 1 Then
+			Draw String (500, 5), "*", 13
+		EndIf
+
+		Draw String (900, 5), "F1 - помощь", 4
+
+
+		ScreenUnLock()
+
+		key = GetKey()
+
+		Select Case key
+
+			Case KEY_CTRL_Q
+				Cls
+				Color 12
+				Print "Выйти из программы? (y/n) "
+				If GetKey_YN() = 1 Then
+					End(0)
+				EndIf
+				Color 15
+
+			Case KEY_F1
+				draw_help()
+
+			Case KEY_CTRL_LEFT
+				If START_X < seans_num_out-1-1 Then START_X += 1 End If
+
+			Case KEY_CTRL_RIGHT
+				If START_X >0 Then START_X -= 1  End If
+
+			Case KEY_RIGHT
+				If CUR < seans_num_out-1 Then CUR += 1 End If
+				If SEL = 1 Then
+					If point_end < seans_num_out-1 Then
+						point_end += 1
+					EndIf
+				EndIf
+
+			Case KEY_LEFT
+
+				If SEL = 1 Then
+					If point_end > point_start Then
+						point_end -= 1
+						If CUR > 0 Then CUR -= 1  End If
+					EndIf
+				Else
+					If CUR > 0 Then CUR -= 1  End If
+				EndIf
+
+			Case KEY_HOME
+				If SEL = 0 Then
+					CUR=START_X
+				EndIf
+
+
+			Case KEY_END
+				If SEL = 0 Then
+					If START_X+1024-1 < seans_num_out Then
+						CUR = START_X+1024-1-3
+					Else
+						CUR=seans_num_out-1
+					EndIf
+				EndIf
+
+			Case KEY_TAB
+				If SEL = 0 Then
+					If CUR + 10 < seans_num_out-1 Then CUR += 10
+				EndIf
+
+			Case KEY_1
+				draw_d(h, z)
+
+			Case KEY_SPACE
+				If SEL = 1 Then SEL = 0 Else SEL = 1
+				point_start = CUR
+				point_end = CUR
+
+			Case KEY_I
+				If SEL = 1 Then
+
+					If point_end-point_start = 0 Then
+						Exit Select
+					EndIf
+
+					Input "Введите номер параметра (0 - отмена, 1 - Te, 2 - H+, 3 - He+, 4 - Ti, 5 - всё): ", wnd
+
+					If wnd = 0 Then
+						Exit Select
+					EndIf
+
+					save(h)
+					Select Case wnd
+
+						Case 1
+							interpolate_param(h, z, point_start, point_end, PARAM_TE)
+
+						Case 2
+							interpolate_param(h, z, point_start, point_end, PARAM_H)
+
+						Case 3
+							interpolate_param(h, z, point_start, point_end, PARAM_HE)
+
+						Case 4
+							interpolate_param(h, z, point_start, point_end, PARAM_TI)
+
+						Case 5
+							interpolate_param(h, z, point_start, point_end, PARAM_TI)
+							interpolate_param(h, z, point_start, point_end, PARAM_TE)
+							interpolate_param(h, z, point_start, point_end, PARAM_H)
+							interpolate_param(h, z, point_start, point_end, PARAM_HE)
+
+					End Select
+
+					param_load(h, @ti_loaded(0), @te_loaded(0), @hyd_loaded(0), @he_loaded(0), @d_loaded(0) )
+					SEL = 0
+
+				EndIf
+
+
+
+			Case KEY_U
+				isSaved = 0
+				undo(h)
+				param_load(h, @ti_loaded(0), @te_loaded(0), @hyd_loaded(0), @he_loaded(0), @d_loaded(0) )
+
+
+			Case KEY_R
+
+
+				Input "Введите номер параметра (0 - отмена, 1 - Te, 2 - H+, 3 - He+, 4 - Ti, 5 - Te и Ti, 6 - H+ и Te и Ti): ", wnd
+
+				If wnd = 0 Then
+					Exit Select
+				EndIf
+
+				Select Case wnd
+
+					Case 1
+						inverse_problem_te(h, z)
+						param_load2(h, @ti_loaded(0), @te_loaded(0), @hyd_loaded(0), @he_loaded(0), @d_loaded(0) )
+
+					Case 2
+						inverse_problem_hyd(h, z)
+						param_load2(h, @ti_loaded(0), @te_loaded(0), @hyd_loaded(0), @he_loaded(0), @d_loaded(0) )
+
+					Case 3
+						If SEL = 1 Then
+
+							If point_end-point_start < 1 Then
+								Exit Select
+							EndIf
+
+							save(h)
+							inverse_problem_he(h, z, point_start, point_end)
+
+							param_load(h, @ti_loaded(0), @te_loaded(0), @hyd_loaded(0), @he_loaded(0), @d_loaded(0) )
+							SEL = 0
+
+						EndIf
+
+					Case 4
+						inverse_problem_ti(h, z)
+						param_load2(h, @ti_loaded(0), @te_loaded(0), @hyd_loaded(0), @he_loaded(0), @d_loaded(0) )
+
+					Case 5
+						inverse_problem_ti_te(h, z)
+						param_load2(h, @ti_loaded(0), @te_loaded(0), @hyd_loaded(0), @he_loaded(0), @d_loaded(0) )
+
+					Case 6
+						inverse_problem_hyd_ti_te(h, z)
+						param_load2(h, @ti_loaded(0), @te_loaded(0), @hyd_loaded(0), @he_loaded(0), @d_loaded(0) )
+
+				End Select
+
+
+			Case KEY_P
+				If SEL = 1 Then
+
+					Input "Введите номер параметра (0 - отмена, 3 - He+): ", wnd
+
+					If wnd = 0 Then
+						Exit Select
+					EndIf
+
+					save(h)
+
+					Select Case wnd
+						Case 3
+							input_param(h, z, point_start, point_end, PARAM_HE)
+					End Select
+
+					param_load(h, @ti_loaded(0), @te_loaded(0), @hyd_loaded(0), @he_loaded(0), @d_loaded(0) )
+					SEL = 0
+
+				EndIf
+
+			Case KEY_T
+				Input "Введите ширину окна для усреднения по времени: ", wnd_trand_width
+				If wnd_trand_width Mod 2 = 0 Then
+					wnd_trand_width += 1
+				EndIf
+
+				If z <> 0 Then
+
+					file = FreeFile()
+					Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Ti2."+Str(-1)+"."+Str(CInt(Hkm(h-Hstep)))+".txt" For Input As #file
+
+					If Err() > 0 Then
+						file = FreeFile()
+						Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Ti."+Str(-1)+"."+Str(CInt(Hkm(h-Hstep)))+".txt" For Input As #file
+					EndIf
+
+					For t = 0 To seans_num_out-1
+						Input #file, tmp_d(t)
+					Next t
+					Close #file
+
+					array_trand_d(@tmp_d(0), @ti_loaded_prev(0), wnd_trand_width, seans_num_out)
+
+
+					file = FreeFile()
+					Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Te2."+Str(-1)+"."+Str(CInt(Hkm(h-Hstep)))+".txt" For Input As #file
+
+					If Err() > 0 Then
+						file = FreeFile()
+						Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Te."+Str(-1)+"."+Str(CInt(Hkm(h-Hstep)))+".txt" For Input As #file
+					EndIf
+
+					For t = 0 To seans_num_out-1
+						Input #file, tmp_d(t)
+					Next t
+					Close #file
+
+					array_trand_d(@tmp_d(0), @te_loaded_prev(0), wnd_trand_width, seans_num_out)
+
+
+					file = FreeFile()
+					Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Hyd2."+Str(-1)+"."+Str(CInt(Hkm(h-Hstep)))+".txt" For Input As #file
+
+					If Err() > 0 Then
+						file = FreeFile()
+						Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Hyd."+Str(-1)+"."+Str(CInt(Hkm(h-Hstep)))+".txt" For Input As #file
+					EndIf
+
+					For t = 0 To seans_num_out-1
+						Input #file, tmp_d(t)
+					Next t
+					Close #file
+
+					array_trand_d(@tmp_d(0), @hyd_loaded_prev(0), wnd_trand_width, seans_num_out)
+
+
+					file = FreeFile()
+					Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "He2."+Str(-1)+"."+Str(CInt(Hkm(h-Hstep)))+".txt" For Input As #file
+
+					If Err() > 0 Then
+						file = FreeFile()
+						Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "He."+Str(-1)+"."+Str(CInt(Hkm(h-Hstep)))+".txt" For Input As #file
+					EndIf
+
+					For t = 0 To seans_num_out-1
+						Input #file, tmp_d(t)
+					Next t
+					Close #file
+
+					array_trand_d(@tmp_d(0), @he_loaded_prev(0), wnd_trand_width, seans_num_out)
+
+				EndIf
+
+
+			Case KEY_S
+				isSaved = 1
+				save(h)
+
+				file = FreeFile()
+				Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "_Te."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+				For t = 0 To seans_num_out-1
+					Input #file, te_loaded_saved(t)
+				Next t
+				Close #file
+
+				file = FreeFile()
+				Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "_Ti."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+				For t = 0 To seans_num_out-1
+					Input #file, ti_loaded_saved(t)
+				Next t
+				Close #file
+
+				file = FreeFile()
+				Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "_He."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+				For t = 0 To seans_num_out-1
+					Input #file, he_loaded_saved(t)
+				Next t
+				Close #file
+
+				file = FreeFile()
+				Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "_Hyd."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+				For t = 0 To seans_num_out-1
+					Input #file, hyd_loaded_saved(t)
+				Next t
+				Close #file
+
+
+			Case KEY_CTRL_A
+				point_start = 0
+				point_end = seans_num_out-1
+				CUR=seans_num_out-1
+				SEL = 1
+
+
+			Case KEY_M
+
+				Dim As Integer mode
+
+				If SEL = 1 Then
+
+					If point_end-point_start < 1 Then
+						Exit Select
+					EndIf
+
+					Input "Введите номер параметра (0 - отмена, 1 - Te, 2 - H+, 4 - Ti): ", wnd
+
+					If wnd = 0 Then
+						Exit Select
+					EndIf
+
+					If wnd = 4 Then
+						Input "Введите номер режима (0 - отмена, 1 - задать значение, 2 - усреднение, 3 - линейная интерполяция, 4 - аппроксимация полиномом,  5 - аппроксимация сплайнами со скользящим окном, 6 - градиент, 7 - Ti=Te (если Ti>Te)): ", mode
+					Else
+						Input "Введите номер режима (0 - отмена, 1 - задать значение, 2 - усреднение, 3 - линейная интерполяция, 4 - аппроксимация полиномом,  5 - аппроксимация сплайнами со скользящим окном, 6 - градиент): ", mode
+					EndIf
+
+					If mode = 0 Then
+						Exit Select
+					EndIf
+
+					Select Case wnd
+
+						Case 1
+							Select Case mode
+
+								Case 1
+									Dim As Integer level
+									Input "Введите значение параметра: ", level
+									level_te(h, z, point_start, point_end, level)
+
+								Case 2
+									Dim As Integer wnd_width
+									Input "Введите ширину окна: ", wnd_width
+									trand_te(h, z, point_start, point_end, wnd_width)
+
+								Case 3
+									interpolate_param(h, z, point_start, point_end, PARAM_TE)
+
+								Case 4
+									Dim As Integer degree
+									Input "Введите степень полинома: ", degree
+									poly_te(h, z, point_start, point_end, degree)
+
+								Case 5
+									Dim As Integer wnd_width, degree
+									Input "Введите ширину окна: ", wnd_width
+									Input "Введите степень полинома: ", degree
+									spline_wnd_te(h, z, point_start, point_end, wnd_width, degree)
+
+								Case 6
+									gradient_te(h, z, point_start, point_end)
+
+							End Select
+
+						Case 2
+							Select Case mode
+								Case 1
+									Dim As Integer level
+									Input "Введите значение параметра (%): ", level
+									level_hyd(h, z, point_start, point_end, level)
+
+								Case 2
+									Dim As Integer wnd_width
+									Input "Введите ширину окна: ", wnd_width
+									trand_hyd(h, z, point_start, point_end, wnd_width)
+
+								Case 3
+									interpolate_param(h, z, point_start, point_end, PARAM_H)
+
+								Case 4
+									Dim As Integer degree
+									Input "Введите степень полинома: ", degree
+									poly_hyd(h, z, point_start, point_end, degree)
+
+							End Select
+
+						Case 4
+							Select Case mode
+
+								Case 1
+									Dim As Integer level
+									Input "Введите значение параметра: ", level
+									level_ti(h, z, point_start, point_end, level)
+
+								Case 2
+									Dim As Integer wnd_width
+									Input "Введите ширину окна: ", wnd_width
+									trand_ti(h, z, point_start, point_end, wnd_width)
+
+								Case 3
+									interpolate_param(h, z, point_start, point_end, PARAM_TI)
+
+								Case 4
+									Dim As Integer degree
+									Input "Введите степень полинома: ", degree
+									poly_ti(h, z, point_start, point_end, degree)
+
+								Case 5
+									Dim As Integer wnd_width, degree
+									Input "Введите ширину окна: ", wnd_width
+									Input "Введите степень полинома: ", degree
+									spline_wnd_ti(h, z, point_start, point_end, wnd_width, degree)
+
+								Case 7
+									equate_ti(h, z, point_start, point_end)
+
+							End Select
+
+
+					End Select
+
+					param_load(h, @ti_loaded(0), @te_loaded(0), @hyd_loaded(0), @he_loaded(0), @d_loaded(0) )
+					SEL = 0
+
+				EndIf
+
+
+
+		End Select
+
+		If key = KEY_CTRL_N Then Exit Do End If
+
+	Loop
+
+End Sub
+
+''' ================================================================
+
+Sub draw_d(ByVal h As Integer, ByVal z As Integer)
+
+	Dim As Integer wnd_trand_width
+
+	Dim As Integer he, t, file
+
+	ReDim As Double   he_loaded(0 To seans_num_out-1)
+
+	ReDim As Double   t_loaded(0 To seans_num_out-1)
+
+	ReDim As Double   d_loaded(0 To He_max+1, 0 To seans_num_out-1)
+
+	ReDim As Double  tmp_d(0 To seans_num_out-1)
+	ReDim As Double  tmp_d_d(0 To He_max+1, 0 To seans_num_out-1)
+
+	Dim As Double SCALE_Y = 750
+	'	Dim As Integer START_X = 0
+
+
+	Dim As Integer key
+	Dim As Integer offset
+
+	Dim As Double max_val, min_val
+
+	'	Dim As Integer CUR = 0
+	Dim As Integer CUR_HE
+
+	Cls
+	Input "Введите ширину окна: ", wnd_trand_width
+
+
+	' загрузка времени
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "T.txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, t_loaded(t)
+	Next t
+	Close #file
+
+
+
+	' загрузка временного хода He+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "He."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, he_loaded(t)
+	Next t
+	Close #file
+
+
+
+	' загрузка временного хода погрешностей
+	For he = 0 To He_max Step he_step
+
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "D."+Str(He)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+		For t = 0 To seans_num_out-1
+			Input #file, tmp_d(t)'d_loaded(he, t)
+		Next t
+		Close #file
+
+		array_trand_d( @tmp_d(0), @d_loaded(he, 0), wnd_trand_width, seans_num_out)
+
+	Next he
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "D."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, tmp_d(t)'d_loaded(He_max+1, t)
+	Next t
+	Close #file
+
+	array_trand_d( @tmp_d(0), @d_loaded(He_max+1, 0), wnd_trand_width, seans_num_out)
+
+
+	Do
+
+		ScreenLock()
+
+		Cls()
+
+		' вывод погрешностей
+
+		For he = 0 To He_max Step he_step
+			For t = 0 To seans_num_out-1
+				tmp_d_d(he, t) = d_loaded(he, t)-d_loaded(He_max+1, t)
+			Next t
+		Next he
+
+		' поиск глобального минимума
+		min_val = 1e200
+		For he = 0 To He_max Step he_step
+			For t = 0 To seans_num_out-1
+				If tmp_d_d(he, t) < min_val Then min_val = tmp_d_d(he, t)
+			Next t
+		Next he
+
+		For he = 0 To He_max Step he_step
+			For t = 0 To seans_num_out-1
+				tmp_d_d(he, t) -= min_val
+			Next t
+		Next he
+
+		' поиск глобального максимума
+		max_val = -1e200
+		For he = 0 To He_max Step he_step
+			For t = 0 To seans_num_out-1
+				If tmp_d_d(he, t) > max_val Then max_val = tmp_d_d(he, t)
+			Next t
+		Next he
+
+
+
+		If max_val <> 0 Then
+			For he = 0 To He_max Step he_step
+				For t = 0 To seans_num_out-1
+					tmp_d_d(he, t) /= max_val
+				Next t
+			Next he
+		EndIf
+
+		Line (0, 740 )-(1024, 740 ), 7, , &b0000000011110000
+		For he = 0 To He_max Step he_step
+			For t = START_X To seans_num_out-1-1
+				Line (t-START_X, 740-SCALE_Y*tmp_d_d(he, t) )-(t+1-START_X, 740-SCALE_Y*tmp_d_d(he, t+1) ), 15-he\2
+			Next t
+		Next he
+
+		Line (CUR-START_X, 2)-(CUR-START_X, 768-2), 7
+
+
+
+		min_val = 1e200
+		For he = 0 To He_max Step he_step
+			If tmp_d_d(he, CUR) < min_val Then
+				min_val = tmp_d_d(he, CUR)
+				CUR_HE = he
+			EndIf
+		Next he
+
+		Line (0, 0)-(1024, 25), 0, BF
+		Draw String (5, 5), Left( Str(t_loaded(CUR)), 6), 15
+		Draw String (100, 5), "He = " + Left( Str( CUR_HE ), 3) + "%", 15-CUR_HE\2
+		Draw String (200, 5), "He = " + Left( Str( he_loaded(CUR) ), 3)+"%", 15-he_loaded(CUR)\2
+		Draw String (300, 5), "|б| = " + Left( Str( Abs(he_loaded(CUR)-CUR_HE) ), 3)+"%", 11
+
+		ScreenUnLock
+
+		key = GetKey
+
+		Select Case key
+
+			Case KEY_CTRL_LEFT
+				If START_X < seans_num_out-1-1 Then START_X += 1 End If
+
+			Case KEY_CTRL_RIGHT
+				If START_X >0 Then START_X -= 1  End If
+
+			Case KEY_RIGHT
+				If CUR < seans_num_out-1 Then CUR += 1 End If
+
+			Case KEY_LEFT
+				If CUR > 0 Then CUR -= 1  End If
+
+			Case KEY_HOME
+				CUR=START_X
+
+			Case KEY_END
+				If START_X+1024-1 < seans_num_out Then
+					CUR = START_X+1024-1-3
+				Else
+					CUR=seans_num_out-1
+				End If
+
+			Case KEY_TAB
+				If CUR + 10 < seans_num_out-1 Then CUR += 10
+
+			Case KEY_UP
+				If SCALE_Y < 384000 Then SCALE_Y *= 2
+
+			Case KEY_DOWN
+				If SCALE_Y > 750 Then SCALE_Y \= 2
+
+
+		End Select
+
+		If key = KEY_ESC Then Exit Do End If
+
+	Loop
+
+End Sub
+
+
+
+''' ================================================================
+
+Sub draw_te(ByVal h As Integer, ByVal z As Integer)
+
+	Dim As Integer wnd_trand_width
+
+	Dim As Integer t, file
+
+	ReDim As Double   he_loaded(0 To seans_num_out-1)
+
+	ReDim As Double   t_loaded(0 To seans_num_out-1)
+
+	ReDim As Double   d_loaded(0 To He_max+1, 0 To seans_num_out-1)
+
+	ReDim As Double  tmp_d(0 To seans_num_out-1)
+	ReDim As Double  tmp_d_d(0 To He_max+1, 0 To seans_num_out-1)
+
+	Dim As Integer he
+
+	Dim As Double SCALE_Y = 750
+	'	Dim As Integer START_X = 0
+
+
+	Dim As Integer key
+	Dim As Integer offset
+
+	Dim As Double max_val, min_val
+
+	'	Dim As Integer CUR = 0
+	Dim As Integer CUR_HE
+
+	Cls
+	Input "Введите ширину окна: ", wnd_trand_width
+
+
+	' загрузка времени
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "T.txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, t_loaded(t)
+	Next t
+	Close #file
+
+
+
+	' загрузка временного хода He+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "He."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, he_loaded(t)
+	Next t
+	Close #file
+
+
+
+	' загрузка временного хода погрешностей
+	For he = 0 To He_max Step he_step
+
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "D."+Str(He)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+		For t = 0 To seans_num_out-1
+			Input #file, tmp_d(t)'d_loaded(he, t)
+		Next t
+		Close #file
+
+		array_trand_d( @tmp_d(0), @d_loaded(he, 0), wnd_trand_width, seans_num_out)
+
+	Next he
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "D."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, tmp_d(t)'d_loaded(He_max+1, t)
+	Next t
+	Close #file
+
+	array_trand_d( @tmp_d(0), @d_loaded(He_max+1, 0), wnd_trand_width, seans_num_out)
+
+
+	Do
+
+		ScreenLock
+
+		Cls
+
+		' вывод погрешностей
+
+		For he = 0 To He_max Step he_step
+			For t = 0 To seans_num_out-1
+				tmp_d_d(he, t) = d_loaded(he, t)-d_loaded(He_max+1, t)
+			Next t
+		Next he
+
+		' поиск глобального минимума
+		min_val = 1e200
+		For he = 0 To He_max Step he_step
+			For t = 0 To seans_num_out-1
+				If tmp_d_d(he, t) < min_val Then min_val = tmp_d_d(he, t)
+			Next t
+		Next he
+
+		For he = 0 To He_max Step he_step
+			For t = 0 To seans_num_out-1
+				tmp_d_d(he, t) -= min_val
+			Next t
+		Next he
+
+		' поиск глобального максимума
+		max_val = -1e200
+		For he = 0 To He_max Step he_step
+			For t = 0 To seans_num_out-1
+				If tmp_d_d(he, t) > max_val Then max_val = tmp_d_d(he, t)
+			Next t
+		Next he
+
+
+
+		If max_val <> 0 Then
+			For he = 0 To He_max Step he_step
+				For t = 0 To seans_num_out-1
+					tmp_d_d(he, t) /= max_val
+				Next t
+			Next he
+		EndIf
+
+		Line (0, 740 )-(1024, 740 ), 7, , &b0000000011110000
+		For he = 0 To He_max Step he_step
+			For t = START_X To seans_num_out-1-1
+				Line (t-START_X, 740-SCALE_Y*tmp_d_d(he, t) )-(t+1-START_X, 740-SCALE_Y*tmp_d_d(he, t+1) ), 15-he\2
+			Next t
+		Next he
+
+		Line (CUR-START_X, 2)-(CUR-START_X, 768-2), 7
+
+
+
+		min_val = 1e200
+		For he = 0 To He_max Step he_step
+			If tmp_d_d(he, CUR) < min_val Then
+				min_val = tmp_d_d(he, CUR)
+				CUR_HE = he
+			EndIf
+		Next he
+
+		Line (0, 0)-(1024, 25), 0, BF
+		Draw String (5, 5), Left( Str(t_loaded(CUR)), 6), 15
+		Draw String (100, 5), "He = " + Left( Str( CUR_HE ), 3) + "%", 15-CUR_HE\2
+		Draw String (200, 5), "He = " + Left( Str( he_loaded(CUR) ), 3)+"%", 15-he_loaded(CUR)\2
+		Draw String (300, 5), "|б| = " + Left( Str( Abs(he_loaded(CUR)-CUR_HE) ), 3)+"%", 11
+
+		ScreenUnLock()
+
+		key = GetKey()
+
+		Select Case key
+
+			Case KEY_CTRL_LEFT
+				If START_X < seans_num_out-1-1 Then START_X += 1 End If
+
+			Case KEY_CTRL_RIGHT
+				If START_X >0 Then START_X -= 1  End If
+
+			Case KEY_RIGHT
+				If CUR < seans_num_out-1 Then CUR += 1 End If
+
+			Case KEY_LEFT
+				If CUR > 0 Then CUR -= 1  End If
+
+			Case KEY_HOME
+				CUR=START_X
+
+			Case KEY_END
+				If START_X+1024-1 < seans_num_out Then
+					CUR = START_X+1024-1-3
+				Else
+					CUR=seans_num_out-1
+				End If
+
+			Case KEY_TAB
+				If CUR + 10 < seans_num_out-1 Then CUR += 10
+
+			Case KEY_UP
+				If SCALE_Y < 384000 Then SCALE_Y *= 2
+
+			Case KEY_DOWN
+				If SCALE_Y > 750 Then SCALE_Y \= 2
+
+
+		End Select
+
+		If key = KEY_ESC Then Exit Do End If
+
+	Loop
+
+End Sub
+
+
+
+''' ================================================================
+
+
+
+Sub undo(ByVal h As Integer)
+	FileCopy (SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "_Hyd."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt", SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Hyd."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt")
+	FileCopy (SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "_Te."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt", SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Te."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt")
+	FileCopy (SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "_Ti."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt", SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Ti."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt")
+	FileCopy (SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "_He."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt", SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "He."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt")
+	FileCopy (SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "_D."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt", SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "D."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt")
+
+	Kill (SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "_Hyd."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt")
+	Kill (SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "_Te."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt")
+	Kill (SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "_Ti."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt")
+	Kill (SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "_He."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt")
+	Kill (SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "_D."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt")
+End Sub
+
+
+
+''' ================================================================
+
+
+
+Sub save(ByVal h As Integer)
+
+	FileCopy (SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Hyd."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt", SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "_Hyd."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt")
+	FileCopy (SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Te."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt", SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "_Te."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt")
+	FileCopy (SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Ti."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt", SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "_Ti."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt")
+	FileCopy (SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "He."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt", SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "_He."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt")
+	FileCopy (SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "D."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt", SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "_D."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt")
+
+	Print
+	Color 12
+	Print "Сохранено..."
+	Color 15
+	Sleep 400
+
+End Sub
+
+
+''' ================================================================
+
+Function analysis_param(ByVal h As Integer, ByVal z As Integer, ByVal param As Integer) As Integer
+
+	ReDim As Double param_loaded(0 To seans_num_out-1)
+	ReDim As Double an(0 To seans_num_out-1)
+	ReDim As Double bn(0 To seans_num_out-1)
+
+	Dim As Integer t, f
+	Dim As Integer file
+
+	Dim As String param_str
+
+	Select Case param
+
+		Case PARAM_TI
+			param_str = "Ti."
+
+		Case PARAM_TE
+			param_str = "Te."
+
+		Case PARAM_H
+			param_str = "Hyd."
+
+		Case PARAM_HE
+			param_str = "He."
+
+	End Select
+
+	' загрузка временного хода выбранного параметра
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ param_str +Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, param_loaded(t)
+	Next t
+	Close #file
+
+	For t = 0 To seans_num_out-1
+		an(0) += param_loaded(t)
+	Next t
+	an(0) /= seans_num_out
+	an(0) /= 2
+
+	For f = 1 To seans_num_out\2
+		For t = 0 To seans_num_out-1
+			an(f) += param_loaded(t)*Cos(f*t*2*(4*Atn(1))/seans_num_out)
+			bn(f) += param_loaded(t)*Sin(f*t*2*(4*Atn(1))/seans_num_out)
+		Next t
+		an(f) /= seans_num_out
+		bn(f) /= seans_num_out
+
+	Next f
+
+
+	' запись временного хода
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/W."+ param_str+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+
+	For f = 0 To seans_num_out\2
+		Print #file, Using "##.####^^^^ "; Sqr(an(f)^2+bn(f)^2)
+	Next f
+	Close #file
+
+	Dim As Double abMax = -1e200
+	Dim As Integer abMaxIndex = 0
+	For f = 0 To seans_num_out\2
+		If Sqr(an(f)^2+bn(f)^2) > abMax Then
+			abMax = Sqr(an(f)^2+bn(f)^2)
+			abMaxIndex = f
+		EndIf
+	Next f
+
+	For f = 0 To seans_num_out\2
+		If Sqr(an(f)^2+bn(f)^2)/Sqr(an(abMaxIndex)^2+bn(abMaxIndex)^2) < 0.05 Then
+
+			file = FreeFile()
+			Open SEANS_DIR_OUT + DirectoryOutput+"/step5/F."+ param_str+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+			Print #file, f
+			Close #file
+
+			file = FreeFile()
+			Open SEANS_DIR_OUT + DirectoryOutput+"/step5/N."+ param_str+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+			Print #file, seans_num_out\f
+			Close #file
+
+			Return seans_num_out\f
+
+		EndIf
+	Next f
+
+
+End Function
+
+''' ================================================================
+
+
+
+Sub interpolate_param(ByVal h As Integer, ByVal z As Integer, ByVal t_start As Integer, ByVal t_end As Integer, ByVal param As Integer)
+
+	ReDim As Double param_loaded(0 To seans_num_out-1)
+
+	Dim As Integer t
+	Dim As Integer file
+
+	Dim As Double  d_param
+
+	Dim As String param_str
+
+	Select Case param
+
+		Case PARAM_TI
+			param_str = "Ti."
+
+		Case PARAM_TE
+			param_str = "Te."
+
+		Case PARAM_H
+			param_str = "Hyd."
+
+		Case PARAM_HE
+			param_str = "He."
+
+	End Select
+
+	' загрузка временного хода выбранного параметра
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ param_str +Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, param_loaded(t)
+	Next t
+	Close #file
+
+
+	d_param = ( param_loaded(t_end)-param_loaded(t_start) ) / (t_end-t_start)
+
+
+	If (param = PARAM_TI) Or (param = PARAM_TE) Then
+		For t = t_start To t_end ' по времени
+			param_loaded(t) =  ( ( CInt( param_loaded(t_start) + d_param*(t-t_start) ) ) \ 20 ) * 20
+		Next t
+	Else
+		For t = t_start To t_end ' по времени
+			param_loaded(t) =  CInt( param_loaded(t_start) + d_param*(t-t_start) )
+		Next t
+	EndIf
+
+
+	' запись временного хода выбранного параметра
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ param_str +Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+
+	If param = PARAM_H Or param = PARAM_HE Then
+		For t = 0 To seans_num_out-1
+			Print #file, Using "###.# "; param_loaded(t)
+		Next t
+	Else
+		For t = 0 To seans_num_out-1
+			Print #file, Using "####.# "; param_loaded(t)
+		Next t
+	EndIf
+	Close #file
+
+End Sub
+
+
+''' ================================================================
+
+
+Sub trand_ti(ByVal h As Integer, ByVal z As Integer, ByVal t_start As Integer, ByVal t_end As Integer, wnd As Integer)
+
+	ReDim As Double param_loaded(0 To seans_num_out-1)
+	ReDim As Double trand(0 To seans_num_out-1)
+
+	Dim As Integer t
+	Dim As Integer file
+
+	' загрузка временного хода выбранного параметра
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/Ti."+ Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, param_loaded(t)
+	Next t
+	Close #file
+
+	array_trand_d(@param_loaded(0), @trand(0), wnd, seans_num_out)
+
+	For t = t_start To t_end ' по времени
+		param_loaded(t) =   ( CInt( trand(t) ) \ 20 ) * 20
+	Next t
+
+	' запись временного хода выбранного параметра
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/Ti."+ Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+
+	For t = 0 To seans_num_out-1
+		Print #file, Using "####.# "; param_loaded(t)
+	Next t
+	Close #file
+
+End Sub
+
+
+''' ================================================================
+
+
+Sub trand_te(ByVal h As Integer, ByVal z As Integer, ByVal t_start As Integer, ByVal t_end As Integer, wnd As Integer)
+
+	ReDim As Double param_loaded(0 To seans_num_out-1)
+	ReDim As Double trand(0 To seans_num_out-1)
+
+	Dim As Integer t
+	Dim As Integer file
+
+	' загрузка временного хода выбранного параметра
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/Te."+ Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, param_loaded(t)
+	Next t
+	Close #file
+
+
+	array_trand_d(@param_loaded(0), @trand(0), wnd, seans_num_out)
+
+	For t = t_start To t_end ' по времени
+		param_loaded(t) =   ( CInt( trand(t) ) \ 20 ) * 20
+	Next t
+
+	' запись временного хода выбранного параметра
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/Te."+ Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+
+	For t = 0 To seans_num_out-1
+		Print #file, Using "####.# "; param_loaded(t)
+	Next t
+	Close #file
+
+End Sub
+
+
+''' ================================================================
+
+
+Sub trand_hyd(ByVal h As Integer, ByVal z As Integer, ByVal t_start As Integer, ByVal t_end As Integer, wnd As Integer)
+
+	ReDim As Double param_loaded(0 To seans_num_out-1)
+	ReDim As Double trand(0 To seans_num_out-1)
+
+	Dim As Integer t
+	Dim As Integer file
+
+	' загрузка временного хода выбранного параметра
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/Hyd."+ Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, param_loaded(t)
+	Next t
+	Close #file
+
+
+	array_trand_d(@param_loaded(0), @trand(0), wnd, seans_num_out)
+
+	For t = t_start To t_end ' по времени
+		param_loaded(t) =   CInt( trand(t) )
+	Next t
+
+	' запись временного хода выбранного параметра
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/Hyd."+ Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+
+	For t = 0 To seans_num_out-1
+		Print #file, Using "###.# "; param_loaded(t)
+	Next t
+	Close #file
+
+End Sub
+
+
+
+''' ================================================================
+
+
+Sub level_ti(ByVal h As Integer, ByVal z As Integer, ByVal t_start As Integer, ByVal t_end As Integer, level As Integer)
+
+	ReDim As Double param_loaded(0 To seans_num_out-1)
+	ReDim As Double trand(0 To seans_num_out-1)
+
+	Dim As Integer t
+	Dim As Integer file
+
+	' загрузка временного хода выбранного параметра
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/Ti."+ Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, param_loaded(t)
+	Next t
+	Close #file
+
+
+	For t = t_start To t_end ' по времени
+		param_loaded(t) =  ( CInt( level ) \ 20 ) * 20
+	Next t
+
+	' запись временного хода выбранного параметра
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/Ti."+ Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+
+	For t = 0 To seans_num_out-1
+		Print #file, Using "####.# "; param_loaded(t)
+	Next t
+	Close #file
+
+End Sub
+
+
+''' ================================================================
+
+
+Sub level_te(ByVal h As Integer, ByVal z As Integer, ByVal t_start As Integer, ByVal t_end As Integer, level As Integer)
+
+	ReDim As Double param_loaded(0 To seans_num_out-1)
+	ReDim As Double trand(0 To seans_num_out-1)
+
+	Dim As Integer t
+	Dim As Integer file
+
+	' загрузка временного хода выбранного параметра
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/Te."+ Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, param_loaded(t)
+	Next t
+	Close #file
+
+
+	For t = t_start To t_end ' по времени
+		param_loaded(t) =  ( CInt( level ) \ 20 ) * 20
+	Next t
+
+	' запись временного хода выбранного параметра
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/Te."+ Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+
+	For t = 0 To seans_num_out-1
+		Print #file, Using "####.# "; param_loaded(t)
+	Next t
+	Close #file
+
+End Sub
+
+
+
+''' ================================================================
+
+
+Sub level_hyd(ByVal h As Integer, ByVal z As Integer, ByVal t_start As Integer, ByVal t_end As Integer, level As Integer)
+
+	ReDim As Double param_loaded(0 To seans_num_out-1)
+	ReDim As Double trand(0 To seans_num_out-1)
+
+	Dim As Integer t
+	Dim As Integer file
+
+	' загрузка временного хода выбранного параметра
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/Hyd."+ Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, param_loaded(t)
+	Next t
+	Close #file
+
+
+	For t = t_start To t_end ' по времени
+		param_loaded(t) = CInt( level*2 )
+	Next t
+
+	' запись временного хода выбранного параметра
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/Hyd."+ Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+
+	For t = 0 To seans_num_out-1
+		Print #file, Using "####.# "; param_loaded(t)
+	Next t
+	Close #file
+
+End Sub
+
+
+
+''' ================================================================
+
+
+
+
+Sub gradient_te(ByVal h As Integer, ByVal z As Integer, ByVal t_start As Integer, ByVal t_end As Integer)
+
+	ReDim As Double param_loaded(0 To z, 0 To seans_num_out-1)
+	ReDim As Double gradients(0 To z-1)
+
+	Dim As Double gradient
+
+	Dim As Integer t
+	Dim As Integer file
+
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/Te."+ Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, param_loaded(z, t)
+	Next t
+	Close #file
+
+
+	For zz As Integer = 1 To z
+		' загрузка временного хода выбранного параметра
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step5/Te2."+ Str(-1)+"."+Str(CInt(Hkm(h-Hstep*(zz))))+".txt" For Input As #file
+		For t = 0 To seans_num_out-1
+			Input #file, param_loaded(z-zz, t)
+		Next t
+		Close #file
+	Next zz
+
+	For zz As Integer = 0 To z-2
+		gradients(zz) = 0
+		For t = t_start To t_end ' по времени
+			gradients(zz) += param_loaded(zz+1, t)-param_loaded(zz, t)
+		Next t
+		gradients(zz) /= t_end-t_start
+	Next zz
+
+	Cls
+
+	For zz As Integer = 0 To z-2
+		Print Using "#### "; gradients(zz);
+	Next zz
+	Print
+
+	Input "Введите значение градиента: ", gradient
+
+	For t = t_start To t_end ' по времени
+		param_loaded(z, t) =  ( CInt( param_loaded(z-1, t) + gradient ) \ 20 ) * 20
+	Next t
+
+	' запись временного хода выбранного параметра
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/Te."+ Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+
+	For t = 0 To seans_num_out-1
+		Print #file, Using "####.# "; param_loaded(z, t)
+	Next t
+	Close #file
+
+End Sub
+
+
+
+''' ================================================================
+
+
+Sub poly_ti(ByVal h As Integer, ByVal z As Integer, ByVal t_start As Integer, ByVal t_end As Integer, degree As Integer)
+
+	ReDim As Double param_loaded(0 To seans_num_out-1)
+	ReDim As Double trand(0 To seans_num_out-1)
+
+	ReDim As Double in_x(0 To (t_end-t_start))
+	ReDim As Double in_y(0 To (t_end-t_start))
+	ReDim As Double coeff(0 To degree)
+
+
+	Dim As Integer t
+	Dim As Integer file
+
+	' загрузка временного хода выбранного параметра
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/Ti."+ Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, param_loaded(t)
+	Next t
+	Close #file
+
+	Dim As Integer y = 0
+	For t = t_start To t_end ' по времени
+		in_x(t) = y
+		in_y(t) = param_loaded(t)
+		y += 1
+	Next t
+
+	approx_poly_coeff_d(@in_x(0), @in_y(0), y, @coeff(0), degree)
+
+	y = 0
+	For t = t_start To t_end ' по времени
+
+		param_loaded(t) = 0
+		For k As Integer = 0 To degree
+			param_loaded(t) += coeff(k) * y^k
+		Next k
+
+		param_loaded(t) = ( CInt( param_loaded(t) ) \ 20 ) * 20
+
+		y += 1
+
+	Next t
+
+
+	' запись временного хода выбранного параметра
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/Ti."+ Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+
+	For t = 0 To seans_num_out-1
+		Print #file, Using "####.# "; param_loaded(t)
+	Next t
+	Close #file
+
+End Sub
+
+
+''' ================================================================
+
+
+Sub poly_te(ByVal h As Integer, ByVal z As Integer, ByVal t_start As Integer, ByVal t_end As Integer, degree As Integer)
+
+	ReDim As Double param_loaded(0 To seans_num_out-1)
+	ReDim As Double trand(0 To seans_num_out-1)
+
+	ReDim As Double in_x(0 To (t_end-t_start))
+	ReDim As Double in_y(0 To (t_end-t_start))
+	ReDim As Double coeff(0 To degree)
+
+
+	Dim As Integer t
+	Dim As Integer file
+
+	' загрузка временного хода выбранного параметра
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/Te."+ Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, param_loaded(t)
+	Next t
+	Close #file
+
+	Dim As Integer y = 0
+	For t = t_start To t_end ' по времени
+		in_x(t) = y
+		in_y(t) = param_loaded(t)
+		y += 1
+	Next t
+
+	approx_poly_coeff_d(@in_x(0), @in_y(0), y, @coeff(0), degree)
+
+	y = 0
+	For t = t_start To t_end ' по времени
+
+		param_loaded(t) = 0
+		For k As Integer = 0 To degree
+			param_loaded(t) += coeff(k) * y^k
+		Next k
+
+		param_loaded(t) = ( CInt( param_loaded(t) ) \ 20 ) * 20
+
+		y += 1
+
+	Next t
+
+
+	' запись временного хода выбранного параметра
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/Te."+ Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+
+	For t = 0 To seans_num_out-1
+		Print #file, Using "####.# "; param_loaded(t)
+	Next t
+	Close #file
+
+End Sub
+
+
+
+''' ================================================================
+
+
+Sub poly_hyd(ByVal h As Integer, ByVal z As Integer, ByVal t_start As Integer, ByVal t_end As Integer, degree As Integer)
+
+	ReDim As Double param_loaded(0 To seans_num_out-1)
+	ReDim As Double trand(0 To seans_num_out-1)
+
+	ReDim As Double in_x(0 To (t_end-t_start))
+	ReDim As Double in_y(0 To (t_end-t_start))
+	ReDim As Double coeff(0 To degree)
+
+
+	Dim As Integer t
+	Dim As Integer file
+
+	' загрузка временного хода выбранного параметра
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/Hyd."+ Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, param_loaded(t)
+	Next t
+	Close #file
+
+	Dim As Integer y = 0
+	For t = t_start To t_end ' по времени
+		in_x(t) = y
+		in_y(t) = param_loaded(t)
+		y += 1
+	Next t
+
+	approx_poly_coeff_d(@in_x(0), @in_y(0), y, @coeff(0), degree)
+
+	y = 0
+	For t = t_start To t_end ' по времени
+
+		param_loaded(t) = 0
+		For k As Integer = 0 To degree
+			param_loaded(t) += coeff(k) * y^k
+		Next k
+
+		param_loaded(t) = CInt( param_loaded(t) )
+
+		y += 1
+
+	Next t
+
+
+	' запись временного хода выбранного параметра
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/Hyd."+ Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+
+	For t = 0 To seans_num_out-1
+		Print #file, Using "###.# "; param_loaded(t)
+	Next t
+	Close #file
+
+End Sub
+
+
+
+
+''' ================================================================
+
+
+Sub spline_wnd_ti(ByVal h As Integer, ByVal z As Integer, ByVal t_start As Integer, ByVal t_end As Integer, wnd As Integer, degree As Integer)
+
+	ReDim As Double param_loaded(0 To seans_num_out-1)
+	ReDim As Double trand(0 To seans_num_out-1)
+
+	Dim As Integer t
+	Dim As Integer file
+
+	ReDim As Double out_y(0 To t_end-t_start)
+
+	ReDim As Double in_x(0 To wnd-1)
+	ReDim As Double in_y(0 To wnd-1)
+	ReDim As Double coeff(0 To degree)
+
+	' загрузка временного хода выбранного параметра
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/Ti."+ Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, param_loaded(t)
+	Next t
+	Close #file
+
+
+
+	Dim As Integer y = 0
+	For t = t_start To t_end ' по времени
+
+		Dim As Integer num = 0
+		For tt As Integer = -wnd\2 To wnd\2
+
+			Dim As Integer index = t+tt
+
+			If index > 0 And index < seans_num_out-1 Then
+				in_y(num) = param_loaded(index)
+				in_x(num) = index
+				num += 1
+			EndIf
+
+		Next tt
+
+		approx_poly_coeff_d(@in_x(0), @in_y(0), num, @coeff(0), degree)
+
+		out_y(y) = 0
+
+		For k As Integer = 0 To degree
+			out_y(y) += coeff(k) * t^k
+		Next
+
+		y += 1
+
+	Next t
+
+	y = 0
+	For t = t_start+1 To t_end-1 ' по времени
+		param_loaded(t) =   ( CInt( out_y(y) ) \ 20 ) * 20
+		y += 1
+	Next t
+
+	' запись временного хода выбранного параметра
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/Ti."+ Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+
+	For t = 0 To seans_num_out-1
+		Print #file, Using "####.# "; param_loaded(t)
+	Next t
+	Close #file
+
+End Sub
+
+
+
+''' ================================================================
+
+
+Sub spline_wnd_te(ByVal h As Integer, ByVal z As Integer, ByVal t_start As Integer, ByVal t_end As Integer, wnd As Integer, degree As Integer)
+
+	ReDim As Double param_loaded(0 To seans_num_out-1)
+	ReDim As Double trand(0 To seans_num_out-1)
+
+	Dim As Integer t
+	Dim As Integer file
+
+	ReDim As Double out_y(0 To t_end-t_start)
+
+	ReDim As Double in_x(0 To wnd-1)
+	ReDim As Double in_y(0 To wnd-1)
+	ReDim As Double coeff(0 To degree)
+
+	' загрузка временного хода выбранного параметра
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/Te."+ Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, param_loaded(t)
+	Next t
+	Close #file
+
+
+
+	Dim As Integer y = 0
+	For t = t_start To t_end ' по времени
+
+		Dim As Integer num = 0
+		For tt As Integer = -wnd\2 To wnd\2
+
+			Dim As Integer index = t+tt
+
+			If index > 0 And index < seans_num_out-1 Then
+				in_y(num) = param_loaded(index)
+				in_x(num) = index
+				num += 1
+			EndIf
+
+		Next tt
+
+		approx_poly_coeff_d(@in_x(0), @in_y(0), num, @coeff(0), degree)
+
+		out_y(y) = 0
+
+		For k As Integer = 0 To degree
+			out_y(y) += coeff(k) * t^k
+		Next
+
+		y += 1
+
+	Next t
+
+	y = 0
+	For t = t_start+1 To t_end-1 ' по времени
+		param_loaded(t) =   ( CInt( out_y(y) ) \ 20 ) * 20
+		y += 1
+	Next t
+
+	' запись временного хода выбранного параметра
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/Te."+ Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+
+	For t = 0 To seans_num_out-1
+		Print #file, Using "####.# "; param_loaded(t)
+	Next t
+	Close #file
+
+End Sub
+
+
+
+
+''' ================================================================
+
+Sub inverse_problem_he(ByVal h As Integer, ByVal z As Integer, ByVal t_start As Integer, ByVal t_end As Integer)
+
+	ReDim As Double   d_loaded(0 To seans_num_out-1)
+	ReDim As Double  ti_loaded(0 To seans_num_out-1)
+	ReDim As Double  te_loaded(0 To seans_num_out-1)
+	ReDim As Double hyd_loaded(0 To seans_num_out-1)
+	ReDim As Double  he_loaded(0 To seans_num_out-1)
+
+	ReDim As Double   d_all(0 To He_max, 0 To seans_num_out-1)
+	ReDim As Double  ti_all(0 To He_max, 0 To seans_num_out-1)
+	ReDim As Double  te_all(0 To He_max, 0 To seans_num_out-1)
+	ReDim As Double hyd_all(0 To He_max, 0 To seans_num_out-1)
+
+	Dim As Double d_he
+	Dim As Integer t, he
+	Dim As Integer file
+
+
+	For he = 0 To He_max Step he_step
+
+		' Загрузка Ti
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Ti."+Str(he)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+		For t = 0 To seans_num_out-1
+			Input #file, ti_all(he, t)
+		Next t
+		Close #file
+
+		' Загрузка Te
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Te."+Str(he)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+		For t = 0 To seans_num_out-1
+			Input #file, te_all(he, t)
+		Next t
+		Close #file
+
+		' Загрузка H+
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Hyd."+Str(he)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+		For t = 0 To seans_num_out-1
+			Input #file, hyd_all(he, t)
+		Next t
+		Close #file
+
+		' Загрузка погрешностей
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "D."+Str(he)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+		For t = 0 To seans_num_out-1
+			Input #file, d_all(he, t)
+		Next t
+		Close #file
+
+	Next he
+
+
+	param_load(h, @ti_loaded(0), @te_loaded(0), @hyd_loaded(0), @he_loaded(0), @d_loaded(0) )
+
+	d_he = ( he_loaded(t_end)-he_loaded(t_start) ) / (t_end-t_start)
+
+
+	For t = t_start To t_end ' по времени
+		he_loaded(t) = CInt( he_loaded(t_start) + d_he*(t-t_start) )
+	Next t
+
+
+	For t = t_start+1 To t_end-1 ' по времени
+		d_loaded(t)   = d_all  (he_loaded(t), t)
+		ti_loaded(t)  = ti_all (he_loaded(t), t)
+		te_loaded(t)  = te_all (he_loaded(t), t)
+		hyd_loaded(t) = hyd_all(he_loaded(t), t)
+	Next t
+
+
+	param_save(h, @ti_loaded(0), @te_loaded(0), @hyd_loaded(0), @he_loaded(0), @d_loaded(0) )
+
+End Sub
+
+
+''' ================================================================
+
+
+Sub inverse_problem_ti(ByVal h As Integer, ByVal z As Integer)
+
+	Dim As Integer he, hyd
+	Dim As Integer t
+	Dim As Integer file
+	Dim As Double  ti_loaded(0 To seans_num_out-1)
+
+	Cls()
+
+	' Загрузка Ti
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Ti."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, ti_loaded(t)
+	Next t
+	Close #file
+
+	For he = 0 To he_max Step he_step
+
+		Print Using "n = ###   h = ####   He+ = ##"; h; Hkm(h); he;
+		Print ,
+
+		' Загружаем библиотеки АКФ
+
+		Print "Загрузка библиотек АКФ... ";
+
+		If libraries_num > 0 Then
+			For hyd = 0 To libraries_num-1
+				fclose ( libraries_file(hyd) )
+			Next hyd
+		EndIf
+
+		libraries_list_load(He)
+
+		If Config_oxygen <> 0 Then
+			libraries_num = 1
+		EndIf
+
+		For hyd = 0 To libraries_num-1
+			Print_process_percent((hyd*100)/libraries_num)
+			library_light_list_get_filename(@zfilename, @libraries_filelist, hyd)
+			zfilename = LIBRARY_PATH + zfilename
+			libraries_file(hyd) = fopen (zfilename, "rb")
+			If libraries_file(hyd) = NULL Then
+				PrintErrorToLog(ErrorFortranLib, __FILE__, __LINE__)
+				End
+			EndIf
+		Next hyd
+
+		Print_process_percent(1000)
+		Print "OK"
+
+
+
+
+		For t = 0 To seans_num_out-1
+
+			dat_all_str(h, t).ti_start = ti_loaded(t)
+			dat_all_str(h, t).ti_end   = ti_loaded(t)
+
+			dat_all_str(h, t).te_start = 500
+			dat_all_str(h, t).te_end   = 4000
+
+			dat_all_str(h, t).hyd_start = 0
+			dat_all_str(h, t).hyd_end   = libraries_num-1
+
+			dat_all_str(h, t).d_c = 1e200 ' очистка погрешностей
+
+		Next t
+
+
+		If isConv <> 0 Then
+			inverse_problem_v2_conv(h, z, Config_step_h_2, Config_step_te_2, Config_step_ti_2)
+		Else
+			If ConfigAmbig <> 0 Then
+				inverse_problem_v2_ambig(h, z, Config_step_h_2, Config_step_te_2, Config_step_ti_2)
+			Else
+				inverse_problem_v2(h, z, Config_step_h_2, Config_step_te_2, Config_step_ti_2)
+			EndIf
+		EndIf
+
+
+		' 3 шаг
+		ranges_set(h, Config_range_h_3, Config_range_te_3, 0)
+		If isConv <> 0 Then
+			inverse_problem_v2_conv(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_3)
+		Else
+			If ConfigAmbig <> 0 Then
+				inverse_problem_v2_ambig(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_3)
+			Else
+				inverse_problem_v2(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_3)
+			EndIf
+		EndIf
+
+
+		results_write2(h, he)
+
+	Next he
+
+	intervals_input_auto2(h)
+
+End Sub
+
+
+''' ================================================================
+
+
+
+Sub inverse_problem_te(ByVal h As Integer, ByVal z As Integer)
+
+	Dim As Integer he, hyd
+	Dim As Integer t
+	Dim As Integer file
+	Dim As Double  te_loaded(0 To seans_num_out-1)
+
+	Cls()
+
+	' Загрузка Te
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Te."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, te_loaded(t)
+	Next t
+	Close #file
+
+	For he = 0 To he_max Step he_step
+
+		Print Using "n = ###   h = ####   He+ = ##"; h; Hkm(h); he;
+		Print ,
+
+		' Загружаем библиотеки АКФ
+		Print "Загрузка библиотек АКФ... ";
+
+
+		If libraries_num > 0 Then
+			For hyd = 0 To libraries_num-1
+				fclose ( libraries_file(hyd) )
+			Next hyd
+		EndIf
+
+		libraries_list_load(He)
+
+		If Config_oxygen <> 0 Then
+			libraries_num = 1
+		EndIf
+
+		For hyd = 0 To libraries_num-1
+			Print_process_percent((hyd*100)/libraries_num)
+			library_light_list_get_filename(@zfilename, @libraries_filelist, hyd)
+			zfilename = LIBRARY_PATH + zfilename
+			libraries_file(hyd) = fopen (zfilename, "rb")
+			If libraries_file(hyd) = NULL Then
+				PrintErrorToLog(ErrorFortranLib, __FILE__, __LINE__)
+				End
+			EndIf
+		Next hyd
+
+
+
+		Print_process_percent(1000)
+		Print "OK"
+
+
+
+
+
+
+		For t = 0 To seans_num_out-1
+
+			dat_all_str(h, t).te_start = te_loaded(t)
+			dat_all_str(h, t).te_end   = te_loaded(t)
+
+			dat_all_str(h, t).ti_start = 500
+			dat_all_str(h, t).ti_end   = 4000
+
+			dat_all_str(h, t).hyd_start = 0
+			dat_all_str(h, t).hyd_end   = libraries_num-1
+
+			dat_all_str(h, t).d_c = 1e200 ' очистка погрешностей
+
+		Next t
+
+
+
+
+
+		If isConv <> 0 Then
+			inverse_problem_v2_conv(h, z, Config_step_h_2, Config_step_te_2, Config_step_ti_2)
+		Else
+			If ConfigAmbig <> 0 Then
+				inverse_problem_v2_ambig(h, z, Config_step_h_2, Config_step_te_2, Config_step_ti_2)
+			Else
+				inverse_problem_v2(h, z, Config_step_h_2, Config_step_te_2, Config_step_ti_2)
+			EndIf
+		EndIf
+
+		' 3 шаг
+		ranges_set(h, Config_range_h_3, 0, Config_range_ti_3)
+		If isConv <> 0 Then
+			inverse_problem_v2_conv(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_3)
+		Else
+			If ConfigAmbig <> 0 Then
+				inverse_problem_v2_ambig(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_3)
+			Else
+				inverse_problem_v2(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_3)
+			EndIf
+		EndIf
+
+
+
+		results_write2(h, he)
+
+	Next he
+
+	intervals_input_auto2(h)
+
+End Sub
+
+
+
+
+''' ================================================================
+
+
+
+Sub inverse_problem_hyd(ByVal h As Integer, ByVal z As Integer)
+
+	Dim As Integer he, hyd
+	Dim As Integer t
+	Dim As Integer file
+	Dim As Double  hyd_loaded(0 To seans_num_out-1)
+
+	Cls()
+
+	' Загрузка Hyd
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Hyd."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, hyd_loaded(t)
+	Next t
+	Close #file
+
+
+	For he = 0 To he_max Step he_step
+
+		Print Using "n = ###   h = ####   He+ = ##"; h; Hkm(h); he;
+		Print ,
+		' Загружаем библиотеки АКФ
+
+		Print "Загрузка библиотек АКФ... ";
+
+
+
+		If libraries_num > 0 Then
+			For hyd = 0 To libraries_num-1
+				fclose ( libraries_file(hyd) )
+			Next hyd
+		EndIf
+
+		libraries_list_load(He)
+
+		If Config_oxygen <> 0 Then
+			libraries_num = 1
+		EndIf
+
+		For hyd = 0 To libraries_num-1
+			Print_process_percent((hyd*100)/libraries_num)
+			library_light_list_get_filename(@zfilename, @libraries_filelist, hyd)
+			zfilename = LIBRARY_PATH + zfilename
+			libraries_file(hyd) = fopen (zfilename, "rb")
+			If libraries_file(hyd) = NULL Then
+				PrintErrorToLog(ErrorFortranLib, __FILE__, __LINE__)
+				End
+			EndIf
+		Next hyd
+
+
+		Print_process_percent(1000)
+
+		Print "OK"
+
+
+		For t = 0 To seans_num_out-1
+
+			dat_all_str(h, t).ti_start = 500
+			dat_all_str(h, t).ti_end   = 4000
+
+			dat_all_str(h, t).te_start = 500
+			dat_all_str(h, t).te_end   = 4000
+
+			dat_all_str(h, t).hyd_start = hyd_loaded(t)-1
+			dat_all_str(h, t).hyd_end   = hyd_loaded(t)+1
+
+			dat_all_str(h, t).d_c = 1e200 ' очистка погрешностей
+
+		Next t
+
+
+		If isConv <> 0 Then
+			inverse_problem_v2_conv(h, z, 1, Config_step_te_2, Config_step_ti_2)
+		Else
+			If ConfigAmbig <> 0 Then
+				inverse_problem_v2_ambig(h, z, 1, Config_step_te_2, Config_step_ti_2)
+			Else
+				inverse_problem_v2(h, z, 1, Config_step_te_2, Config_step_ti_2)
+			EndIf
+		EndIf
+
+
+		' 3 шаг
+		ranges_set(h, 0, Config_range_te_3, Config_range_ti_3)
+		If isConv <> 0 Then
+			inverse_problem_v2_conv(h, z, 1, Config_step_te_3, Config_step_ti_3)
+		Else
+			If ConfigAmbig <> 0 Then
+				inverse_problem_v2_ambig(h, z, 1, Config_step_te_3, Config_step_ti_3)
+			Else
+				inverse_problem_v2(h, z, 1, Config_step_te_3, Config_step_ti_3)
+			EndIf
+		EndIf
+
+
+		results_write2(h, he)
+
+	Next he
+
+	intervals_input_auto2(h)
+
+End Sub
+
+
+''' ================================================================
+
+
+Sub inverse_problem_hyd_ti_te(ByVal h As Integer, ByVal z As Integer)
+
+	Dim As Integer he, hyd
+	Dim As Integer t
+	Dim As Integer file
+	Dim As Double  hyd_loaded(0 To seans_num_out-1)
+	Dim As Double  te_loaded(0 To seans_num_out-1)
+	Dim As Double  ti_loaded(0 To seans_num_out-1)
+
+	Cls()
+
+	' Hyd
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Hyd."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, hyd_loaded(t)
+	Next t
+	Close #file
+
+	' Ti
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Ti."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, ti_loaded(t)
+	Next t
+	Close #file
+
+	' Te
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Te."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, te_loaded(t)
+	Next t
+	Close #file
+
+	For he = 0 To he_max Step he_step
+
+		Print Using "n = ###   h = ####   He+ = ##"; h; Hkm(h); he;
+		Print ,
+
+
+		'
+		Print "Загрузка библиотек АКФ... ";
+
+		If libraries_num > 0 Then
+			For hyd = 0 To libraries_num-1
+				fclose ( libraries_file(hyd) )
+			Next hyd
+		EndIf
+
+
+		libraries_list_load(He)
+
+
+		If Config_oxygen <> 0 Then
+			libraries_num = 1
+		EndIf
+
+
+		For hyd = 0 To libraries_num-1
+			Print_process_percent((hyd*100)/libraries_num)
+			library_light_list_get_filename(@zfilename, @libraries_filelist, hyd)
+			zfilename = LIBRARY_PATH + zfilename
+			libraries_file(hyd) = fopen (zfilename, "rb")
+			If libraries_file(hyd) = NULL Then
+				PrintErrorToLog(ErrorFortranLib, __FILE__, __LINE__)
+				End
+			EndIf
+		Next hyd
+
+		Print_process_percent(1000)
+		Print "OK"
+
+
+		For t = 0 To seans_num_out-1
+
+			dat_all_str(h, t).ti_start = ti_loaded(t)
+			dat_all_str(h, t).ti_end   = ti_loaded(t)
+
+			dat_all_str(h, t).te_start = te_loaded(t)
+			dat_all_str(h, t).te_end   = te_loaded(t)
+
+			dat_all_str(h, t).hyd_start = hyd_loaded(t)
+			dat_all_str(h, t).hyd_end   = hyd_loaded(t)
+
+			dat_all_str(h, t).d_c = 1e200 ' очистка погрешностей
+
+		Next t
+
+
+		' 3 шаг
+		'ranges_set(h, 0, 0, 0)
+		If isConv <> 0 Then
+			inverse_problem_v2_conv(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_3)
+		Else
+			If ConfigAmbig <> 0 Then
+				inverse_problem_v2_ambig(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_3)
+			Else
+				inverse_problem_v2(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_3)
+			EndIf
+		EndIf
+
+
+		results_write2(h, he)
+
+	Next he
+
+	intervals_input_auto2(h)
+
+End Sub
+
+
+
+
+''' ================================================================
+
+
+
+Sub inverse_problem_ti_te(ByVal h As Integer, ByVal z As Integer)
+
+	Dim As Integer he, hyd
+	Dim As Integer t
+	Dim As Integer file
+	Dim As Double  ti_loaded(0 To seans_num_out-1)
+	Dim As Double  te_loaded(0 To seans_num_out-1)
+
+	Cls()
+
+	' Ti
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Ti."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, ti_loaded(t)
+	Next t
+	Close #file
+
+	' Te
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Te."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, te_loaded(t)
+	Next t
+	Close #file
+
+	For he = 0 To he_max Step he_step
+
+		Print Using "n = ###   h = ####   He+ = ##"; h; Hkm(h); he;
+		Print ,
+
+		' Загружаем библиотеки АКФ
+		Print "Загрузка библиотек АКФ... ";
+
+		If libraries_num > 0 Then
+			For hyd = 0 To libraries_num-1
+				fclose ( libraries_file(hyd) )
+			Next hyd
+		EndIf
+
+		libraries_list_load(He)
+
+		If Config_oxygen <> 0 Then
+			libraries_num = 1
+		EndIf
+
+		For hyd = 0 To libraries_num-1
+			Print_process_percent((hyd*100)/libraries_num)
+			library_light_list_get_filename(@zfilename, @libraries_filelist, hyd)
+			zfilename = LIBRARY_PATH + zfilename
+			libraries_file(hyd) = fopen (zfilename, "rb")
+			If libraries_file(hyd) = NULL Then
+				PrintErrorToLog(ErrorFortranLib, __FILE__, __LINE__)
+				End
+			EndIf
+		Next hyd
+
+		Print_process_percent(1000)
+		Print "OK"
+
+
+
+
+		For t = 0 To seans_num_out-1
+
+			dat_all_str(h, t).ti_start = ti_loaded(t)
+			dat_all_str(h, t).ti_end   = ti_loaded(t)
+
+			dat_all_str(h, t).te_start = te_loaded(t)
+			dat_all_str(h, t).te_end   = te_loaded(t)
+
+			dat_all_str(h, t).hyd_start = 0
+			dat_all_str(h, t).hyd_end   = libraries_num-1
+
+			dat_all_str(h, t).d_c = 1e200 ' очистка погрешностей
+
+		Next t
+
+
+		' 2 шаг
+		'ranges_set(h, Config_step_h_2, 0, 0)
+		If isConv <> 0 Then
+			inverse_problem_v2_conv(h, z, Config_step_h_2, Config_step_te_2, Config_step_ti_2)
+		Else
+			If ConfigAmbig <> 0 Then
+				inverse_problem_v2_ambig(h, z, Config_step_h_2, Config_step_te_2, Config_step_ti_2)
+			Else
+				inverse_problem_v2(h, z, Config_step_h_2, Config_step_te_2, Config_step_ti_2)
+			EndIf
+		EndIf
+
+		' 3 шаг
+		ranges_set(h, Config_range_h_3, 0, 0)
+		If isConv <> 0 Then
+			inverse_problem_v2_conv(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_3)
+		Else
+			If ConfigAmbig <> 0 Then
+				inverse_problem_v2_ambig(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_3)
+			Else
+				inverse_problem_v2(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_3)
+			EndIf
+		EndIf
+
+		results_write2(h, he)
+
+	Next he
+
+	intervals_input_auto2(h)
+
+End Sub
+
+
+''' ================================================================
+
+Sub param_load(ByVal h As Integer, ByVal ti As Double Ptr, ByVal te As Double Ptr, ByVal hyd As Double Ptr, ByVal he As Double Ptr, ByVal d As Double Ptr)
+
+	Dim As Integer t, file
+
+	' загрузка временного хода Ti
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Ti."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, ti[t]
+	Next t
+	Close #file
+
+	' загрузка временного хода Te
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Te."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, te[t]
+	Next t
+	Close #file
+
+
+	' загрузка временного хода H+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Hyd."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, hyd[t]
+	Next t
+	Close #file
+
+
+	' загрузка временного хода He+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "He."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, he[t]
+	Next t
+	Close #file
+
+
+	' загрузка временного хода D
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "D."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, d[t]
+	Next t
+	Close #file
+
+
+End Sub
+
+
+
+''' ================================================================
+
+Sub param_load2(ByVal h As Integer, ByVal ti As Double Ptr, ByVal te As Double Ptr, ByVal hyd As Double Ptr, ByVal he As Double Ptr, ByVal d As Double Ptr)
+
+	Dim As Integer t, file
+
+	' загрузка временного хода Ti
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Ti2."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, ti[t]
+	Next t
+	Close #file
+
+	' загрузка временного хода Te
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Te2."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, te[t]
+	Next t
+	Close #file
+
+
+	' загрузка временного хода H+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Hyd2."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, hyd[t]
+	Next t
+	Close #file
+
+
+	' загрузка временного хода He+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "He2."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, he[t]
+	Next t
+	Close #file
+
+
+	' загрузка временного хода D
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "D2."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, d[t]
+	Next t
+	Close #file
+
+
+End Sub
+
+
+
+''' ================================================================
+
+Sub param_save(ByVal h As Integer, ByVal ti As Double Ptr, ByVal te As Double Ptr, ByVal hyd As Double Ptr, ByVal he As Double Ptr, ByVal d As Double Ptr)
+
+	Dim As Integer t, file
+
+	' запись временного хода Ti
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Ti."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+	For t = 0 To seans_num_out-1
+		Print #file,  Using "####.# ";ti[t]
+	Next t
+	Close #file
+
+	' запись временного хода Te
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Te."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+	For t = 0 To seans_num_out-1
+		Print #file,  Using "####.# ";te[t]
+	Next t
+	Close #file
+
+
+	' запись временного хода H+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Hyd."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+	For t = 0 To seans_num_out-1
+		Print #file,  Using "###.# "; hyd[t]
+	Next t
+	Close #file
+
+
+	' запись временного хода He+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "He."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+	For t = 0 To seans_num_out-1
+		Print #file,  Using "###.# "; he[t]
+	Next t
+	Close #file
+
+
+	' запись временного хода D
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "D."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+	For t = 0 To seans_num_out-1
+		Print #file, Using "##.#####^^^^^ "; d[t]
+	Next t
+	Close #file
+
+
+End Sub
+
+
+''' ================================================================
+
+Sub equate_ti(ByVal h As Integer, ByVal z As Integer, ByVal t_start As Integer, ByVal t_end As Integer)
+
+
+	ReDim As Double ti_loaded(0 To seans_num_out-1)
+	ReDim As Double te_loaded(0 To seans_num_out-1)
+
+	Dim As Integer t
+	Dim As Integer file
+
+	' загрузка временного хода Ti
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/Ti."+ Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, ti_loaded(t)
+	Next t
+	Close #file
+
+	' загрузка временного хода Te
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/Te."+ Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, te_loaded(t)
+	Next t
+	Close #file
+
+
+	For t = t_start To t_end ' по времени
+		If ti_loaded(t) > te_loaded(t) Then
+			ti_loaded(t) = te_loaded(t)
+		EndIf
+	Next t
+
+	' запись временного хода выбранного параметра
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/Ti."+ Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+
+	For t = 0 To seans_num_out-1
+		Print #file, Using "####.# "; ti_loaded(t)
+	Next t
+	Close #file
+
+End Sub
+
+
+''' ================================================================
+
+Sub draw_help()
+	Dim key As Integer
+
+	Cls
+	Color 11
+	Print "UPRISE version " + UPRISE_VERSION
+	Print "(Unified Processing of the Results of Incoherent Scatter Experiments)"
+	Print
+	Color 7
+	Print "Estimate - программа оценки параметров ионосферы (решение обратной задачи рассеяния)"
+	Print "(c) Богомаз А.В., Котов Д.В. (Институт ионосферы)"
+	Color 8
+	Print
+	Print "================================"
+	Print "Программа собрана " + Mid(__DATE__, 4, 2)+"."+Mid(__DATE__, 1, 2)+"."+Mid(__DATE__, 7, 4)
+	Print "================================"
+	Color 15
+	Print
+	Print "Управление:"
+	Print " Alt + Enter      Переключиться из оконного режима в полноэкранный и наоборот"
+	Print "       Left/Right Перемещение по времени"
+	Print "       Home       Перемещение курсора в начало экрана"
+	Print "       End        Перемещение курсора в конец экрана"
+	Print "       Tab        Перемещение курсора на 10 минут вправо"
+	Print "Ctrl + Left/Right Сдвиг графиков по оси времени"
+	Print "       Пробел     Начать/отменить выбор данных для интерполяции, пересчёта, ручной коррекции"
+	Print "       F1         Вызов этой помощи"
+	Print "Ctrl + N          Переход на следующую высоту"
+	Print "       I          Интерполяция одного или всех параметров"
+	Print "       R          Пересчёт параметров по одному интерполированному"
+	Print "       P          Заполнение параметра указанным значением (ручная коррекция)"
+	Print "       U          Отмена предыдущего действия (интерполяции, пересчёта, ручной коррекции)"
+	Print "       T          Изменить ширину окна для расчёта тренда параметров на предыдущей высоте"
+	Print
+	Color 12
+	Print "Нажмите Enter"
+
+	Do
+		key = GetKey
+	Loop Until key = KEY_ENTER
+
+	Color 15, 0
+	Cls
+End Sub
+
+''' ================================================================
+
+Sub input_param(ByVal h As Integer, ByVal z As Integer, ByVal t_start As Integer, ByVal t_end As Integer, ByVal param As Integer)
+
+	ReDim As Double   d_loaded(0 To seans_num_out-1)
+	ReDim As Double  ti_loaded(0 To seans_num_out-1)
+	ReDim As Double  te_loaded(0 To seans_num_out-1)
+	ReDim As Double hyd_loaded(0 To seans_num_out-1)
+	ReDim As Double  he_loaded(0 To seans_num_out-1)
+
+	ReDim As Double   d_he(0 To seans_num_out-1)
+	ReDim As Double  ti_he(0 To seans_num_out-1)
+	ReDim As Double  te_he(0 To seans_num_out-1)
+	ReDim As Double hyd_he(0 To seans_num_out-1)
+
+	Dim As Integer t, he
+	Dim As Integer file
+
+	Input "Введите значение He+: "; he
+
+	' Загрузка Ti
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Ti."+Str(he)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, ti_he(t)
+	Next t
+	Close #file
+
+	' Загрузка Te
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Te."+Str(he)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, te_he(t)
+	Next t
+	Close #file
+
+	' Загрузка H+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Hyd."+Str(he)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, hyd_he(t)
+	Next t
+	Close #file
+
+	' Загрузка погрешностей
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "D."+Str(he)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, d_he(t)
+	Next t
+	Close #file
+
+
+	param_load(h, @ti_loaded(0), @te_loaded(0), @hyd_loaded(0), @he_loaded(0), @d_loaded(0) )
+
+
+	For t = t_start+1 To t_end-1 ' по времени
+		he_loaded(t) = he
+	Next t
+
+	For t = t_start+1 To t_end-1 ' по времени
+		d_loaded(t)   = d_he(t)
+		ti_loaded(t)  = ti_he(t)
+		te_loaded(t)  = te_he(t)
+		hyd_loaded(t) = hyd_he(t)
+	Next t
+
+	param_save(h, @ti_loaded(0), @te_loaded(0), @hyd_loaded(0), @he_loaded(0), @d_loaded(0) )
+
+End Sub
+
+''' ================================================================
+
+Function getHydMax(h As Integer) As Integer
+
+	Dim As Integer t
+	Dim As Integer file
+	ReDim As Double hyd(0 To seans_num_out-1)
+	Dim As Double hydMax
+
+	' загрузка временного хода H+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Hyd."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+
+	For t = 0 To seans_num_out-1
+		Input #file, hyd(t)
+	Next t
+	Close #file
+
+	hydMax = hyd(0)
+	For t = 1 To seans_num_out-1
+		If hyd(t) > hydMax Then
+			hydMax = hyd(t)
+		EndIf
+	Next t
+
+	Return hydMax
+
+End Function
+
+''' ================================================================
+
+Function getHeMax(h As Integer) As Integer
+
+	Dim As Integer t
+	Dim As Integer file
+	ReDim As Double he(0 To seans_num_out-1)
+	Dim As Double heMax
+
+	' загрузка временного хода He+
+	file = FreeFile()
+
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "He2."+Str(-1)+"."+Str(h)+".txt" For Input As #file
+
+	If Err <> 0 Then
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "He."+Str(-1)+"."+Str(h)+".txt" For Input As #file
+	EndIf
+
+
+	For t = 0 To seans_num_out-1
+		Input #file, he(t)
+	Next t
+	Close #file
+
+
+	For t = 0 To seans_num_out-1
+		heRange(t) = he(t)+He_grad
+		If heRange(t) > He_maxLib Then
+			heRange(t) = He_maxLib
+		EndIf
+	Next t
+
+
+	heMax = heRange(0)
+	For t = 1 To seans_num_out-1
+		if heRange(t) > heMax Then
+			heMax = heRange(t)
+		EndIf
+	Next t
+
+
+	Return heMax
+
+End Function
+
+''' ================================================================
+
+
+Sub libraries_list_load(He As Integer)
+
+
+	If pulse_length = 663 Then
+
+		If isConv = 1 Then
+			libraries_num = library_light_list_get("Short_663_P+C_", He, @libraries_filelist) ' получаем список библиотек для He=0 и число этих библиотек
+		Else
+			libraries_num = library_light_list_get("For_Ambig+q_profile_", He, @libraries_filelist) ' получаем список библиотек для He=0 и число этих библиотек
+		EndIf
+
+	EndIf
+
+	If pulse_length = 795 Then
+
+		If isConv = 1 Then
+			libraries_num = library_light_list_get("Short_795_P+C_", He, @libraries_filelist) ' получаем список библиотек для He=0 и число этих библиотек
+		Else
+			libraries_num = library_light_list_get("For_Ambig+q_profile_", He, @libraries_filelist) ' получаем список библиотек для He=0 и число этих библиотек
+		EndIf
+
+	EndIf
+
+End Sub
+
+
+''' ================================================================
+
+
+Sub save_and_exit()
+
+
+	Dim As Integer nH, nT
+	Dim As Integer t, h
+	Dim As Integer file
+	Dim As Double temp
+
+
+	' получаем количество сеансов
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/T.txt" For Input As #file
+
+	nT = 0
+	Do While Not Eof(file)
+		Input #file, temp
+		nT += 1
+	Loop
+
+	Close #file
+
+
+
+	' получаем количество высот
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/H.txt" For Input As #file
+
+	nH = 0
+	Do While Not Eof(file)
+		Input #file, temp
+		nH += 1
+	Loop
+
+	Close #file
+
+
+	' выделяем память
+	ReDim As Double  t_array  (0 To nT-1)
+	ReDim As Integer h_array  (0 To nH-1)
+	ReDim As Double  q_array  (0 To nT-1, 0 To nH-1)
+	ReDim As Double  ti_array (0 To nT-1, 0 To nH-1)
+	ReDim As Double  te_array (0 To nT-1, 0 To nH-1)
+	ReDim As Double  he_array (0 To nT-1, 0 To nH-1)
+	ReDim As Double  hyd_array(0 To nT-1, 0 To nH-1)
+	ReDim As Double  m_array  (0 To nT-1, 0 To nH-1)
+
+
+	' считываем время сеансов
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/T.txt" For Input As #file
+
+	For t = 0 To nT-1
+		Input #file, t_array(t)
+	Next t
+
+	Close #file
+
+
+	' считываем значения высот
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/H.txt" For Input As #file
+
+
+	For h = 0 To nH-1
+		Input #file, h_array(h)
+	Next h
+
+	Close #file
+
+
+	For i As Integer = 0 To nH-1
+		For j As Integer = 0 To nH-1-1
+			If h_array(j) > h_array(j+1) Then
+				Dim As Integer tmp = h_array(j)
+				h_array(j) = h_array(j+1)
+				h_array(j+1) = tmp
+			EndIf
+		Next j
+	Next i
+
+
+
+	ReDim As Double  _ti_array (0 To nT-1, 0 To nH-1)
+	ReDim As Double  _te_array (0 To nT-1, 0 To nH-1)
+	ReDim As Double  _he_array (0 To nT-1, 0 To nH-1)
+	ReDim As Double  _hyd_array(0 To nT-1, 0 To nH-1)
+
+	ReDim As Double  ti2_array (0 To nT-1, 0 To nH-1)
+	ReDim As Double  te2_array (0 To nT-1, 0 To nH-1)
+	ReDim As Double  he2_array (0 To nT-1, 0 To nH-1)
+	ReDim As Double  hyd2_array(0 To nT-1, 0 To nH-1)
+
+	' чтение данных из файла
+	For h = 0 To nH-1
+
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/Q."+ Str(h_array(h)) +".txt" For Input As #file
+		For t = 0 To nT-1
+			Input #file, q_array(t, h)
+		Next t
+		Close #file
+
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/Ti.-1."+ Str(h_array(h)) +".txt" For Input As #file
+		For t = 0 To nT-1
+			Input #file, ti_array(t, h)
+		Next t
+		Close #file
+
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/Te.-1."+ Str(h_array(h)) +".txt" For Input As #file
+		For t = 0 To nT-1
+			Input #file, te_array(t, h)
+		Next t
+		Close #file
+
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/Hyd.-1."+ Str(h_array(h)) +".txt" For Input As #file
+		For t = 0 To nT-1
+			Input #file, hyd_array(t, h)
+		Next t
+		Close #file
+
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/M.-1."+ Str(h_array(h)) +".txt" For Input As #file
+		For t = 0 To nT-1
+			Input #file, m_array(t, h)
+		Next t
+		Close #file
+
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/He.-1."+ Str(h_array(h)) +".txt" For Input As #file
+		For t = 0 To nT-1
+			Input #file, he_array(t, h)
+		Next t
+		Close #file
+
+		/'
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/_Ti.-1."+ Str(h_array(h)) +".txt" For Input As #file
+		For t = 0 To nT-1
+			Input #file, _ti_array(t, h)
+		Next t
+		Close #file
+
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/_Te.-1."+ Str(h_array(h)) +".txt" For Input As #file
+		For t = 0 To nT-1
+			Input #file, _te_array(t, h)
+		Next t
+		Close #file
+
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/_Hyd.-1."+ Str(h_array(h)) +".txt" For Input As #file
+		For t = 0 To nT-1
+			Input #file, _hyd_array(t, h)
+		Next t
+		Close #file
+
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/_He.-1."+ Str(h_array(h)) +".txt" For Input As #file
+		For t = 0 To nT-1
+			Input #file, _he_array(t, h)
+		Next t
+		Close #file
+
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/Ti2.-1."+ Str(h_array(h)) +".txt" For Input As #file
+		For t = 0 To nT-1
+			Input #file, ti2_array(t, h)
+		Next t
+		Close #file
+
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/Te2.-1."+ Str(h_array(h)) +".txt" For Input As #file
+		For t = 0 To nT-1
+			Input #file, te2_array(t, h)
+		Next t
+		Close #file
+
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/Hyd2.-1."+ Str(h_array(h)) +".txt" For Input As #file
+		For t = 0 To nT-1
+			Input #file, hyd2_array(t, h)
+		Next t
+		Close #file
+
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/He2.-1."+ Str(h_array(h)) +".txt" For Input As #file
+		For t = 0 To nT-1
+			Input #file, he2_array(t, h)
+		Next t
+		Close #file
+		'/
+
+	Next h
+
+
+
+	' запись Ti
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/Ti.txt" For Output As #file
+
+	Print #file, "      0 ";
+
+	For h = 0 To nH-1
+		Print #file, Using "###### "; h_array(h);
+	Next h
+
+	For t = 0 To nT-1
+		Print #file,
+		Print #file, Using "##.#### "; t_array(t);
+		For h = 0 To nH-1
+			Print #file, Using "###### "; ti_array(t, h);
+		Next h
+	Next t
+
+	Close #file
+
+	/'
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/_Ti.txt" For Output As #file
+
+	Print #file, "      0 ";
+
+	For h = 0 To nH-1
+		Print #file, Using "###### "; h_array(h);
+	Next h
+
+	For t = 0 To nT-1
+		Print #file,
+		Print #file, Using "##.#### "; t_array(t);
+		For h = 0 To nH-1
+			Print #file, Using "###### "; _ti_array(t, h);
+		Next h
+	Next t
+
+	Close #file
+
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/Ti2.txt" For Output As #file
+
+
+	Print #file, "      0 ";
+
+	For h = 0 To nH-1
+		Print #file, Using "###### "; h_array(h);
+	Next h
+
+	For t = 0 To nT-1
+		Print #file,
+		Print #file, Using "##.#### "; t_array(t);
+		For h = 0 To nH-1
+			Print #file, Using "###### "; ti2_array(t, h);
+		Next h
+	Next t
+
+	Close #file
+	'/
+
+	' запись Te
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/Te.txt" For Output As #file
+
+
+	Print #file, "      0 ";
+
+	For h = 0 To nH-1
+		Print #file, Using "###### "; h_array(h);
+	Next h
+
+	For t = 0 To nT-1
+		Print #file,
+		Print #file, Using "##.#### "; t_array(t);
+		For h = 0 To nH-1
+			Print #file, Using "###### "; te_array(t, h);
+		Next h
+	Next t
+
+	Close #file
+
+	/'
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/_Te.txt" For Output As #file
+
+	Print #file, "      0 ";
+
+	For h = 0 To nH-1
+		Print #file, Using "###### "; h_array(h);
+	Next h
+
+	For t = 0 To nT-1
+		Print #file,
+		Print #file, Using "##.#### "; t_array(t);
+		For h = 0 To nH-1
+			Print #file, Using "###### "; _te_array(t, h);
+		Next h
+	Next t
+
+	Close #file
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/Te2.txt" For Output As #file
+
+
+	Print #file, "      0 ";
+
+	For h = 0 To nH-1
+		Print #file, Using "###### "; h_array(h);
+	Next h
+
+	For t = 0 To nT-1
+		Print #file,
+		Print #file, Using "##.#### "; t_array(t);
+		For h = 0 To nH-1
+			Print #file, Using "###### "; te2_array(t, h);
+		Next h
+	Next t
+
+	Close #file
+	'/
+
+	' запись He
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/He.txt" For Output As #file
+
+	Print #file, "      0 ";
+
+	For h = 0 To nH-1
+		Print #file, Using "###### "; h_array(h);
+	Next h
+
+	For t = 0 To nT-1
+		Print #file,
+		Print #file, Using "##.#### "; t_array(t);
+		For h = 0 To nH-1
+			Print #file, Using "###.## "; he_array(t, h);
+		Next h
+	Next t
+
+	Close #file
+
+	/'
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/_He.txt" For Output As #file
+
+
+	Print #file, "      0 ";
+
+	For h = 0 To nH-1
+		Print #file, Using "###### "; h_array(h);
+	Next h
+
+	For t = 0 To nT-1
+		Print #file,
+		Print #file, Using "##.#### "; t_array(t);
+		For h = 0 To nH-1
+			Print #file, Using "###.## "; _he_array(t, h);
+		Next h
+	Next t
+
+	Close #file
+
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/He2.txt" For Output As #file
+
+
+	Print #file, "      0 ";
+
+	For h = 0 To nH-1
+		Print #file, Using "###### "; h_array(h);
+	Next h
+
+	For t = 0 To nT-1
+		Print #file,
+		Print #file, Using "##.#### "; t_array(t);
+		For h = 0 To nH-1
+			Print #file, Using "###.## "; he2_array(t, h);
+		Next h
+	Next t
+
+	Close #file
+	'/
+
+	' запись Hyd
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/Hyd.txt" For Output As #file
+
+	Print #file, "      0 ";
+
+	For h = 0 To nH-1
+		Print #file, Using "###### "; h_array(h);
+	Next h
+
+	For t = 0 To nT-1
+		Print #file,
+		Print #file, Using "##.#### "; t_array(t);
+		For h = 0 To nH-1
+			Print #file, Using "###.## "; hyd_array(t, h)/2;
+		Next h
+	Next t
+
+	Close #file
+
+	/'
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/_Hyd.txt" For Output As #file
+
+	Print #file, "      0 ";
+
+	For h = 0 To nH-1
+		Print #file, Using "###### "; h_array(h);
+	Next h
+
+	For t = 0 To nT-1
+		Print #file,
+		Print #file, Using "##.#### "; t_array(t);
+		For h = 0 To nH-1
+			Print #file, Using "###.## "; _hyd_array(t, h)/2;
+		Next h
+	Next t
+
+	Close #file
+
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/Hyd2.txt" For Output As #file
+
+	Print #file, "      0 ";
+
+	For h = 0 To nH-1
+		Print #file, Using "###### "; h_array(h);
+	Next h
+
+	For t = 0 To nT-1
+		Print #file,
+		Print #file, Using "##.#### "; t_array(t);
+		For h = 0 To nH-1
+			Print #file, Using "###.## "; hyd2_array(t, h)/2;
+		Next h
+	Next t
+
+	Close #file
+'/
+
+
+	' запись Q
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/Q.txt" For Output As #file
+
+	Print #file, "      0 ";
+
+	h = Config_h_min_q
+	Do
+		Print #file, Using " ###### "; Hkm(h);
+		h += 1
+	Loop Until Hkm(h) > h_array(nH-1)
+
+	For t = 0 To nT-1
+		Print #file,
+		Print #file, Using "##.#### "; t_array(t);
+		h = Config_h_min_q
+		Do
+			Print #file, Using "###.### "; dat_all_str(h, t).q;
+			h += 1
+		Loop Until Hkm(h) > h_array(nH-1)
+	Next t
+
+	Close #file
+
+
+
+
+	' запись Qh2
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/Qh2.txt" For Output As #file
+
+
+	Print #file, "      0 ";
+
+	h = Config_h_min_q
+	Do
+		Print #file, Using "###### "; Hkm(h);
+		h += 1
+	Loop Until Hkm(h) > h_array(nH-1)
+
+	For t = 0 To nT-1
+		Print #file,
+		Print #file, Using "##.#### "; t_array(t);
+		h = Config_h_min_q
+		Do
+			Print #file, Using "##.###^^^^ "; dat_all_str(h, t).q*(Hkm(h)^2);
+			h += 1
+		Loop Until Hkm(h) > h_array(nH-1)
+	Next t
+
+	Close #file
+
+
+	MkDir(SEANS_DIR_OUT + DirectoryOutput+"/step3")
+
+	CopyFile( SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/Ti.F.txt", SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/Ti.FLIP.FLIP.txt", 0)
+	CopyFile( SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/Te.F.txt", SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/Te.FLIP.FLIP.txt", 0)
+	CopyFile( SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/Hyd.F.txt", SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/Hyd.FLIP.FLIP.txt", 0)
+	CopyFile( SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/He.F.txt", SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/He.FLIP.FLIP.txt", 0)
+	CopyFile( SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/O.F.txt", SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/O.FLIP.FLIP.txt", 0)
+	CopyFile( SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/Ne.F.txt", SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/Ne.FLIP.FLIP.txt", 0)
+	CopyFile( SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/Ti.txt", SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/Ti.FLIP.txt", 0)
+	CopyFile( SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/Te.txt", SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/Te.FLIP.txt", 0)
+	CopyFile( SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/Hyd.txt", SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/Hyd.FLIP.txt", 0)
+	CopyFile( SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/He.txt", SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/He.FLIP.txt", 0)
+
+End Sub
+
+
+''' ================================================================
+
+
+Sub interpolate_ti(ByVal h As Integer, ByVal z As Integer)
+
+	ReDim As Integer label(0 To seans_num_out-1)
+
+	ReDim As Double ti_trand(0 To seans_num_out-1)
+	ReDim As Double hyd_trand(0 To seans_num_out-1)
+
+	ReDim As Double ti(0 To seans_num_out-1)
+	ReDim As Double hyd(0 To seans_num_out-1)
+
+	ReDim As Double prod(0 To seans_num_out-1)
+
+	Dim As Double mean, dev
+
+	Dim As Integer file, t, i
+
+
+	FileCopy (SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Ti."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt", SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "+Ti."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt")
+
+	' загрузка временного хода Ti
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/Ti."+ Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, ti(t)
+	Next t
+	Close #file
+
+	' загрузка временного хода H+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Hyd."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, hyd(t)
+	Next t
+	Close #file
+
+	array_trand_d(@ti(0), @ti_trand(0), Config_ti_interpolate_num, seans_num_out)
+	array_trand_d(@hyd(0), @hyd_trand(0), Config_ti_interpolate_num, seans_num_out)
+
+
+	For t = 0 To seans_num_out-1
+		prod(t) = -hyd(t)*ti(t)
+	Next t
+
+
+	mean = stat_mean_d(@prod(0), seans_num_out)
+	dev = stat_deviation_d(@prod(0), seans_num_out)
+
+
+	For t = 0 To seans_num_out-1
+		if Abs(prod(t)-mean) > Config_ti_interpolate_dev*dev Then
+			label(t) = 1
+		Else
+			label(t) = 0
+		EndIf
+	Next t
+
+
+
+	' загрузка временного хода Ti
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/Ti."+ Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+	For t = 0 To seans_num_out-1
+		Input #file, ti(t)
+	Next t
+	Close #file
+
+	For t = 0 To seans_num_out-1
+
+		Dim As Integer c = 0
+		Dim As Double d = 0
+
+
+		i = 0
+		Do While (c < Config_ti_interpolate_points\2)
+
+			If t-i < 0 Then
+				Exit Do
+			EndIf
+
+			If label(t-i) = 1 Then
+				c += 1
+				d += ti(t-i)
+			EndIf
+
+			i += 1
+
+		Loop
+
+		i = 0
+		Do While (c < Config_ti_interpolate_points\2)
+
+			If t+i > seans_num_out-1 Then
+				Exit Do
+			EndIf
+
+			If label(t+i) = 1 Then
+				c += 1
+				d += ti(t+i)
+			EndIf
+
+			i += 1
+
+		Loop
+
+		If c <> 0 Then
+			ti(t) = ( CInt(d/c) \ 20 ) * 20
+		EndIf
+
+	Next t
+
+
+	' запись временного хода произведения вариаций
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Var."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+	For t = 0 To seans_num_out-1
+		Print #file,  Using "#######.# "; prod(t)
+	Next t
+	Close #file
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Mean+Dev."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+	Print #file,  Using "#######.#  #######.# "; mean; dev
+	Close #file
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+ "Label."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+	For t = 0 To seans_num_out-1
+		Print #file,  Using "# "; label(t)
+	Next t
+	Close #file
+
+	' запись временного хода Ti
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step5/Ti."+ Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+
+	For t = 0 To seans_num_out-1
+		Print #file, Using "####.# "; ti(t)
+	Next t
+	Close #file
+
+End Sub
+
+''' ================================================================
+
