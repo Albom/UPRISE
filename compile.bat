@@ -89,26 +89,26 @@ mkdir UPRISE\in
 mkdir UPRISE\out
 
 echo =================================================================
-echo Copying files...
+echo Moving and copying files...
 
-copy UPRISE.exe UPRISE
-copy 1_UPRISE_short.exe UPRISE
-copy 1_UPRISE_view_SNew.exe UPRISE
-copy 1_UPRISE_view_SOld.exe UPRISE
-copy 1_UPRISE_view_COld.exe UPRISE
-copy 2_UPRISE_processing_SNew.exe UPRISE
-copy 2_UPRISE_processing_SOld.exe UPRISE
-copy 2_UPRISE_processing_COld.exe UPRISE
-copy 2_UPRISE_processing_SNew_Minus.exe UPRISE
-copy 3_UPRISE_estimate.exe UPRISE
-copy 3_UPRISE_estimate_wave.exe UPRISE
-copy 3_UPRISE_estimate_COld.exe UPRISE
-copy 3_UPRISE_estimate_FLIP_te_ti.exe UPRISE
-copy 3_UPRISE_estimate_FLIP_te.exe UPRISE
-copy 3_UPRISE_estimate_FLIP_te_storm.exe UPRISE
-copy 3_UPRISE_estimate_storm.exe UPRISE
-copy 3_UPRISE_estimate_newton.exe UPRISE
-copy 3_UPRISE_velocity.exe UPRISE
+move UPRISE.exe UPRISE\UPRISE.exe 
+move 1_UPRISE_short.exe UPRISE\1_UPRISE_short.exe
+move 1_UPRISE_view_SNew.exe UPRISE\1_UPRISE_view_SNew.exe
+move 1_UPRISE_view_SOld.exe UPRISE\1_UPRISE_view_SOld.exe
+move 1_UPRISE_view_COld.exe UPRISE\1_UPRISE_view_COld.exe
+move 2_UPRISE_processing_SNew.exe UPRISE\2_UPRISE_processing_SNew.exe
+move 2_UPRISE_processing_SOld.exe UPRISE\2_UPRISE_processing_SOld.exe
+move 2_UPRISE_processing_COld.exe UPRISE\2_UPRISE_processing_COld.exe
+move 2_UPRISE_processing_SNew_Minus.exe UPRISE\2_UPRISE_processing_SNew_Minus.exe
+move 3_UPRISE_estimate.exe UPRISE\3_UPRISE_estimate.exe
+move 3_UPRISE_estimate_wave.exe UPRISE\3_UPRISE_estimate_wave.exe
+move 3_UPRISE_estimate_COld.exe UPRISE\3_UPRISE_estimate_COld.exe
+move 3_UPRISE_estimate_FLIP_te_ti.exe UPRISE\3_UPRISE_estimate_FLIP_te_ti.exe
+move 3_UPRISE_estimate_FLIP_te.exe UPRISE\3_UPRISE_estimate_FLIP_te.exe
+move 3_UPRISE_estimate_FLIP_te_storm.exe UPRISE\3_UPRISE_estimate_FLIP_te_storm.exe
+move 3_UPRISE_estimate_storm.exe UPRISE\3_UPRISE_estimate_storm.exe
+move 3_UPRISE_estimate_newton.exe UPRISE\3_UPRISE_estimate_newton.exe
+move 3_UPRISE_velocity.exe UPRISE\3_UPRISE_velocity.exe
 
 copy albom.dll UPRISE
 copy rz291014.dat UPRISE
