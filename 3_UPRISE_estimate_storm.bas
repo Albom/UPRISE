@@ -602,7 +602,8 @@ Color 15
 Dim Shared As Integer Start_storm_time, End_storm_time
 Input "¬ведите начальный номер сеанса (дл€ Te > 4000 K): ", Start_storm_time
 Input "¬ведите конечный номер сеанса (дл€ Te > 4000 K): ", End_storm_time
-
+Dim Shared As Integer te_max_global = 5000
+Input "¬ведите максимально возможное значение Te: ", te_max_global
 Cls
 Color 11
 
@@ -1420,8 +1421,8 @@ Sub inverse_problem_v1_ambig_storm(ByVal h As Integer, ByVal z As Integer, ByVal
 		te_min = 500
 	EndIf
 
-	If te_max > 5000 Then
-		te_max = 5000
+	If te_max > te_max_global Then
+		te_max = te_max_global
 	EndIf
 
 	Dim As Double ti_max = RegRange(3, 0)
@@ -2133,7 +2134,7 @@ Sub ranges_reset(ByVal h As Integer, t_start As Integer = -1 , t_end As Integer 
 
 	For t = t_start To t_end
 		dat_all_str(h, t).te_start = 500
-		dat_all_str(h, t).te_end = 5000
+		dat_all_str(h, t).te_end = te_max_global
 
 		dat_all_str(h, t).ti_start = 500
 		dat_all_str(h, t).ti_end = 5000
