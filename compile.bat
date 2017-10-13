@@ -111,11 +111,8 @@ move 3_UPRISE_estimate_newton.exe UPRISE\3_UPRISE_estimate_newton.exe
 move 3_UPRISE_velocity.exe UPRISE\3_UPRISE_velocity.exe
 
 copy albom.dll UPRISE
-copy rz291014.dat UPRISE
-copy razr4v.dat UPRISE
-copy filter.dat UPRISE
-copy filter_COld.dat UPRISE
 
+xcopy hardware UPRISE\hardware /e /i /h
 xcopy config UPRISE\config /e /i /h
 xcopy ambig UPRISE\ambig /e /i /h
 

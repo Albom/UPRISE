@@ -687,7 +687,7 @@ If isConv = 0 Then
 
 	' загрузка АКФ ИХ фильтра
 	file = FreeFile()
-	Open "filter.dat" For Input As #file
+	Open "hardware/filter.dat" For Input As #file
 	If Err <> 0 Then
 		PrintErrorToLog(ErrorFilter, __FILE__, __LINE__)
 		End

@@ -256,7 +256,7 @@ MkDir(SEANS_DIR_OUT + DirectoryOutput+"/step3")
 
 
 file = FreeFile()
-Open "filter.dat" For Input As #file
+Open "hardware/filter.dat" For Input As #file
 If Err <> 0 Then
 	PrintErrorToLog(ErrorFilter, __FILE__, __LINE__)
 	End
