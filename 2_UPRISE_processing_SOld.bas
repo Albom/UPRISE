@@ -101,7 +101,7 @@ Screen 20
 
 Dim As String  tmp
 file = FreeFile()
-Open "config.dat" For Input As #file
+Open "config/config.dat" For Input As #file
 Input #file, razr_filename
 Input #file, tmp
 Input #file, tmp

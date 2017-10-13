@@ -115,13 +115,8 @@ copy rz291014.dat UPRISE
 copy razr4v.dat UPRISE
 copy filter.dat UPRISE
 copy filter_COld.dat UPRISE
-copy config.dat UPRISE
-copy config_wave.dat UPRISE
-copy config_velocity.dat UPRISE
-copy config_short.dat UPRISE
-copy config_COld.dat UPRISE
-copy config_screen.dat UPRISE
 
+xcopy config UPRISE\config /e /i /h
 xcopy ambig UPRISE\ambig /e /i /h
 
 copy Report.xls UPRISE

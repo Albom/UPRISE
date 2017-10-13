@@ -119,7 +119,7 @@ Print "================================"
 
 
 file = FreeFile()
-Open "config_wave.dat" For Input As #file
+Open "config/config_wave.dat" For Input As #file
 If Err <> 0 Then
 	PrintErrorToLog(ErrorSeansNotLoaded, __FILE__, __LINE__)
 	End

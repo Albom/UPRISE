@@ -88,7 +88,6 @@ Dim As as_file_struct as_file_str ' буфер для выходного файла
 Dim Shared noiseAcfCos(0 To 18)	As Double  Ptr
 Dim Shared noiseAcfSin(0 To 18)	As Double  Ptr
 Dim Shared noisePShort As Double  Ptr
-'Dim Shared signalToNoiseRatio(0 To 679) As Double  Ptr
 Dim Shared signalToNoiseRatioShort(0 To 679) As Double  Ptr
 
 Dim As Integer partrap = 0
@@ -104,7 +103,7 @@ Screen 20
 
 
 file = FreeFile()
-Open "config.dat" For Input As #file
+Open "config/config.dat" For Input As #file
 Input #file, razr_filename
 Close #file
 

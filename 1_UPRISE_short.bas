@@ -109,7 +109,7 @@ Dim As Integer screen_height = 768
 
 ' Загрузка конфигурационного файла
 file = FreeFile()
-Open "config_screen.dat" For Input As #file
+Open "config/config_screen.dat" For Input As #file
 If Err <> 0 Then
 	PrintErrorToLog(ErrorFilter, __FILE__, __LINE__)
 	End
@@ -137,7 +137,7 @@ DY = Y0 * 0.8
 Open Err For Output As #1
 
 file = FreeFile()
-Open "config_short.dat" For Input As #file
+Open "config/config_short.dat" For Input As #file
 Input #file, razr_filename
 Input #file, h_start
 Input #file, h_end

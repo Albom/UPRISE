@@ -124,7 +124,7 @@ Color 15
 
 
 file = FreeFile()
-Open "config_COld.dat" For Input As #file
+Open "config/config_COld.dat" For Input As #file
 
 Input #file, tmp_string
 

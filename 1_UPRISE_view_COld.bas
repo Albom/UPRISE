@@ -71,7 +71,7 @@ Open Err For Output As #1
 ' Загрузка конфигурационного файла
 Dim As Integer file
 file = FreeFile()
-Open "config_screen.dat" For Input As #file
+Open "config/config_screen.dat" For Input As #file
 If Err <> 0 Then
 	PrintErrorToLog(ErrorFilter, __FILE__, __LINE__)
 	End
@@ -95,22 +95,8 @@ ScreenInfo ,,,,,,driver
 Print #1, "Screen driver: "; driver
 
 Dim As String  tmp
-'Dim Shared As Integer pulseLength
-file = FreeFile()
-/'
-Open "config.dat" For Input As #file
-Input #file, tmp
-Input #file, tmp
-Input #file, tmp
-Input #file, tmp
-Input #file, pulseLength
-Close #file
 
-If (pulseLength <> 663) And (pulseLength <> 795) Then
-	PrintErrorToLog(ErrorInputData, __FILE__, __LINE__)
-	End
-EndIf
-'/
+file = FreeFile()
 
 Cls
 Color 11

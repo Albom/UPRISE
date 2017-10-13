@@ -99,7 +99,7 @@ Color 15
 
 
 file = FreeFile()
-Open "config_velocity.dat" For Input As #file
+Open "config/config_velocity.dat" For Input As #file
 If Err() <> 0 Then
 	Input "Hmin: ", Hmin
 	Input "Hmax: ", Hmax

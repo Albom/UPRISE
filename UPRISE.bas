@@ -180,7 +180,7 @@ Do
 					ShellExecute(CPtr(Any Ptr, hwnd), "explore", "out", NULL, NULL, SW_SHOWNORMAL)
 
 				Case BTN_Options
-					ShellExecute(CPtr(Any Ptr, hwnd), "open", "config.dat", NULL, NULL, SW_SHOWNORMAL)
+					ShellExecute(CPtr(Any Ptr, hwnd), "open", "config/config.dat", NULL, NULL, SW_SHOWNORMAL)
 
 				Case BTN_SAVE
 

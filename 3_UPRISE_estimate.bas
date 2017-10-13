@@ -280,7 +280,7 @@ Color 15
 
 
 file = FreeFile()
-Open "config.dat" For Input As #file
+Open "config/config.dat" For Input As #file
 If Err() > 0 Then
 
 	isTrapVar = 0
@@ -681,7 +681,7 @@ seans_num_out = seans_num_in
 DeleteDir(SEANS_DIR_OUT + DirectoryOutput+"/step3", /'FOF_ALLOWUNDO Or '/FOF_NOCONFIRMATION Or FOF_SILENT)
 MkDir(SEANS_DIR_OUT + DirectoryOutput+"/step3")
 
-FileCopy("config.dat", SEANS_DIR_OUT + DirectoryOutput+"/step3/config.dat")
+FileCopy("config/config.dat", SEANS_DIR_OUT + DirectoryOutput+"/step3/config.dat")
 
 If isConv = 0 Then
 

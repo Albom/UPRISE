@@ -104,7 +104,7 @@ Screen 20
 
 
 file = FreeFile()
-Open "config.dat" For Input As #file
+Open "config/config.dat" For Input As #file
 Input #file, razr_filename
 Close #file
 
