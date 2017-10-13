@@ -1530,12 +1530,9 @@ Sub inverse_problem_v2_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_
 	Dim As Double acf_lib(0 To 255)
 	Dim As Double acf_teor(0 To 255)
 
-
 	For hyd = 0 To libraries_num-1 Step step_hyd
 
 		For t = 0 To seans_num_out-1 ' по времени
-
-			'If heCurrent <= heRange(t) Then
 
 			If ( hyd >= RegRange(4, t) ) And ( hyd <= RegRange(5, t) ) Then
 
@@ -1552,15 +1549,11 @@ Sub inverse_problem_v2_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_
 									If (te >= ti And Config_Overlap_prohibition = 1) Or (Config_Overlap_prohibition = 0) Then
 										If (te/ti <= 4) And (te/ti >= 0.7) Then
 
-
-
 											If acf_library_light_short( libraries_file(hyd), @temperatures(0), temperatures_len, ti, te, @acf_lib(25), num_point_acf) <> 0 Then
-
 
 												For tau = 0 To 24
 													acf_lib(tau) = acf_lib(50-tau)
 												Next tau
-
 
 												For lag = 0 To 18
 													acf_teor(lag) = 0
@@ -1568,10 +1561,6 @@ Sub inverse_problem_v2_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_
 														acf_teor(lag) += acf_lib(tau) * AmbigCoeff(tau, (h-hMin)\hStep, t, lag)
 													Next tau
 												Next lag
-
-												'!											For lag = 0 To 18
-												'!												acf_teor(lag) /= lag+1
-												'!											Next lag
 
 												d = 0
 												If Config_sigma <> 0 Then
@@ -1629,8 +1618,6 @@ Sub inverse_problem_v2_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_
 				EndIf
 
 			EndIf
-
-			'EndIf
 
 		Next t
 
@@ -1707,8 +1694,6 @@ Sub inverse_problem_v2_conv(ByVal h As Integer, ByVal z As Integer, ByVal step_h
 				EndIf
 
 			EndIf
-
-			'			EndIf
 
 		Next t
 
