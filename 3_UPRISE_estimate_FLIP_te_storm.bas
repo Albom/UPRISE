@@ -1517,7 +1517,7 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 
 
 		ranges_set_FLIP(h) ' установка температур согласно FLIP и очистка погрешностей
-
+/'
 		If z = 0 Then
 			inverse_problem_v2_ambig(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_1)
 			ranges_set(h, 0, 0, Config_range_ti_2)
@@ -1529,6 +1529,21 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 			ranges_set(h, 0, 0, Config_range_ti_2)
 			inverse_problem_v2_ambig_storm(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_2, he)
 			ranges_set(h, 0, 0, Config_range_ti_3)
+			inverse_problem_v2_ambig_storm(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_3, he)
+		EndIf
+'/
+
+		If z = 0 Then
+			inverse_problem_v2_ambig(h, z, Config_step_h_1, Config_step_te_3, Config_step_ti_1)
+			ranges_set(h, Config_range_h_2, 0, Config_range_ti_2)
+			inverse_problem_v2_ambig(h, z, Config_step_h_2, Config_step_te_3, Config_step_ti_2)
+			ranges_set(h, Config_range_h_3, 0, Config_range_ti_3)
+			inverse_problem_v2_ambig(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_3)
+		Else
+			inverse_problem_v2_ambig_storm(h, z, Config_step_h_1, Config_step_te_3, Config_step_ti_1, he)
+			ranges_set(h, Config_range_h_2, 0, Config_range_ti_2)
+			inverse_problem_v2_ambig_storm(h, z, Config_step_h_2, Config_step_te_3, Config_step_ti_2, he)
+			ranges_set(h, Config_range_h_3, 0, Config_range_ti_3)
 			inverse_problem_v2_ambig_storm(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_3, he)
 		EndIf
 
@@ -1982,7 +1997,6 @@ Sub inverse_problem_v2_ambig_storm(ByVal h As Integer, ByVal z As Integer, ByVal
 	Dim As Double acf_teor(0 To 255)
 
 	Dim As Double he_
-	
 	he_ = he/100.0
 
 	For hyd = 0 To libraries_num-1 Step step_hyd
