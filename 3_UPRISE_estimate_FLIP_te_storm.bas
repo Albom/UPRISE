@@ -602,8 +602,6 @@ Color 15
 Dim Shared As Integer Start_storm_time, End_storm_time
 Input "¬ведите начальный номер сеанса (дл€ Te > 4000 K): ", Start_storm_time
 Input "¬ведите конечный номер сеанса (дл€ Te > 4000 K): ", End_storm_time
-Dim Shared As Integer te_max_global = 5000
-Input "¬ведите максимально возможное значение Te: ", te_max_global
 Cls()
 
 Color 11
@@ -1100,9 +1098,6 @@ For t = 0 To seans_num_out-1
 		te_flip_all(r, t) = (CInt(te_flip_all(r, t))\20)*20
 		If te_flip_all(r, t) < 500 Then
 			te_flip_all(r, t) = 500
-		EndIf
-		If te_flip_all(r, t) > te_max_global Then
-			te_flip_all(r, t) = te_max_global
 		EndIf
 	Next
 
