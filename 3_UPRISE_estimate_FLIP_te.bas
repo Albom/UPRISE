@@ -1847,19 +1847,13 @@ Sub inverse_problem_v2_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_
 
 		For t = 0 To seans_num_out-1 ' по времени
 
-			'If heCurrent <= heRange(t) Then
-
 			If ( hyd >= RegRange(4, t) ) And ( hyd <= RegRange(5, t) ) Then
 
 				If (hyd >= dat_all_str(h, t).hyd_start) And (hyd <= dat_all_str(h, t).hyd_end) Then
 
 					For te = dat_all_str(h, t).te_start To dat_all_str(h, t).te_end Step step_te
 
-						'If ( te >= RegRange(0, t) ) And ( te <= RegRange(1, t) ) Then
-
 						For ti = dat_all_str(h, t).ti_start To dat_all_str(h, t).ti_end Step step_ti
-
-							'			If ( ti >= RegRange(2, t) ) And ( ti <= RegRange(3, t) ) Then
 
 							If (te >= ti And Config_Overlap_prohibition = 1) Or (Config_Overlap_prohibition = 0) Then
 								If (te/ti <= 4) And (te/ti >= 1.0) Then
@@ -1922,27 +1916,19 @@ Sub inverse_problem_v2_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_
 											dat_all_str(h, t).ratio = ratio
 										EndIf
 
-										'											Else
-										'												Print t, ti, te
 									EndIf
 
 								EndIf
 
 							EndIf
 
-							'			EndIf
-
 						Next ti
-
-						'	EndIf
 
 					Next te
 
 				EndIf
 
 			EndIf
-
-			'EndIf
 
 		Next t
 
@@ -2170,8 +2156,8 @@ Sub ranges_set_FLIP(ByVal h As Integer)
 		dat_all_str(h, t).te_start = te_flip_all(h, t)
 		dat_all_str(h, t).te_end = te_flip_all(h, t)
 
-		dat_all_str(h, t).ti_start = 500'ti_flip_all(h, t)
-		dat_all_str(h, t).ti_end = 4000'ti_flip_all(h, t)
+		dat_all_str(h, t).ti_start = 500
+		dat_all_str(h, t).ti_end = 4000
 
 		dat_all_str(h, t).hyd_start = 0
 		dat_all_str(h, t).hyd_end = libraries_num-1

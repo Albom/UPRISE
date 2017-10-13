@@ -3664,8 +3664,6 @@ Sub draw_d(ByVal h As Integer, ByVal z As Integer)
 	ReDim As Double  tmp_d_d(0 To He_max+1, 0 To seans_num_out-1)
 
 	Dim As Double SCALE_Y = 750
-	'	Dim As Integer START_X = 0
-
 
 	Dim As Integer key
 	Dim As Integer offset

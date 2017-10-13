@@ -118,7 +118,7 @@ Open Err For Output As #1
 
 Cls
 Color 11
-Print "UPRISE version " + UPRISE_VERSION 
+Print "UPRISE version " + UPRISE_VERSION
 Print "(Unified Processing of the Results of Incoherent Scatter Experiments)"
 
 Print
@@ -142,7 +142,7 @@ Print "Исходные данные, находящиеся в папке " + Chr(34) + "in" + Chr(34) + ":"
 Color 10
 Dim As String fn
 fn = Dir("./in/*", fbDirectory)
-While Len(fn) > 0 
+While Len(fn) > 0
 	fn = Dir()
 	If Len(fn)=6 Then
 		Print fn;"  ";
@@ -666,15 +666,6 @@ If noisePShort = NULL Then
 	End
 EndIf
 
-/'
-For h = 0 To 679
-	signalToNoiseRatio(h) = Callocate( seans_out_num, SizeOf(Double) )
-	If signalToNoiseRatio(h) = NULL Then
-		PrintErrorToLog(ErrorNotEnoughMemory, __FILE__, __LINE__)
-		End
-	EndIf
-Next h
-'/
 For h = 0 To 679
 	signalToNoiseRatioShort(h) = Callocate( seans_out_num, SizeOf(Double) )
 	If signalToNoiseRatioShort(h) = NULL Then
@@ -699,17 +690,6 @@ For t = 0 To seans_out_num-1
 	Next tau
 
 
-	' Вычитание шума
-	/'
-	For h = 0 To 679
-		For tau = 0 To 18
-			seans_str_out(h).datCos(tau)[t] -= noiseAcfCos(tau)[t]
-			seans_str_out(h).datSin(tau)[t] -= noiseAcfSin(tau)[t]
-		Next tau
-	Next h
-	'/
-
-
 	noisePShort[t] = 0
 	For h = 500 To 599
 		noisePShort[t] += seans_str_out(h).pShort[t]
@@ -730,44 +710,6 @@ Print "OK"
 Print "Учёт характеристики разрядника... ";
 
 For t = 0 To seans_out_num-1
-
-
-	' учёт разрядника
-	/'
-	For h = 0 To 679 ' по высоте
-		' вспомогательные локальные переменные (видны только в цикле)
-		Dim As Integer l1, l2 ' индексы
-		Dim As Double  r1, r2 ' значения коэффициента передачи
-
-		l1 = h
-		For tau = 0 To 18 ' по задержке
-
-			l2 = h+tau
-
-			If l1 < 300 Then
-				r1 = razr(l1)
-			Else
-				r1 = 1.0
-			EndIf
-
-			If l2 < 300 Then
-				r2 = razr(l2)
-			Else
-				r2 = 1.0
-			EndIf
-
-			If r1*r2 > 1e-6 Then
-				seans_str_out(h).datCos(tau)[t] /= Sqr( r1*r2 )
-				seans_str_out(h).datSin(tau)[t] /= Sqr( r1*r2 )
-			Else
-				seans_str_out(h).datCos(tau)[t] = 0
-				seans_str_out(h).datSin(tau)[t] = 0
-			EndIf
-
-		Next tau
-
-	Next h
-'/
 
 	' учёт разрядника для профиля мощности по короткому импульсу
 	For h = 0 To 679-12 ' по высоте
@@ -809,61 +751,19 @@ For t = 0 To seans_out_num-1
 
 	For h = 0 To 679
 
-'		If h >= 18+partrap And h <= 679-partrap Then
-
-			For tau = 0 To 18
-/'
-				seans_str_out(h).datCosTrap(tau)[t] = 0
-				For z As Integer = h-tau-partrap To h+partrap ' по высоте
-					seans_str_out(h).datCosTrap(tau)[t] += seans_str_out(z).datCos(tau)[t]
-				Next z
-
-				If is_divide = 1 Then
-					seans_str_out(h).datCosTrap(tau)[t]  /= tau+2*partrap+1 ' делить на количество слагаемых
-				EndIf
-'/ 
+		For tau = 0 To 18
 			seans_str_out(h).datCosTrap(tau)[t] = seans_str_out(h).datCos(tau)[t] '!!!
-			
-			Next tau
-/'
-		Else
-
-			For tau = 0 To 18
-				seans_str_out(h).datCosTrap(tau)[t]  = 0
-			Next tau
-
-		EndIf
-'/
+		Next tau
 	Next h
 
 	' 2) для синусной составляющей
 
 	For h = 0 To 679
 
-'		If h >= 18+partrap And h <= 679-partrap Then
-
-			For tau = 0 To 18
-/'
-				seans_str_out(h).datSinTrap(tau)[t] = 0
-				For z As Integer = h-tau-partrap To h+partrap ' по высоте
-					seans_str_out(h).datSinTrap(tau)[t]  += seans_str_out(z).datSin(tau)[t]
-				Next z
-
-				If is_divide = 1 Then
-					seans_str_out(h).datSinTrap(tau)[t] /= tau+2*partrap+1 ' делить на количество слагаемых
-				EndIf
-'/
+		For tau = 0 To 18
 			seans_str_out(h).datSinTrap(tau)[t] = seans_str_out(h).datSin(tau)[t] '!!!
-			Next tau
+		Next tau
 
-/'		Else
-
-			For tau = 0 To 18
-				seans_str_out(h).datSinTrap(tau)[t] = 0
-			Next tau
-
-		EndIf
-'/
 	Next h
 
 Next t

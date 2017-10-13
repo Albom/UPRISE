@@ -773,13 +773,6 @@ Print "OK"
 
 ReDim As Double time_decimal_all(0 To seans_num_out-1)
 
-'file = FreeFile()
-'Open SEANS_DIR_OUT + DirectoryOutput+"/step5/"+"T.txt" For Input As #file
-'For t = 0 To seans_num_out-1 ' по времени
-'	Input #file, time_decimal_all(t)
-'Next
-'Close #file
-
 
 
 
@@ -817,7 +810,6 @@ For t = 0 To seans_num_out-1 ' по времени
 	Dim As Integer day1, month1, year1
 	date_from_str(@day1, @month1, @year1, @as_file_in.date_ )
 	time_decimal_all(t) = date_2unixtime(day1, month1, year1, hh, mm, ss)
-	'	Print #1, time_decimal_all(t)
 
 	For h = 0 To nh-1
 
@@ -1295,22 +1287,6 @@ Next t
 
 Close #file
 
-'file = FreeFile()
-'Open "out.txt" For Output As #file
-'Print #file, Using "##### "; 0;
-'For c As Integer = 0 To seans_num_out-1
-'	Print #file, Using "############## "; time_decimal_all(c);
-'Next
-'Print #file,
-'For r As Integer = 0 To nH-1
-'	Print #file, Using "##### "; Hkm(r);
-'	For c As Integer = 0 To seans_num_out-1
-'		Print #file, Using "#####          "; ti_flip_all(r, c);
-'	Next
-'	Print #file,
-'Next
-'Close #file
-'break
 
 '  онец работы с файлами FLIP
 
@@ -1610,8 +1586,6 @@ Sub inverse_problem_v1_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_
 
 									If ( te >= RegRange(0, t) ) And ( te <= RegRange(1, t) ) And ( ti >= RegRange(2, t) ) And ( ti <= RegRange(3, t) ) And ( hyd >= RegRange(4, t) ) And ( hyd <= RegRange(5, t) ) Then
 
-										'If heCurrent <= heRange(t) Then
-
 										For lag = 0 To 18
 											acf_teor(lag) = 0
 											For tau = 0 To 50
@@ -1661,8 +1635,6 @@ Sub inverse_problem_v1_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_
 											dat_all_str(h, t).hyd_c = hyd
 											dat_all_str(h, t).ratio = ratio
 										EndIf
-
-										'EndIf
 
 									EndIf
 
@@ -1725,8 +1697,6 @@ Sub inverse_problem_v1_conv(ByVal h As Integer, ByVal z As Integer, ByVal step_h
 
 								If ( te >= RegRange(0, t) ) And ( te <= RegRange(1, t) ) And ( ti >= RegRange(2, t) ) And ( ti <= RegRange(3, t) ) And ( hyd >= RegRange(4, t) ) And ( hyd <= RegRange(5, t) ) Then
 
-									'									If heCurrent <= heRange(t) Then
-
 									d = 0
 									For tau = 1 To 18
 										d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - dat_all_str(h, t).acf(0)*acf_teor(tau) )^2
@@ -1739,7 +1709,6 @@ Sub inverse_problem_v1_conv(ByVal h As Integer, ByVal z As Integer, ByVal step_h
 										dat_all_str(h, t).hyd_c = hyd
 									EndIf
 
-									'									Endif
 
 								EndIf
 
@@ -1860,8 +1829,6 @@ Sub inverse_problem_v2_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_
 
 		For t = 0 To seans_num_out-1 ' по времени
 
-			'If heCurrent <= heRange(t) Then
-
 			If ( hyd >= RegRange(4, t) ) And ( hyd <= RegRange(5, t) ) Then
 
 				If (hyd >= dat_all_str(h, t).hyd_start) And (hyd <= dat_all_str(h, t).hyd_end) Then
@@ -1872,10 +1839,6 @@ Sub inverse_problem_v2_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_
 
 							For ti = dat_all_str(h, t).ti_start To dat_all_str(h, t).ti_end Step step_ti
 
-								'			If ( ti >= RegRange(2, t) ) And ( ti <= RegRange(3, t) ) Then
-
-								'If (te >= ti And Config_Overlap_prohibition = 1) Or (Config_Overlap_prohibition = 0) Then
-								'	If (te/ti <= 4) And (te/ti >= 0.7) Then
 
 								If acf_library_light_short( libraries_file(hyd), @temperatures(0), temperatures_len, ti, te, @acf_lib(25), num_point_acf) <> 0 Then
 
@@ -1935,15 +1898,7 @@ Sub inverse_problem_v2_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_
 										dat_all_str(h, t).ratio = ratio
 									EndIf
 
-									'											Else
-									'												Print t, ti, te
 								EndIf
-
-								'	EndIf
-
-								'	EndIf
-
-								'			EndIf
 
 							Next ti
 
@@ -1986,8 +1941,6 @@ Sub inverse_problem_v2_conv(ByVal h As Integer, ByVal z As Integer, ByVal step_h
 	For hyd = 0 To libraries_num-1 Step step_hyd
 
 		For t = 0 To seans_num_out-1 ' по времени
-
-			'			If heCurrent <= heRange(t) Then
 
 			If ( hyd >= RegRange(4, t) ) And ( hyd <= RegRange(5, t) ) Then
 
@@ -2032,8 +1985,6 @@ Sub inverse_problem_v2_conv(ByVal h As Integer, ByVal z As Integer, ByVal step_h
 				EndIf
 
 			EndIf
-
-			'			EndIf
 
 		Next t
 
@@ -3903,8 +3854,6 @@ Sub draw_te(ByVal h As Integer, ByVal z As Integer)
 	Dim As Integer he
 
 	Dim As Double SCALE_Y = 750
-	'	Dim As Integer START_X = 0
-
 
 	Dim As Integer key
 	Dim As Integer offset
@@ -6128,65 +6077,6 @@ Sub save_and_exit()
 		Next t
 		Close #file
 
-		/'
-
-		file = FreeFile()
-		Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/_Ti.-1."+ Str(h_array(h)) +".txt" For Input As #file
-		For t = 0 To nT-1
-			Input #file, _ti_array(t, h)
-		Next t
-		Close #file
-
-		file = FreeFile()
-		Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/_Te.-1."+ Str(h_array(h)) +".txt" For Input As #file
-		For t = 0 To nT-1
-			Input #file, _te_array(t, h)
-		Next t
-		Close #file
-
-		file = FreeFile()
-		Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/_Hyd.-1."+ Str(h_array(h)) +".txt" For Input As #file
-		For t = 0 To nT-1
-			Input #file, _hyd_array(t, h)
-		Next t
-		Close #file
-
-		file = FreeFile()
-		Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/_He.-1."+ Str(h_array(h)) +".txt" For Input As #file
-		For t = 0 To nT-1
-			Input #file, _he_array(t, h)
-		Next t
-		Close #file
-
-		file = FreeFile()
-		Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/Ti2.-1."+ Str(h_array(h)) +".txt" For Input As #file
-		For t = 0 To nT-1
-			Input #file, ti2_array(t, h)
-		Next t
-		Close #file
-
-		file = FreeFile()
-		Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/Te2.-1."+ Str(h_array(h)) +".txt" For Input As #file
-		For t = 0 To nT-1
-			Input #file, te2_array(t, h)
-		Next t
-		Close #file
-
-		file = FreeFile()
-		Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/Hyd2.-1."+ Str(h_array(h)) +".txt" For Input As #file
-		For t = 0 To nT-1
-			Input #file, hyd2_array(t, h)
-		Next t
-		Close #file
-
-		file = FreeFile()
-		Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/He2.-1."+ Str(h_array(h)) +".txt" For Input As #file
-		For t = 0 To nT-1
-			Input #file, he2_array(t, h)
-		Next t
-		Close #file
-
-		'/
 
 	Next h
 
@@ -6213,47 +6103,6 @@ Sub save_and_exit()
 
 	Close #file
 
-	/'
-	file = FreeFile()
-	Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/_Ti.txt" For Output As #file
-
-	Print #file, "      0 ";
-
-	For h = 0 To nH-1
-		Print #file, Using "###### "; h_array(h);
-	Next h
-
-	For t = 0 To nT-1
-		Print #file,
-		Print #file, Using "##.#### "; t_array(t);
-		For h = 0 To nH-1
-			Print #file, Using "###### "; _ti_array(t, h);
-		Next h
-	Next t
-
-	Close #file
-
-
-	file = FreeFile()
-	Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/Ti2.txt" For Output As #file
-
-
-	Print #file, "      0 ";
-
-	For h = 0 To nH-1
-		Print #file, Using "###### "; h_array(h);
-	Next h
-
-	For t = 0 To nT-1
-		Print #file,
-		Print #file, Using "##.#### "; t_array(t);
-		For h = 0 To nH-1
-			Print #file, Using "###### "; ti2_array(t, h);
-		Next h
-	Next t
-
-	Close #file
-	'/
 
 	' запись Te
 
@@ -6277,47 +6126,6 @@ Sub save_and_exit()
 
 	Close #file
 
-	/'
-	file = FreeFile()
-	Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/_Te.txt" For Output As #file
-
-	Print #file, "      0 ";
-
-	For h = 0 To nH-1
-		Print #file, Using "###### "; h_array(h);
-	Next h
-
-	For t = 0 To nT-1
-		Print #file,
-		Print #file, Using "##.#### "; t_array(t);
-		For h = 0 To nH-1
-			Print #file, Using "###### "; _te_array(t, h);
-		Next h
-	Next t
-
-	Close #file
-
-	file = FreeFile()
-	Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/Te2.txt" For Output As #file
-
-
-	Print #file, "      0 ";
-
-	For h = 0 To nH-1
-		Print #file, Using "###### "; h_array(h);
-	Next h
-
-	For t = 0 To nT-1
-		Print #file,
-		Print #file, Using "##.#### "; t_array(t);
-		For h = 0 To nH-1
-			Print #file, Using "###### "; te2_array(t, h);
-		Next h
-	Next t
-
-	Close #file
-	'/
-
 	' запись He
 
 	file = FreeFile()
@@ -6339,48 +6147,6 @@ Sub save_and_exit()
 
 	Close #file
 
-	/'
-	file = FreeFile()
-	Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/_He.txt" For Output As #file
-
-
-	Print #file, "      0 ";
-
-	For h = 0 To nH-1
-		Print #file, Using "###### "; h_array(h);
-	Next h
-
-	For t = 0 To nT-1
-		Print #file,
-		Print #file, Using "##.#### "; t_array(t);
-		For h = 0 To nH-1
-			Print #file, Using "###.## "; _he_array(t, h);
-		Next h
-	Next t
-
-	Close #file
-
-
-	file = FreeFile()
-	Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/He2.txt" For Output As #file
-
-
-	Print #file, "      0 ";
-
-	For h = 0 To nH-1
-		Print #file, Using "###### "; h_array(h);
-	Next h
-
-	For t = 0 To nT-1
-		Print #file,
-		Print #file, Using "##.#### "; t_array(t);
-		For h = 0 To nH-1
-			Print #file, Using "###.## "; he2_array(t, h);
-		Next h
-	Next t
-
-	Close #file
-	'/
 
 	' запись Hyd
 
@@ -6403,47 +6169,6 @@ Sub save_and_exit()
 
 	Close #file
 
-	/'
-	file = FreeFile()
-	Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/_Hyd.txt" For Output As #file
-
-	Print #file, "      0 ";
-
-	For h = 0 To nH-1
-		Print #file, Using "###### "; h_array(h);
-	Next h
-
-	For t = 0 To nT-1
-		Print #file,
-		Print #file, Using "##.#### "; t_array(t);
-		For h = 0 To nH-1
-			Print #file, Using "###.## "; _hyd_array(t, h)/2;
-		Next h
-	Next t
-
-	Close #file
-
-
-	file = FreeFile()
-	Open SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/Hyd2.txt" For Output As #file
-
-	Print #file, "      0 ";
-
-	For h = 0 To nH-1
-		Print #file, Using "###### "; h_array(h);
-	Next h
-
-	For t = 0 To nT-1
-		Print #file,
-		Print #file, Using "##.#### "; t_array(t);
-		For h = 0 To nH-1
-			Print #file, Using "###.## "; hyd2_array(t, h)/2;
-		Next h
-	Next t
-
-	Close #file
-
-	'/
 
 
 	' запись Q

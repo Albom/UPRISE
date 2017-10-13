@@ -662,15 +662,6 @@ If noisePShort = NULL Then
 	End
 EndIf
 
-/'
-For h = 0 To 679
-	signalToNoiseRatio(h) = Callocate( seans_out_num, SizeOf(Double) )
-	If signalToNoiseRatio(h) = NULL Then
-		PrintErrorToLog(ErrorNotEnoughMemory, __FILE__, __LINE__)
-		End
-	EndIf
-Next h
-'/
 For h = 0 To 679
 	signalToNoiseRatioShort(h) = Callocate( seans_out_num, SizeOf(Double) )
 	If signalToNoiseRatioShort(h) = NULL Then

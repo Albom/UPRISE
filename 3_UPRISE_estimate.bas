@@ -24,7 +24,6 @@ Using FB 'для перехода в полноэкранный режим монитора
 Type dat_all_struct
 
 	Dim	acf(0 To 18)	As Double
-	'	Dim	p_corr			As Double
 	Dim	q					As Double
 
 	Dim	d_c				As Double
@@ -1285,8 +1284,6 @@ Sub inverse_problem_v1_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_
 
 									If ( te >= RegRange(0, t) ) And ( te <= RegRange(1, t) ) And ( ti >= RegRange(2, t) ) And ( ti <= RegRange(3, t) ) And ( hyd >= RegRange(4, t) ) And ( hyd <= RegRange(5, t) ) Then
 
-										'If heCurrent <= heRange(t) Then
-
 										For lag = 0 To 18
 											acf_teor(lag) = 0
 											For tau = 0 To 50
@@ -1400,8 +1397,6 @@ Sub inverse_problem_v1_conv(ByVal h As Integer, ByVal z As Integer, ByVal step_h
 
 								If ( te >= RegRange(0, t) ) And ( te <= RegRange(1, t) ) And ( ti >= RegRange(2, t) ) And ( ti <= RegRange(3, t) ) And ( hyd >= RegRange(4, t) ) And ( hyd <= RegRange(5, t) ) Then
 
-									'									If heCurrent <= heRange(t) Then
-
 									d = 0
 									For tau = 1 To 18
 										d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - dat_all_str(h, t).acf(0)*acf_teor(tau) )^2
@@ -1413,8 +1408,6 @@ Sub inverse_problem_v1_conv(ByVal h As Integer, ByVal z As Integer, ByVal step_h
 										dat_all_str(h, t).te_c = te
 										dat_all_str(h, t).hyd_c = hyd
 									EndIf
-
-									'									Endif
 
 								EndIf
 
@@ -1648,8 +1641,6 @@ Sub inverse_problem_v2_conv(ByVal h As Integer, ByVal z As Integer, ByVal step_h
 	For hyd = 0 To libraries_num-1 Step step_hyd
 
 		For t = 0 To seans_num_out-1 ' по времени
-
-			'			If heCurrent <= heRange(t) Then
 
 			If ( hyd >= RegRange(4, t) ) And ( hyd <= RegRange(5, t) ) Then
 
@@ -3549,7 +3540,6 @@ Sub draw_te(ByVal h As Integer, ByVal z As Integer)
 
 	Dim As Double max_val, min_val
 
-	'	Dim As Integer CUR = 0
 	Dim As Integer CUR_HE
 
 	Cls
@@ -3582,7 +3572,7 @@ Sub draw_te(ByVal h As Integer, ByVal z As Integer)
 		file = FreeFile()
 		Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "D."+Str(He)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
 		For t = 0 To seans_num_out-1
-			Input #file, tmp_d(t)'d_loaded(he, t)
+			Input #file, tmp_d(t)
 		Next t
 		Close #file
 
@@ -5008,8 +4998,6 @@ Sub inverse_problem_hyd_ti_te(ByVal h As Integer, ByVal z As Integer)
 		Print Using "n = ###   h = ####   He+ = ##"; h; Hkm(h); he;
 		Print ,
 
-
-		'
 		Print "Загрузка библиотек АКФ... ";
 
 		If libraries_num > 0 Then

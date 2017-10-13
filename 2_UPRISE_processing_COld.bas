@@ -822,45 +822,6 @@ Do Until t + tNak > seans_out_num-1
 			as_file_str.acf[h].var(tau) = 0
 		Next tau
 	Next h
-	/'
-	If isVar <> 0 Then ' расчёт дисперсии
-
-		' расчёт мат. ожидания АКФ сигнала
-
-		ReDim As Double mean(0 To as_file_str.nh - 1, 0 To 18)
-
-		For tau = 0 To 18 ' по задержке
-			For h = 0 To as_file_str.nh - 1 ' по высоте
-				mean(h, tau) = as_file_str.acf[h].rc(tau) - as_file_str.rnc(tau)
-			Next h
-		Next tau
-
-		' расчёт дисперсии точек АКФ
-
-		For h = 0 To as_file_str.nh - 1
-			For tau = 0 To 18 ' по задержке
-
-				Dim As Double noise(0 To tNak-1)
-
-				For i = 0 To tNak-1
-					noise(i) = 0
-					For z As Integer = 500 To 599
-						noise(i) += seans_str_out(z).datCos(tau)[t+i]
-					Next z
-					noise(i) /= 100
-				Next i
-
-				as_file_str.acf[h].var(tau) = 0
-				For i = 0 To tNak-1
-					as_file_str.acf[h].var(tau) += (mean(h, tau) - seans_str_out(h).datCos(tau)[t+i] + noise(i))^2
-				Next i
-				as_file_str.acf[h].var(tau) /= tNak
-
-			Next tau
-		Next h
-
-	EndIf
-'/
 
 	as_file_save( SEANS_DIR_OUT + DirectoryOutput + "/step2/"+ "AS" + DirectoryOutput + "." + EXT,  @as_file_str) ' запись в файл
 

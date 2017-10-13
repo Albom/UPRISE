@@ -427,8 +427,6 @@ Do
 Loop
 
 
-' DeAllocate (seans_str)
-
 
 ''' =======================================================================
 
@@ -501,21 +499,6 @@ Sub Vis_array_load()
 	Dim As Integer NUM = 6
 
 	ReDim As Double max_a(0 To seans_loaded-1) ' массив для поиска max (с учётом меток)
-	'	ReDim As Double noise(0 To seans_loaded-1, 0 To 6) ' массив АКФ шума
-
-	/'
-	If is_noise < 0 Then
-		For i = 0 To seans_loaded-1
-			seans1c_noise(@seans_str(i).seans, @noise(i, 0), 19, 500, 600)
-		Next i
-	Else
-		For i = 0 To seans_loaded-1
-			For j = 0 To 6
-				noise(i, j) = 0
-			Next
-		Next
-	EndIf
-'/
 
 	For j = 0 To NUM ' Загружаем ординаты для отображения
 		For i = 0 To seans_loaded-1
@@ -881,13 +864,11 @@ Sub LoadFiles(ByVal Directory As String)
 	Print seans_loaded+seans_num,
 
 	ReDim Preserve As seans_struct seans_str(0 To seans_loaded+seans_num-1)
-
-	/'
 	If Err = 4 Then
 		Print "Ошибка памяти!!!", seans_loaded+seans_num, Directory
 		break
 	EndIf
-'/
+
 
 	For i = 0 To lst_len-1
 
@@ -899,20 +880,6 @@ Sub LoadFiles(ByVal Directory As String)
 
 			seans1c_load ( directory + "/" + filename, @(seans_str(seans_loaded).seans) )
 
-/'
-Open "1.csv" For Output As #4
-
-For hx As Integer = 0 To 359
-	For tau As Integer = 0 To 6
-		Print #4, seans_str(seans_loaded).seans.dat1(hx, tau); "; ";
-	Next tau
-	Print #4,
-Next hx
-
-Close #4
-Print "OK"
-break
-'/
 			Print #1, filename
 
 			seans_str(seans_loaded).filename = filename

@@ -24,7 +24,6 @@ Using FB 'для перехода в полноэкранный режим монитора
 Type dat_all_struct
 
 	Dim	acf(0 To 18)	As Double
-	'	Dim	p_corr			As Double
 	Dim	q					As Double
 
 	Dim	d_c				As Double
@@ -991,16 +990,6 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 	Close #file
 
 
-	/'
-	file = FreeFile()
-	Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "Pcorr."+Str(CInt(Hkm(h)))+".txt" For Output As #file
-	For t = 0 To seans_num_out-1 ' по времени
-		Print #file, dat_all_str(h, t).p_corr
-	Next t
-	Close #file
-'/
-
-
 	file = FreeFile()
 	Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "He."+Str(CInt(Hkm(h)))+".txt" For Output As #file
 	Close #file
@@ -1299,8 +1288,6 @@ Sub inverse_problem_v1_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_
 
 									If ( te >= RegRange(0, t) ) And ( te <= RegRange(1, t) ) And ( ti >= RegRange(2, t) ) And ( ti <= RegRange(3, t) ) And ( hyd >= RegRange(4, t) ) And ( hyd <= RegRange(5, t) ) Then
 
-										'If heCurrent <= heRange(t) Then
-
 										For lag = 0 To 18
 											acf_teor(lag) = 0
 											For tau = 0 To 50
@@ -1350,8 +1337,6 @@ Sub inverse_problem_v1_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_
 											dat_all_str(h, t).hyd_c = hyd
 											dat_all_str(h, t).ratio = ratio
 										EndIf
-
-										'EndIf
 
 									EndIf
 
@@ -1413,8 +1398,6 @@ Sub inverse_problem_v1_conv(ByVal h As Integer, ByVal z As Integer, ByVal step_h
 							If ( te >= dat_all_str(h, t).te_start ) And ( te <= dat_all_str(h, t).te_end ) And ( ti >= dat_all_str(h, t).ti_start ) And ( ti <= dat_all_str(h, t).ti_end ) And ( hyd >= dat_all_str(h, t).hyd_start ) And ( hyd <= dat_all_str(h, t).hyd_end ) Then
 
 								If ( te >= RegRange(0, t) ) And ( te <= RegRange(1, t) ) And ( ti >= RegRange(2, t) ) And ( ti <= RegRange(3, t) ) And ( hyd >= RegRange(4, t) ) And ( hyd <= RegRange(5, t) ) Then
-
-									'									If heCurrent <= heRange(t) Then
 
 									d = 0
 									For tau = 1 To 18
@@ -1549,8 +1532,6 @@ Sub inverse_problem_v2_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_
 
 		For t = 0 To seans_num_out-1 ' по времени
 
-			'If heCurrent <= heRange(t) Then
-
 			If ( hyd >= RegRange(4, t) ) And ( hyd <= RegRange(5, t) ) Then
 
 				If (hyd >= dat_all_str(h, t).hyd_start) And (hyd <= dat_all_str(h, t).hyd_end) Then
@@ -1644,8 +1625,6 @@ Sub inverse_problem_v2_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_
 
 			EndIf
 
-			'EndIf
-
 		Next t
 
 	Next hyd
@@ -1675,8 +1654,6 @@ Sub inverse_problem_v2_conv(ByVal h As Integer, ByVal z As Integer, ByVal step_h
 	For hyd = 0 To libraries_num-1 Step step_hyd
 
 		For t = 0 To seans_num_out-1 ' по времени
-
-			'			If heCurrent <= heRange(t) Then
 
 			If ( hyd >= RegRange(4, t) ) And ( hyd <= RegRange(5, t) ) Then
 
@@ -1721,8 +1698,6 @@ Sub inverse_problem_v2_conv(ByVal h As Integer, ByVal z As Integer, ByVal step_h
 				EndIf
 
 			EndIf
-
-			'			EndIf
 
 		Next t
 
@@ -3372,15 +3347,11 @@ Sub draw_d(ByVal h As Integer, ByVal z As Integer)
 	ReDim As Double  tmp_d_d(0 To He_max+1, 0 To seans_num_out-1)
 
 	Dim As Double SCALE_Y = 750
-	'	Dim As Integer START_X = 0
-
 
 	Dim As Integer key
 	Dim As Integer offset
 
 	Dim As Double max_val, min_val
-
-	'	Dim As Integer CUR = 0
 	Dim As Integer CUR_HE
 
 	Cls
@@ -3413,7 +3384,7 @@ Sub draw_d(ByVal h As Integer, ByVal z As Integer)
 		file = FreeFile()
 		Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "D."+Str(He)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
 		For t = 0 To seans_num_out-1
-			Input #file, tmp_d(t)'d_loaded(he, t)
+			Input #file, tmp_d(t)
 		Next t
 		Close #file
 
@@ -3424,7 +3395,7 @@ Sub draw_d(ByVal h As Integer, ByVal z As Integer)
 	file = FreeFile()
 	Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "D."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
 	For t = 0 To seans_num_out-1
-		Input #file, tmp_d(t)'d_loaded(He_max+1, t)
+		Input #file, tmp_d(t)
 	Next t
 	Close #file
 
@@ -3611,7 +3582,7 @@ Sub draw_te(ByVal h As Integer, ByVal z As Integer)
 		file = FreeFile()
 		Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "D."+Str(He)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
 		For t = 0 To seans_num_out-1
-			Input #file, tmp_d(t)'d_loaded(he, t)
+			Input #file, tmp_d(t)
 		Next t
 		Close #file
 
@@ -3622,7 +3593,7 @@ Sub draw_te(ByVal h As Integer, ByVal z As Integer)
 	file = FreeFile()
 	Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "D."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
 	For t = 0 To seans_num_out-1
-		Input #file, tmp_d(t)'d_loaded(He_max+1, t)
+		Input #file, tmp_d(t)
 	Next t
 	Close #file
 

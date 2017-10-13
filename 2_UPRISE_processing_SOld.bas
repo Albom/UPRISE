@@ -18,11 +18,8 @@ End Type
 
 Type seans_struct_out
 	Dim datCos(0 To 18)		As Double  Ptr
-'	Dim datSin(0 To 18)		As Double  Ptr
 	Dim datCosTrap(0 To 18)	As Double  Ptr
-'	Dim datSinTrap(0 To 18)	As Double  Ptr
 	Dim m							As Integer Ptr
-'	Dim pShort					As Double  Ptr
 End Type
 
 
@@ -144,7 +141,7 @@ Print "Исходные данные, находящиеся в папке " + Chr(34) + "in" + Chr(34) + ":"
 Color 10
 Dim As String fn
 fn = Dir("./in/*", fbDirectory)
-While Len(fn) > 0 
+While Len(fn) > 0
 	fn = Dir()
 	If Len(fn)=6 Then
 		Print fn;"  ";
@@ -383,7 +380,7 @@ For t = 0 To seans_loaded-1-1 ' по времени
 
 			If h Mod 4 = 0 Then
 				For tau = 1 To 18 ' по задержке
-					seans_str_out(h).datCos(tau)[i] = CDbl(seans_str_in[t].seans.dat(h\4, tau-1)) - R0DAC_1(tau) 
+					seans_str_out(h).datCos(tau)[i] = CDbl(seans_str_in[t].seans.dat(h\4, tau-1)) - R0DAC_1(tau)
 				Next tau
 			EndIf
 

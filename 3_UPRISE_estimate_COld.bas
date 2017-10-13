@@ -378,15 +378,6 @@ For h = hMax To hMin Step -hStep ' по высоте
 
 
 	libraries_min = 1 '''!!!!!!
-/'	
-	For t = 0 To nT-1 ' по времени '''!!!!!!
-		RegRange(0, t) = dat_all_str(h, t).te_c-ConfigMinusTe
-		RegRange(1, t) = dat_all_str(h, t).te_c+ConfigPlusTe
-		RegRange(2, t) = dat_all_str(h, t).ti_c-ConfigMinusTi
-		RegRange(3, t) = dat_all_str(h, t).ti_c+ConfigPlusTi
-		'		RegRange(4, t) = dat_all_str(h, t).ox_c-20
-	Next t
-'/
 
 Next h
 
@@ -422,7 +413,6 @@ Sub inverse_problem_v1(ByVal h As Integer, ByVal step_ox As Integer, ByVal step_
 
 					If acf_library_heavy( libraries_file(ox), @temperatures(0), temperatures_len, ti, te, @acf_teor(0), nTau) <> 0 Then
 
-						'!!!						func_conv_d(@acf_teor(0), @acf_filter(0), @acf_teor(0), nTau)
 						array_norm0_d(@acf_teor(0), @acf_teor(0), nTau)
 
 						For t = 0 To nT-1 ' по времени
@@ -491,7 +481,6 @@ Sub inverse_problem_v2(ByVal h As Integer, ByVal step_ox As Integer, ByVal step_
 
 									If acf_library_heavy( libraries_file(ox), @temperatures(0), temperatures_len, ti, te, @acf_teor(0), nTau) <> 0 Then
 
-										'!!!										func_conv_d(@acf_teor(0), @acf_filter(0), @acf_teor(0), nTau)
 										array_norm0_d(@acf_teor(0), @acf_teor(0), nTau)
 
 										d = 0
