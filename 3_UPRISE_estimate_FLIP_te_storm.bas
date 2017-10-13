@@ -1981,6 +1981,10 @@ Sub inverse_problem_v2_ambig_storm(ByVal h As Integer, ByVal z As Integer, ByVal
 	Dim As Double acf_lib(0 To 255)
 	Dim As Double acf_teor(0 To 255)
 
+	Dim As Double he_
+	
+	he_ = he/100.0
+
 	For hyd = 0 To libraries_num-1 Step step_hyd
 
 		For t = 0 To seans_num_out-1 ' по времени
@@ -1988,7 +1992,7 @@ Sub inverse_problem_v2_ambig_storm(ByVal h As Integer, ByVal z As Integer, ByVal
 			If ( hyd >= RegRange(4, t) ) And ( hyd <= RegRange(5, t) ) Then
 
 				If (hyd >= dat_all_str(h, t).hyd_start) And (hyd <= dat_all_str(h, t).hyd_end) Then
-
+					
 					For te = dat_all_str(h, t).te_start To dat_all_str(h, t).te_end Step step_te
 
 						For ti = dat_all_str(h, t).ti_start To dat_all_str(h, t).ti_end Step step_ti
@@ -1999,17 +2003,17 @@ Sub inverse_problem_v2_ambig_storm(ByVal h As Integer, ByVal z As Integer, ByVal
 
 								If t >= Start_storm_time And t <= End_storm_time Then
 									If (te/ti <= 4) And (te <= 4000) And (ti <= 4000) Then
-										res = acf_library_light_short( libraries_file(hyd), @temperatures(0), temperatures_len, ti, te, @acf_lib(25), num_point_acf)
+										res = acf_library_light_short(libraries_file(hyd), @temperatures(0), temperatures_len, ti, te, @acf_lib(25), num_point_acf)
 									Else
 										If (te/ti <= 5) Then
-											res = acf_3_kharkiv_22(hyd/200.0, he/100.0, ti, te, @acf_lib(25))
+											res = acf_3_kharkiv_22(hyd/200.0, he_, ti, te, @acf_lib(25))
 										Else
 											res = 0
 										EndIf
 									EndIf
 								Else
 									If (te/ti <= 4) And (te <= 4000) And (ti <= 4000) Then
-										res = acf_library_light_short( libraries_file(hyd), @temperatures(0), temperatures_len, ti, te, @acf_lib(25), num_point_acf)
+										res = acf_library_light_short(libraries_file(hyd), @temperatures(0), temperatures_len, ti, te, @acf_lib(25), num_point_acf)
 									EndIf
 								EndIf
 

@@ -1402,6 +1402,9 @@ Sub inverse_problem_v1_ambig_storm(ByVal h As Integer, ByVal z As Integer, ByVal
 
 	Dim As Double acf_lib(0 To 255)
 	Dim As Double acf_teor(0 To 255)
+	
+	Dim As Double he_
+	he_ = he/100.0
 
 	Dim As Double te_max = RegRange(1, 0)
 	Dim As Double te_min = RegRange(0, 0)
@@ -1460,7 +1463,7 @@ Sub inverse_problem_v1_ambig_storm(ByVal h As Integer, ByVal z As Integer, ByVal
 						res = acf_library_light_short( libraries_file(hyd), @temperatures(0), temperatures_len, ti, te, @acf_lib(25), num_point_acf)
 					Else
 						If (te/ti <= 5) Then
-							res = acf_3_kharkiv_22(hyd/200.0, he/100.0, ti, te, @acf_lib(25))
+							res = acf_3_kharkiv_22(hyd/200.0, he_, ti, te, @acf_lib(25))
 						Else
 							res = 0
 						EndIf
@@ -1829,6 +1832,9 @@ Sub inverse_problem_v2_ambig_storm(ByVal h As Integer, ByVal z As Integer, ByVal
 
 	Dim As Double acf_lib(0 To 255)
 	Dim As Double acf_teor(0 To 255)
+	
+	Dim As Double he_
+	he_ = he/100.0
 
 	For hyd = 0 To libraries_num-1 Step step_hyd
 
@@ -1855,7 +1861,7 @@ Sub inverse_problem_v2_ambig_storm(ByVal h As Integer, ByVal z As Integer, ByVal
 												res = acf_library_light_short( libraries_file(hyd), @temperatures(0), temperatures_len, ti, te, @acf_lib(25), num_point_acf)
 											Else
 												If (te/ti <= 5) And (ti >= 500) And (te >= 500) Then
-													res = acf_3_kharkiv_22(hyd/200.0, he/100.0, ti, te, @acf_lib(25))
+													res = acf_3_kharkiv_22(hyd/200.0, he_, ti, te, @acf_lib(25))
 												Else
 													res = 0
 												EndIf
