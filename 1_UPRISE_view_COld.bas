@@ -878,7 +878,7 @@ Sub LoadFiles(ByVal Directory As String)
 
 		If (isM <> 0) Then
 
-			seans1c_load ( directory + "/" + filename, @(seans_str(seans_loaded).seans) )
+			seans1cv_load ( directory + "/" + filename, @(seans_str(seans_loaded).seans) )
 
 			Print #1, filename
 

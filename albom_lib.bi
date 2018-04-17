@@ -24,70 +24,70 @@
 ' описание scan-кодов клавиш и комбинация клавиш
 
 Enum AlbomKeys
-KEY_CTRL_A = 1
-KEY_BACKSPACE = 8
-KEY_TAB = 9
-KEY_ENTER = 13
-KEY_CTRL_N = 14
-KEY_CTRL_P = 16
-KEY_CTRL_Q = 17
-KEY_CTRL_R = 18
-KEY_CTRL_S = 19
-KEY_CTRL_U = 21
-KEY_ESC = 27
-KEY_SPACE = 32
-KEY_PLUS = 43
-KEY_MINUS = 45
-KEY_1 = 49
-KEY_2 = 50
-KEY_3 = 51
-KEY_4 = 52
-KEY_A_CAPITAL = 65
-KEY_P_CAPITAL = 80
-KEY_R_CAPITAL = 82
-KEY_W_CAPITAL = 87
-KEY_Y_CAPITAL = 89
-KEY_A = 97
-KEY_B = 98
-KEY_C = 99
-KEY_D = 100
-KEY_E = 101
-KEY_F = 102
-KEY_G = 103
-KEY_H = 104
-KEY_I = 105
-KEY_M = 109
-KEY_N = 110
-KEY_O = 111
-KEY_P = 112
-KEY_Q = 113
-KEY_R = 114
-KEY_S = 115
-KEY_T = 116
-KEY_U = 117
-KEY_V = 118
-KEY_W = 119
-KEY_Y = 121
-KEY_Z = 122
-KEY_F1 = 15359
-KEY_F11 = 34303
-KEY_F12 = 34559
-KEY_LEFT = 19455
-KEY_RIGHT = 19967
-KEY_UP = 18687
-KEY_DOWN = 20735
-KEY_DEL = 21503
-KEY_CTRL_DEL = 37887
-KEY_CTRL_LEFT = 29695
-KEY_CTRL_RIGHT = 29951
-KEY_CTRL_UP = 36351
-KEY_CTRL_DOWN = 37375
-KEY_PAGE_UP = 18943
-KEY_PAGE_DOWN = 20991
-KEY_HOME = 18431
-KEY_END = 20479
-KEY_CTRL_PAGE_UP = 34047
-KEY_CTRL_PAGE_DOWN = 30463
+	KEY_CTRL_A = 1
+	KEY_BACKSPACE = 8
+	KEY_TAB = 9
+	KEY_ENTER = 13
+	KEY_CTRL_N = 14
+	KEY_CTRL_P = 16
+	KEY_CTRL_Q = 17
+	KEY_CTRL_R = 18
+	KEY_CTRL_S = 19
+	KEY_CTRL_U = 21
+	KEY_ESC = 27
+	KEY_SPACE = 32
+	KEY_PLUS = 43
+	KEY_MINUS = 45
+	KEY_1 = 49
+	KEY_2 = 50
+	KEY_3 = 51
+	KEY_4 = 52
+	KEY_A_CAPITAL = 65
+	KEY_P_CAPITAL = 80
+	KEY_R_CAPITAL = 82
+	KEY_W_CAPITAL = 87
+	KEY_Y_CAPITAL = 89
+	KEY_A = 97
+	KEY_B = 98
+	KEY_C = 99
+	KEY_D = 100
+	KEY_E = 101
+	KEY_F = 102
+	KEY_G = 103
+	KEY_H = 104
+	KEY_I = 105
+	KEY_M = 109
+	KEY_N = 110
+	KEY_O = 111
+	KEY_P = 112
+	KEY_Q = 113
+	KEY_R = 114
+	KEY_S = 115
+	KEY_T = 116
+	KEY_U = 117
+	KEY_V = 118
+	KEY_W = 119
+	KEY_Y = 121
+	KEY_Z = 122
+	KEY_F1 = 15359
+	KEY_F11 = 34303
+	KEY_F12 = 34559
+	KEY_LEFT = 19455
+	KEY_RIGHT = 19967
+	KEY_UP = 18687
+	KEY_DOWN = 20735
+	KEY_DEL = 21503
+	KEY_CTRL_DEL = 37887
+	KEY_CTRL_LEFT = 29695
+	KEY_CTRL_RIGHT = 29951
+	KEY_CTRL_UP = 36351
+	KEY_CTRL_DOWN = 37375
+	KEY_PAGE_UP = 18943
+	KEY_PAGE_DOWN = 20991
+	KEY_HOME = 18431
+	KEY_END = 20479
+	KEY_CTRL_PAGE_UP = 34047
+	KEY_CTRL_PAGE_DOWN = 30463
 End Enum
 
 
@@ -265,6 +265,11 @@ ByVal alt_end As Integer _
 Declare Function  seans1c_alt Alias "seans1c_alt" (ByVal H As Integer) As Double
 
 Declare Function  seans1c_test Alias "seans1c_test" ( ByVal filename As ZString Ptr) As Integer
+
+Declare Function  seans1cv_load Alias "seans1cv_load" (_
+ByVal filename As ZString Ptr, _
+ByVal seans As seans1c_data Ptr _
+) As Integer
 
 Declare Function  seans1c_load Alias "seans1c_load" (_
 ByVal filename As ZString Ptr, _
@@ -560,6 +565,39 @@ Declare Function  seansH_load Alias "seansH_load" ( _
 ByVal filename As ZString Ptr, _
 ByVal seans As seansH_data Ptr _
 ) As Integer
+
+End Extern
+
+''' ===================================================================================================
+
+Type seansIV_scan Field = 0
+	Dim type1 As Byte
+	Dim data1 As Short Ptr
+	Dim data2 As Short Ptr
+End Type
+
+Type seansIV_data Field = 0
+
+	Dim ver								As Integer
+	Dim date1							As ZString*20
+	Dim nR								As Integer
+	Dim nP								As Integer
+	Dim dT								As Integer
+
+	Dim scans							As seansIV_scan Ptr
+
+End Type
+
+Extern "c"
+
+Declare Function  seansIV_load Alias "seansIV_load" ( _
+					ByVal filename As ZString Ptr, _
+					ByVal seans As seansIV_data Ptr _
+					) As Integer
+
+Declare Function  seansIV_close Alias "seansIV_close" ( _
+					ByVal seans As seansIV_data Ptr _
+					) As Integer
 
 End Extern
 

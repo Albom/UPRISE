@@ -884,7 +884,7 @@ Sub LoadFiles(ByVal Directory As String)
 		is1s = seans1c_test(directory + "/" + filename)
 
 		If (is1s <> 0) Then
-			seans1c_load ( directory + "/" + filename, @(seans_str_in[seans_loaded].seans) )
+			seans1cv_load ( directory + "/" + filename, @(seans_str_in[seans_loaded].seans) )
 
 			Print #1, filename
 

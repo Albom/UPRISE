@@ -377,7 +377,7 @@ For h = hMax To hMin Step -hStep ' по высоте
 	Close #file
 
 
-	libraries_min = 1 '''!!!!!!
+	libraries_min = 101 '''!!!!!!
 
 Next h
 
@@ -420,8 +420,8 @@ Sub inverse_problem_v1(ByVal h As Integer, ByVal step_ox As Integer, ByVal step_
 							If ( te >= RegRange(0, t) ) And ( te <= RegRange(1, t) ) And ( ti >= RegRange(2, t) ) And ( ti <= RegRange(3, t) )  Then
 
 								d = 0
-								For tau = 1 To 18
-									d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - dat_all_str(h, t).acf(0)*acf_teor(tau) )^2
+								For tau = 6 To 12
+									d += ( dat_all_str(h, t).acf(tau) - dat_all_str(h, t).acf(0)*acf_teor(tau) )^2
 								Next tau
 
 								If d < dat_all_str(h, t).d_c Then
