@@ -613,7 +613,8 @@ If Config_ti_interpolate <> 0 Then
 EndIf
 
 
-Cls
+
+Cls()
 Color 11
 
 Print "Результаты обработки, находящиеся в папке " + Chr(34) + "out" + Chr(34) + ":"

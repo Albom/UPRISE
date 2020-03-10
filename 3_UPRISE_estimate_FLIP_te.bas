@@ -13,18 +13,32 @@
 #Include "window9.bi"
 #Include "dir.bi"
 
+#Include Once "sqlite3.bi"
 '''==============================================
 
 #If __FB_LANG__ = "fb"
 Using FB 'для перехода в полноэкранный режим монитора
 #EndIf
+'''==============================================
+' выделяем память для коэффициентов
+Dim As Integer hZero = 60
+ReDim Shared As Double Ambig(0 To 20, 0 To 50, 0 To hZero, 0 To 18)' partrap, tau, h, lag
+ReDim Shared As Double AmbigCoeff(0 To 50, 0 To 1, 0 To 18)'tau, t, lag
+
+Function coeff_load Cdecl (ByVal NotUsed As Any Ptr, _
+	ByVal argc As Integer, _
+	ByVal argv As ZString Ptr Ptr, _
+	ByVal colName As ZString Ptr Ptr) As Integer
+	AmbigCoeff(CInt(*argv[0]), CInt(*argv[1]), CInt(*argv[2])) = CDbl(*argv[3])
+	Return 0
+End Function
 
 '''==============================================
 
 Type dat_all_struct
 
 	Dim	acf(0 To 18)	As Double
-	'	Dim	p_corr			As Double
+
 	Dim	q					As Double
 
 	Dim	d_c				As Double
@@ -614,6 +628,7 @@ While Len(fn) > 0
 	EndIf
 Wend
 Print
+Print
 
 Color 15
 
@@ -1198,15 +1213,15 @@ Open SEANS_DIR_OUT+DirectoryOutput+"/step5/Te.F.txt" For Output As #file
 Print #file, "      0 ";
 
 For h = hMin To hMax Step hStep
-Print #file, Using "###### "; Hkm(h);
+	Print #file, Using "###### "; Hkm(h);
 Next h
 
 For t = 0 To seans_num_out-1
-Print #file,
-Print #file, Using "##.#### "; time_decimal_all(t);
-For h = hMin To hMax Step hStep
-Print #file, Using "###### "; te_flip_all(h, t);
-Next h
+	Print #file,
+	Print #file, Using "##.#### "; time_decimal_all(t);
+	For h = hMin To hMax Step hStep
+		Print #file, Using "###### "; te_flip_all(h, t);
+	Next h
 Next t
 
 Close #file
@@ -1311,12 +1326,6 @@ Close #file
 
 
 
-' выделяем память для коэффициентов
-Dim As Integer hZero = 60
-ReDim Shared As Single Ambig(0 To 20, 0 To 50, 0 To hZero, 0 To 18)' partrap, tau, h, lag
-ReDim Shared As Single AmbigCoeff(0 To 50, 0 To (hMax-hMin)\hStep+1, 0 To seans_num_out-1, 0 To 18)'tau, h, t, lag
-
-
 ' Загрузка ДФН
 Print "Загрузка ДФН... ";
 For partrap As Integer = 0 To 0'20
@@ -1362,20 +1371,58 @@ Print_process_percent(1000)
 Print "OK"
 
 Print "Расчёт коэффициентов... ";
+ReDim Shared As Double AmbigCoeff(0 To 50, 0 To seans_num_out-1, 0 To 18)'tau, t, lag
+Dim Shared As sqlite3 Ptr db
+Dim Shared As ZString Ptr errMsg
+Dim Shared As String database_name
+database_name = SEANS_DIR_OUT + DirectoryOutput + "/step3/" + "AmbigCoeff.db"
+
+Dim As String create_query = "CREATE TABLE IF NOT EXISTS coeff(tau INT, h INT, t INT, lag INT, val DOUBLE);"
+Dim As String begin_query = "BEGIN;"
+Dim As String commit_query = "COMMIT;"
+Dim As String insert_query_b = "INSERT INTO coeff (tau, h, lag, t, val) VALUES ("
+Dim As String insert_query
+
+Kill(database_name)
+
+If sqlite3_open(database_name, @db) <> SQLITE_OK Then
+	Print "Can't open database: "; *sqlite3_errmsg(db)
+	sqlite3_close(db)
+	break
+End If
+
+If sqlite3_exec(db, create_query, 0, 0,  @errMsg) <> SQLITE_OK Then
+	Print "SQL error: "; *errMsg
+	break
+EndIf
+
 For t = 0 To seans_num_out-1
 
 	Print_process_percent((t*100)/seans_num_out)
+	If sqlite3_exec(db, begin_query, 0, 0,  @errMsg) <> SQLITE_OK Then
+		Print "SQL error: "; *errMsg
+		break
+	EndIf
 
 	For h = hMin To hMax Step hStep
 		For lag = 0 To 18
 			For tau = 0 To 50
-				AmbigCoeff(tau, (h-hMin)\hStep, t, lag) = 0
+				AmbigCoeff(tau, t, lag) = 0
 				For z = 0 To hZero+trapProfile(h)*2
-					AmbigCoeff(tau, (h-hMin)\hStep, t, lag) += dat_all_str(h-z+num_point_acf\2+trapProfile(h), t).acf(0) * Ambig(trapProfile(h), tau, z, lag)
+					AmbigCoeff(tau, t, lag) += dat_all_str(h-z+num_point_acf\2+trapProfile(h), t).acf(0) * Ambig(trapProfile(h), tau, z, lag)
 				Next z
+				insert_query = insert_query_b + Str(tau) + ", " + Str(h) + ", " + Str(lag) + ", " + Str(t) + ", " + Str(AmbigCoeff(tau, t, lag)) + ");"
+				If sqlite3_exec(db, insert_query, 0, 0,  @errMsg) <> SQLITE_OK Then
+					Print "SQL error: "; *errMsg
+					break
+				EndIf
 			Next tau
 		Next lag
 	Next h
+	If sqlite3_exec(db, commit_query, 0, 0,  @errMsg) <> SQLITE_OK Then
+		Print "SQL error: "; *errMsg
+		break
+	EndIf
 
 Next t
 Print_process_percent(1000)
@@ -1397,6 +1444,13 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 	Cls
 	Print "Решение обратной задачи... "
 	Print #1, "Inverse problem solving... h="+Str(CInt(Hkm(h)))+" km"
+
+	Dim As String select_query_b = "SELECT tau, t, lag, val FROM coeff WHERE h="
+	Dim As String select_query = select_query_b + Str(h) + ";"
+	If sqlite3_exec(db, select_query, @coeff_load, 0,  @errMsg) <> SQLITE_OK Then
+		Print "SQL error: "; *errMsg
+		break
+	EndIf
 
 	Color 11
 	Print "Для остановки обработки и сохранения результатов зажмите Q."
@@ -1603,7 +1657,7 @@ Sub inverse_problem_v1_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_
 										For lag = 0 To 18
 											acf_teor(lag) = 0
 											For tau = 0 To 50
-												acf_teor(lag) += acf_lib(tau) * AmbigCoeff(tau, (h-hMin)\hStep, t, lag)
+												acf_teor(lag) += acf_lib(tau) * AmbigCoeff(tau, t, lag)
 											Next tau
 										Next lag
 
@@ -1869,7 +1923,7 @@ Sub inverse_problem_v2_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_
 										For lag = 0 To 18
 											acf_teor(lag) = 0
 											For tau = 0 To 50
-												acf_teor(lag) += acf_lib(tau) * AmbigCoeff(tau, (h-hMin)\hStep, t, lag)
+												acf_teor(lag) += acf_lib(tau) * AmbigCoeff(tau, t, lag)
 											Next tau
 										Next lag
 
@@ -6483,6 +6537,9 @@ Sub save_and_exit()
 	CopyFile( SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/Te.txt", SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/Te.FLIP.txt", 0)
 	CopyFile( SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/Hyd.txt", SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/Hyd.FLIP.txt", 0)
 	CopyFile( SEANS_DIR_OUT + DirectoryOutput+"/step5"+"/He.txt", SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/He.FLIP.txt", 0)
+
+	sqlite3_close(db)
+	Kill(database_name)
 
 End Sub
 
