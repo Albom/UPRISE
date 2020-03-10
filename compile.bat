@@ -111,6 +111,7 @@ move 3_UPRISE_estimate_newton.exe UPRISE\3_UPRISE_estimate_newton.exe
 move 3_UPRISE_velocity.exe UPRISE\3_UPRISE_velocity.exe
 
 copy albom.dll UPRISE
+copy sqlite3.dll UPRISE
 
 xcopy hardware UPRISE\hardware /e /i /h
 xcopy config UPRISE\config /e /i /h
