@@ -40,10 +40,6 @@
   <PARAM name="Local" value="estimate.htm#velocity">
  </OBJECT>
  <LI><OBJECT type="text/sitemap">
-  <PARAM name="Name" value="&icirc;&ograve;&divide;&cedil;&ograve; &icirc;&aacute; &icirc;&oslash;&egrave;&aacute;&ecirc;&aring;">
-  <PARAM name="Local" value="report.htm">
- </OBJECT>
- <LI><OBJECT type="text/sitemap">
   <PARAM name="Name" value="&egrave;&ccedil;&acirc;&aring;&ntilde;&ograve;&iacute;&ucirc;&aring; &icirc;&oslash;&egrave;&aacute;&ecirc;&egrave;">
   <PARAM name="Local" value="problems.htm">
  </OBJECT>

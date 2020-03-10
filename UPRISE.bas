@@ -109,7 +109,7 @@ AddComboBoxItem(COMBO_TYPE, "Файлы SOld (коррелятор K1)", -1)
 AddComboBoxItem(COMBO_TYPE, "Файлы COld (4-й режим)", -1)
 SetItemComboBox(COMBO_TYPE, 0)
 
-TextGadget (TEXT_COPYRIGHT, 10, 240, 520, 24 ,"© 2013–2017 Богомаз А.В., Котов Д.В. (Институт ионосферы)")
+TextGadget (TEXT_COPYRIGHT, 10, 240, 520, 24 ,"© 2013–2020 Богомаз А.В., Котов Д.В. (Институт ионосферы)")
 
 
 SetGadgetFont(BTN_VIEW,      font)
@@ -180,7 +180,7 @@ Do
 					ShellExecute(CPtr(Any Ptr, hwnd), "explore", "out", NULL, NULL, SW_SHOWNORMAL)
 
 				Case BTN_Options
-					ShellExecute(CPtr(Any Ptr, hwnd), "open", "config/config.dat", NULL, NULL, SW_SHOWNORMAL)
+					ShellExecute(CPtr(Any Ptr, hwnd), "open", "notepad", "config/config.dat", NULL, SW_SHOWNORMAL)
 
 				Case BTN_SAVE
 

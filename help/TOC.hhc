@@ -36,11 +36,6 @@
   <PARAM name="Local" value="estimate.htm">
  </OBJECT>
  <LI><OBJECT type="text/sitemap">
-  <PARAM name="Name" value="&Ntilde;&icirc;&ccedil;&auml;&agrave;&iacute;&egrave;&aring; &icirc;&ograve;&divide;&cedil;&ograve;&agrave; &icirc;&aacute; &icirc;&oslash;&egrave;&aacute;&ecirc;&aring;">
-  <PARAM name="Local" value="report.htm">
-  <PARAM name="ImageNumber" value="17">
- </OBJECT>
- <LI><OBJECT type="text/sitemap">
   <PARAM name="Name" value="&Egrave;&ccedil;&acirc;&aring;&ntilde;&ograve;&iacute;&ucirc;&aring; &iuml;&eth;&icirc;&aacute;&euml;&aring;&igrave;&ucirc;">
   <PARAM name="Local" value="problems.htm">
   <PARAM name="ImageNumber" value="9">
