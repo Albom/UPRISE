@@ -138,21 +138,21 @@ Do
 				Case BTN_VIEW
 					Select Case GetItemComboBox(COMBO_TYPE)
 						Case 0
-							ShellExecute(CPtr(Any Ptr, hwnd), "open", "1_UPRISE_view_SNew.exe", NULL, NULL, SW_SHOWNORMAL)
+							ShellExecute(CPtr(Any Ptr, hwnd), "open", "1_view_SNew.exe", NULL, NULL, SW_SHOWNORMAL)
 						Case 1
-							ShellExecute(CPtr(Any Ptr, hwnd), "open", "1_UPRISE_view_SOld.exe", NULL, NULL, SW_SHOWNORMAL)
+							ShellExecute(CPtr(Any Ptr, hwnd), "open", "1_view_SOld.exe", NULL, NULL, SW_SHOWNORMAL)
 						Case 2
-							ShellExecute(CPtr(Any Ptr, hwnd), "open", "1_UPRISE_view_COld.exe", NULL, NULL, SW_SHOWNORMAL)
+							ShellExecute(CPtr(Any Ptr, hwnd), "open", "1_view_COld.exe", NULL, NULL, SW_SHOWNORMAL)
 					End Select
 
 				Case BTN_INTEGRATE
 					Select Case GetItemComboBox(COMBO_TYPE)
 						Case 0
-							ShellExecute(CPtr(Any Ptr, hwnd), "open", "2_UPRISE_processing_SNew.exe", NULL, NULL, SW_SHOWNORMAL)
+							ShellExecute(CPtr(Any Ptr, hwnd), "open", "2_process_SNew.exe", NULL, NULL, SW_SHOWNORMAL)
 						Case 1
-							ShellExecute(CPtr(Any Ptr, hwnd), "open", "2_UPRISE_processing_SOld.exe", NULL, NULL, SW_SHOWNORMAL)
+							ShellExecute(CPtr(Any Ptr, hwnd), "open", "2_process_SOld.exe", NULL, NULL, SW_SHOWNORMAL)
 						Case 2
-							ShellExecute(CPtr(Any Ptr, hwnd), "open", "2_UPRISE_processing_COld.exe", NULL, NULL, SW_SHOWNORMAL)
+							ShellExecute(CPtr(Any Ptr, hwnd), "open", "2_process_COld.exe", NULL, NULL, SW_SHOWNORMAL)
 					End Select
 
 
@@ -160,14 +160,14 @@ Do
 					If GetItemComboBox(COMBO_TYPE) = 0 Or  GetItemComboBox(COMBO_TYPE) = 1  Then
 						Select Case GetItemComboBox(COMBO_ESTIMATE)
 							Case 0
-								ShellExecute(CPtr(Any Ptr, hwnd), "open", "3_UPRISE_estimate.exe", NULL, NULL, SW_SHOWNORMAL)
+								ShellExecute(CPtr(Any Ptr, hwnd), "open", "3_estimate.exe", NULL, NULL, SW_SHOWNORMAL)
 							Case 1
-								ShellExecute(CPtr(Any Ptr, hwnd), "open", "3_UPRISE_velocity.exe", NULL, NULL, SW_SHOWNORMAL)
+								ShellExecute(CPtr(Any Ptr, hwnd), "open", "3_velocity.exe", NULL, NULL, SW_SHOWNORMAL)
 							Case 2
-								ShellExecute(CPtr(Any Ptr, hwnd), "open", "3_UPRISE_estimate_wave.exe", NULL, NULL, SW_SHOWNORMAL)
+								ShellExecute(CPtr(Any Ptr, hwnd), "open", "3_estimate_wave.exe", NULL, NULL, SW_SHOWNORMAL)
 						End Select
 					Else
-						ShellExecute(CPtr(Any Ptr, hwnd), "open", "3_UPRISE_estimate_COld.exe", NULL, NULL, SW_SHOWNORMAL)
+						ShellExecute(CPtr(Any Ptr, hwnd), "open", "3_estimate_COld.exe", NULL, NULL, SW_SHOWNORMAL)
 					EndIf
 
 				Case BTN_HELP

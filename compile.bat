@@ -10,72 +10,72 @@ echo UPRISE.bas
 fbc  -s gui -t 10000 -fpu sse -arch 686 -O 3 -vec 2 UPRISE.bas
 IF %errorlevel% equ 1 Goto :Error
 
-echo 1_UPRISE_short.bas
-fbc -s console -t 10000 -fpu sse -arch 686 -O 3 -vec 2 1_UPRISE_short.bas
+echo 1_short.bas
+fbc -s console -t 10000 -fpu sse -arch 686 -O 3 -vec 2 1_short.bas
 IF %errorlevel% equ 1 Goto :Error
 
-echo 1_UPRISE_view_SNew.bas
-fbc -s console -t 10000 -fpu sse -arch 686 -O 3 -vec 2 1_UPRISE_view_SNew.bas
+echo 1_view_SNew.bas
+fbc -s console -t 10000 -fpu sse -arch 686 -O 3 -vec 2 1_view_SNew.bas
 IF %errorlevel% equ 1 Goto :Error
 
-echo 1_UPRISE_view_SOld.bas
-fbc -s console -t 10000 -fpu sse -arch 686 -O 3 -vec 2 1_UPRISE_view_SOld.bas
+echo 1_view_SOld.bas
+fbc -s console -t 10000 -fpu sse -arch 686 -O 3 -vec 2 1_view_SOld.bas
 IF %errorlevel% equ 1 Goto :Error
 
-echo 1_UPRISE_view_COld.bas
-fbc -s console -t 10000 -fpu sse -arch 686 -O 3 -vec 2 1_UPRISE_view_COld.bas
+echo 1_view_COld.bas
+fbc -s console -t 10000 -fpu sse -arch 686 -O 3 -vec 2 1_view_COld.bas
 IF %errorlevel% equ 1 Goto :Error
 
-echo 2_UPRISE_processing_SNew.bas
-fbc -s console -t 10000 -fpu sse -arch 686  -O 3 -vec 2 2_UPRISE_processing_SNew.bas
+echo 2_process_SNew.bas
+fbc -s console -t 10000 -fpu sse -arch 686  -O 3 -vec 2 2_process_SNew.bas
 IF %errorlevel% equ 1 Goto :Error
 
-echo 2_UPRISE_processing_SOld.bas
-fbc -s console -t 10000 -fpu sse -arch 686 -O 3 -vec 2 2_UPRISE_processing_SOld.bas
+echo 2_process_SOld.bas
+fbc -s console -t 10000 -fpu sse -arch 686 -O 3 -vec 2 2_process_SOld.bas
 IF %errorlevel% equ 1 Goto :Error
 
-echo 2_UPRISE_processing_COld.bas
-fbc -s console -t 10000 -fpu sse -arch 686 -O 3 -vec 2 2_UPRISE_processing_COld.bas
+echo 2_process_COld.bas
+fbc -s console -t 10000 -fpu sse -arch 686 -O 3 -vec 2 2_process_COld.bas
 IF %errorlevel% equ 1 Goto :Error
 
-echo 2_UPRISE_processing_SNew_Minus.bas
-fbc -s console -t 10000 -fpu sse -arch 686 -O 3 -vec 2 2_UPRISE_processing_SNew_Minus.bas
+echo 2_process_SNew_Minus.bas
+fbc -s console -t 10000 -fpu sse -arch 686 -O 3 -vec 2 2_process_SNew_Minus.bas
 IF %errorlevel% equ 1 Goto :Error
 
-echo 3_UPRISE_estimate.bas
-fbc -s console -t 10000 -fpu sse -arch 686 -O 3 -vec 2 3_UPRISE_estimate.bas
+echo 3_estimate.bas
+fbc -s console -t 10000 -fpu sse -arch 686 -O 3 -vec 2 3_estimate.bas
 IF %errorlevel% equ 1 Goto :Error
 
-echo 3_UPRISE_estimate_wave.bas
-fbc -s console -t 10000 -fpu sse -arch 686 -O 3 -vec 2 3_UPRISE_estimate_wave.bas
+echo 3_estimate_wave.bas
+fbc -s console -t 10000 -fpu sse -arch 686 -O 3 -vec 2 3_estimate_wave.bas
 IF %errorlevel% equ 1 Goto :Error
 
-echo 3_UPRISE_estimate_COld.bas
-fbc -s console -t 10000 -fpu sse -arch 686 -O 3 -vec 2 3_UPRISE_estimate_COld.bas
+echo 3_estimate_COld.bas
+fbc -s console -t 10000 -fpu sse -arch 686 -O 3 -vec 2 3_estimate_COld.bas
 IF %errorlevel% equ 1 Goto :Error
 
-echo 3_UPRISE_estimate_FLIP_te_ti.bas
-fbc -s console -t 10000 -fpu sse -arch 686 -O 3 -vec 2 3_UPRISE_estimate_FLIP_te_ti.bas
+echo 3_estimate_FLIP_te_ti.bas
+fbc -s console -t 10000 -fpu sse -arch 686 -O 3 -vec 2 3_estimate_FLIP_te_ti.bas
 IF %errorlevel% equ 1 Goto :Error
 
-echo 3_UPRISE_estimate_FLIP_te.bas
-fbc -s console -t 10000 -fpu sse -arch 686 -O 3 -vec 2 3_UPRISE_estimate_FLIP_te.bas
+echo 3_estimate_FLIP_te.bas
+fbc -s console -t 10000 -fpu sse -arch 686 -O 3 -vec 2 3_estimate_FLIP_te.bas
 IF %errorlevel% equ 1 Goto :Error
 
-echo 3_UPRISE_estimate_FLIP_te_storm.bas
-fbc -s console -t 10000 -fpu sse -arch 686 -O 3 -vec 2 3_UPRISE_estimate_FLIP_te_storm.bas
+echo 3_estimate_FLIP_te_storm.bas
+fbc -s console -t 10000 -fpu sse -arch 686 -O 3 -vec 2 3_estimate_FLIP_te_storm.bas
 IF %errorlevel% equ 1 Goto :Error
 
-echo 3_UPRISE_estimate_storm.bas
-fbc -s console -t 10000 -fpu sse -arch 686 -O 3 -vec 2 3_UPRISE_estimate_storm.bas
+echo 3_estimate_storm.bas
+fbc -s console -t 10000 -fpu sse -arch 686 -O 3 -vec 2 3_estimate_storm.bas
 IF %errorlevel% equ 1 Goto :Error
 
-echo 3_UPRISE_estimate_newton.bas
-fbc -s console -t 10000 -fpu sse -arch 686 -O 3 -vec 2 3_UPRISE_estimate_newton.bas
+echo 3_estimate_newton.bas
+fbc -s console -t 10000 -fpu sse -arch 686 -O 3 -vec 2 3_estimate_newton.bas
 IF %errorlevel% equ 1 Goto :Error
 
-echo 3_UPRISE_velocity.bas
-fbc -s console -t 10000 -fpu sse -arch 686 -O 3 -vec 2 3_UPRISE_velocity.bas
+echo 3_velocity.bas
+fbc -s console -t 10000 -fpu sse -arch 686 -O 3 -vec 2 3_velocity.bas
 IF %errorlevel% equ 1 Goto :Error
 
 echo =================================================================
@@ -88,23 +88,23 @@ echo =================================================================
 echo Moving and copying files...
 
 move UPRISE.exe UPRISE\UPRISE.exe 
-move 1_UPRISE_short.exe UPRISE\1_UPRISE_short.exe
-move 1_UPRISE_view_SNew.exe UPRISE\1_UPRISE_view_SNew.exe
-move 1_UPRISE_view_SOld.exe UPRISE\1_UPRISE_view_SOld.exe
-move 1_UPRISE_view_COld.exe UPRISE\1_UPRISE_view_COld.exe
-move 2_UPRISE_processing_SNew.exe UPRISE\2_UPRISE_processing_SNew.exe
-move 2_UPRISE_processing_SOld.exe UPRISE\2_UPRISE_processing_SOld.exe
-move 2_UPRISE_processing_COld.exe UPRISE\2_UPRISE_processing_COld.exe
-move 2_UPRISE_processing_SNew_Minus.exe UPRISE\2_UPRISE_processing_SNew_Minus.exe
-move 3_UPRISE_estimate.exe UPRISE\3_UPRISE_estimate.exe
-move 3_UPRISE_estimate_wave.exe UPRISE\3_UPRISE_estimate_wave.exe
-move 3_UPRISE_estimate_COld.exe UPRISE\3_UPRISE_estimate_COld.exe
-move 3_UPRISE_estimate_FLIP_te_ti.exe UPRISE\3_UPRISE_estimate_FLIP_te_ti.exe
-move 3_UPRISE_estimate_FLIP_te.exe UPRISE\3_UPRISE_estimate_FLIP_te.exe
-move 3_UPRISE_estimate_FLIP_te_storm.exe UPRISE\3_UPRISE_estimate_FLIP_te_storm.exe
-move 3_UPRISE_estimate_storm.exe UPRISE\3_UPRISE_estimate_storm.exe
-move 3_UPRISE_estimate_newton.exe UPRISE\3_UPRISE_estimate_newton.exe
-move 3_UPRISE_velocity.exe UPRISE\3_UPRISE_velocity.exe
+move 1_short.exe UPRISE\1_short.exe
+move 1_view_SNew.exe UPRISE\1_view_SNew.exe
+move 1_view_SOld.exe UPRISE\1_view_SOld.exe
+move 1_view_COld.exe UPRISE\1_view_COld.exe
+move 2_process_SNew.exe UPRISE\2_process_SNew.exe
+move 2_process_SOld.exe UPRISE\2_process_SOld.exe
+move 2_process_COld.exe UPRISE\2_process_COld.exe
+move 2_process_SNew_Minus.exe UPRISE\2_process_SNew_Minus.exe
+move 3_estimate.exe UPRISE\3_estimate.exe
+move 3_estimate_wave.exe UPRISE\3_estimate_wave.exe
+move 3_estimate_COld.exe UPRISE\3_estimate_COld.exe
+move 3_estimate_FLIP_te_ti.exe UPRISE\3_estimate_FLIP_te_ti.exe
+move 3_estimate_FLIP_te.exe UPRISE\3_estimate_FLIP_te.exe
+move 3_estimate_FLIP_te_storm.exe UPRISE\3_estimate_FLIP_te_storm.exe
+move 3_estimate_storm.exe UPRISE\3_estimate_storm.exe
+move 3_estimate_newton.exe UPRISE\3_estimate_newton.exe
+move 3_velocity.exe UPRISE\3_velocity.exe
 
 copy albom.dll UPRISE
 copy sqlite3.dll UPRISE
