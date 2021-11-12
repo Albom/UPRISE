@@ -1367,7 +1367,7 @@ ReDim Shared As Double AmbigCoeff(0 To 50, 0 To seans_num_out-1, 0 To 18)'tau, t
 Dim Shared As sqlite3 Ptr db
 Dim Shared As ZString Ptr errMsg
 Dim Shared As String database_name
-database_name = SEANS_DIR_OUT + DirectoryOutput + "/step3/" + "AmbigCoeff.db"
+database_name = SEANS_DIR_OUT + DirectoryOutput + "/step5/" + "AmbigCoeff.db"
 Dim As String create_query = "CREATE TABLE IF NOT EXISTS coeff(tau INT, h INT, t INT, lag INT, val DOUBLE);"
 Dim As String begin_query = "BEGIN;"
 Dim As String commit_query = "COMMIT;"

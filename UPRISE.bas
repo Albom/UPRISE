@@ -67,11 +67,11 @@ IncludeBinary("images/search.png", SearchIcon)
 font = Cast(UINT, LoadFont("Verdana", 8))
 
 
-hwnd = Cast(UINT, OpenWindow(caption,0,0,530,300, WS_VISIBLE Or WS_CAPTION Or WS_MINIMIZEBOX Or WS_SYSMENU))
+hwnd = Cast(UINT, OpenWindow(caption,0,0,630,300, WS_VISIBLE Or WS_CAPTION Or WS_MINIMIZEBOX Or WS_SYSMENU))
 CenterWindow(CPtr(Any Ptr, hwnd))
 
 
-ImageGadget(IMG_NAME, 0, 0, 550, 80, Catch_Image( ImageLogo()) )
+ImageGadget(IMG_NAME, 0, 0, 650, 80, Catch_Image( ImageLogo()) )
 
 ButtonImageGadget(BTN_IN,      10,  100, 24, 24, Catch_Image(FolderIcon()))
 ButtonImageGadget(BTN_OUT,     40,  100, 24, 24, Catch_Image(SearchIcon()))
@@ -93,8 +93,8 @@ GadgetToolTip(BTN_VIEW, "Запустить программу просмотра и фильтрации данных")
 GadgetToolTip(BTN_INTEGRATE, "Запустить программу обработки данных")
 GadgetToolTip(BTN_ESTIMATE, "Запустить программу оценки параметров ионосферы")
 
-ComboBoxGadget(COMBO_TYPE,     240, 140, 270, 80)
-ComboBoxGadget(COMBO_ESTIMATE, 240, 200, 270, 80)
+ComboBoxGadget(COMBO_TYPE,     240, 140, 370, 200)
+ComboBoxGadget(COMBO_ESTIMATE, 240, 200, 370, 200)
 
 GadgetToolTip(COMBO_TYPE, "Выбор типа данных")
 GadgetToolTip(COMBO_ESTIMATE, "Выбор типа параметров")
@@ -102,14 +102,22 @@ GadgetToolTip(COMBO_ESTIMATE, "Выбор типа параметров")
 AddComboBoxItem(COMBO_ESTIMATE, "Температуры и ионный состав", -1)
 AddComboBoxItem(COMBO_ESTIMATE, "Скорость движения плазмы", -1)
 AddComboBoxItem(COMBO_ESTIMATE, "Wave Edition", -1)
+AddComboBoxItem(COMBO_ESTIMATE, "Температуры и ионный состав (storm)", -1)
+AddComboBoxItem(COMBO_ESTIMATE, "Температуры и ионный состав (FLIP Te)", -1)
+AddComboBoxItem(COMBO_ESTIMATE, "Температуры и ионный состав (FLIP Te+Ti)", -1)
+AddComboBoxItem(COMBO_ESTIMATE, "Температуры и ионный состав (FLIP storm)", -1)
+AddComboBoxItem(COMBO_ESTIMATE, "Температуры (с использованием метода Ньютона)", -1)
+AddComboBoxItem(COMBO_ESTIMATE, "Температуры и ионный состав (Ti=Te)", -1)
+AddComboBoxItem(COMBO_ESTIMATE, "Температуры и ионный состав (H+)", -1)
 SetItemComboBox(COMBO_ESTIMATE, 0)
 
 AddComboBoxItem(COMBO_TYPE, "Файлы SNew (коррелятор K3)", -1)
 AddComboBoxItem(COMBO_TYPE, "Файлы SOld (коррелятор K1)", -1)
 AddComboBoxItem(COMBO_TYPE, "Файлы COld (4-й режим)", -1)
+AddComboBoxItem(COMBO_TYPE, "Файлы SNew (K3), обработка по короткому импульсу", -1)
 SetItemComboBox(COMBO_TYPE, 0)
 
-TextGadget (TEXT_COPYRIGHT, 10, 240, 520, 24 ,"© 2013–2020 Богомаз А.В., Котов Д.В. (Институт ионосферы)")
+TextGadget (TEXT_COPYRIGHT, 10, 240, 520, 24, "© 2013–2021 Богомаз А.В., Котов Д.В. (Институт ионосферы)")
 
 
 SetGadgetFont(BTN_VIEW,      font)
@@ -143,6 +151,8 @@ Do
 							ShellExecute(CPtr(Any Ptr, hwnd), "open", "1_view_SOld.exe", NULL, NULL, SW_SHOWNORMAL)
 						Case 2
 							ShellExecute(CPtr(Any Ptr, hwnd), "open", "1_view_COld.exe", NULL, NULL, SW_SHOWNORMAL)
+						Case 3
+							ShellExecute(CPtr(Any Ptr, hwnd), "open", "1_short.exe", NULL, NULL, SW_SHOWNORMAL)
 					End Select
 
 				Case BTN_INTEGRATE
@@ -153,11 +163,12 @@ Do
 							ShellExecute(CPtr(Any Ptr, hwnd), "open", "2_process_SOld.exe", NULL, NULL, SW_SHOWNORMAL)
 						Case 2
 							ShellExecute(CPtr(Any Ptr, hwnd), "open", "2_process_COld.exe", NULL, NULL, SW_SHOWNORMAL)
+						Case 3
+							ShellExecute(CPtr(Any Ptr, hwnd), "open", "1_short.exe", NULL, NULL, SW_SHOWNORMAL)
 					End Select
 
-
 				Case BTN_ESTIMATE
-					If GetItemComboBox(COMBO_TYPE) = 0 Or  GetItemComboBox(COMBO_TYPE) = 1  Then
+					If GetItemComboBox(COMBO_TYPE) = 0 Or GetItemComboBox(COMBO_TYPE) = 1 Then
 						Select Case GetItemComboBox(COMBO_ESTIMATE)
 							Case 0
 								ShellExecute(CPtr(Any Ptr, hwnd), "open", "3_estimate.exe", NULL, NULL, SW_SHOWNORMAL)
@@ -165,9 +176,25 @@ Do
 								ShellExecute(CPtr(Any Ptr, hwnd), "open", "3_velocity.exe", NULL, NULL, SW_SHOWNORMAL)
 							Case 2
 								ShellExecute(CPtr(Any Ptr, hwnd), "open", "3_estimate_wave.exe", NULL, NULL, SW_SHOWNORMAL)
+							Case 3
+								ShellExecute(CPtr(Any Ptr, hwnd), "open", "3_estimate_storm.exe", NULL, NULL, SW_SHOWNORMAL)
+							Case 4
+								ShellExecute(CPtr(Any Ptr, hwnd), "open", "3_estimate_FLIP_te.exe", NULL, NULL, SW_SHOWNORMAL)
+							Case 5
+								ShellExecute(CPtr(Any Ptr, hwnd), "open", "3_estimate_FLIP_te_ti.exe", NULL, NULL, SW_SHOWNORMAL)
+							Case 6
+								ShellExecute(CPtr(Any Ptr, hwnd), "open", "3_estimate_FLIP_te_storm.exe", NULL, NULL, SW_SHOWNORMAL)
+							Case 7
+								ShellExecute(CPtr(Any Ptr, hwnd), "open", "3_estimate_newton.exe", NULL, NULL, SW_SHOWNORMAL)
+							Case 8
+								ShellExecute(CPtr(Any Ptr, hwnd), "open", "3_estimate_ti=te.exe", NULL, NULL, SW_SHOWNORMAL)
+							Case 9
+								ShellExecute(CPtr(Any Ptr, hwnd), "open", "3_estimate_hyd.exe", NULL, NULL, SW_SHOWNORMAL)
 						End Select
-					Else
+					ElseIf GetItemComboBox(COMBO_TYPE) = 2 Then
 						ShellExecute(CPtr(Any Ptr, hwnd), "open", "3_estimate_COld.exe", NULL, NULL, SW_SHOWNORMAL)
+					Else
+						ShellExecute(CPtr(Any Ptr, hwnd), "open", "1_short.exe", NULL, NULL, SW_SHOWNORMAL)
 					EndIf
 
 				Case BTN_HELP
