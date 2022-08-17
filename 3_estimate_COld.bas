@@ -297,7 +297,7 @@ For t = 0 To nT-1 ' по времени
 	For h = 0 To nH-1
 
 		For tau = 0 To 18
-			dat_all_str(h, t).acf(tau) = as_file.acf[h].rc(tau) + as_file.acf[h].rs(tau)
+			dat_all_str(h, t).acf(tau) = as_file.acf[h].rc(tau) '+ as_file.acf[h].rs(tau)
 		Next tau
 
 		dat_all_str(h, t).d_c = 1e200
@@ -346,7 +346,7 @@ Dim Shared As Double RegRange(0 To 5, 0 To nT-1)
 For t = 0 To nT-1 ' по времени
 	RegRange(0, t) = 200
 	RegRange(1, t) = 3500
-	RegRange(2, t) = 20
+	RegRange(2, t) = 200
 	RegRange(3, t) = 3500
 	RegRange(4, t) = 0
 	RegRange(5, t) = 100
@@ -420,7 +420,7 @@ Sub inverse_problem_v1(ByVal h As Integer, ByVal step_ox As Integer, ByVal step_
 							If ( te >= RegRange(0, t) ) And ( te <= RegRange(1, t) ) And ( ti >= RegRange(2, t) ) And ( ti <= RegRange(3, t) )  Then
 
 								d = 0
-								For tau = 6 To 12
+								For tau = 7 To 12
 									d += ( dat_all_str(h, t).acf(tau) - dat_all_str(h, t).acf(0)*acf_teor(tau) )^2
 								Next tau
 
