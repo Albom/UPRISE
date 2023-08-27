@@ -14,6 +14,7 @@
 #Include "dir.bi"
 
 #Include Once "sqlite3.bi"
+
 '''==============================================
 
 #If __FB_LANG__ = "fb"
@@ -21,20 +22,26 @@ Using FB 'для перехода в полноэкранный режим монитора
 #EndIf
 
 '''==============================================
+
 ' выделяем память для коэффициентов
 Dim As Integer hZero = 60
 ReDim Shared As Double Ambig(0 To 20, 0 To 50, 0 To hZero, 0 To 18)' partrap, tau, h, lag
 ReDim Shared As Double AmbigCoeff(0 To 50, 0 To 1, 0 To 18)'tau, t, lag
 
+
 Function coeff_load Cdecl (ByVal NotUsed As Any Ptr, _
 	ByVal argc As Integer, _
 	ByVal argv As ZString Ptr Ptr, _
 	ByVal colName As ZString Ptr Ptr) As Integer
+
 	AmbigCoeff(CInt(*argv[0]), CInt(*argv[1]), CInt(*argv[2])) = CDbl(*argv[3])
 
 	Return 0
+
 End Function
+
 '''==============================================
+
 Type dat_all_struct
 
 	Dim	acf(0 To 18)	As Double
@@ -200,8 +207,7 @@ Declare Sub inverse_problem_v1(ByVal h As Integer, ByVal z As Integer, ByVal ste
 Declare Sub inverse_problem_v2(ByVal h As Integer, ByVal z As Integer, ByVal step_hyd As Integer, ByVal step_te As Integer, ByVal step_ti As Integer)
 Declare Sub inverse_problem_v1_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_hyd As Integer, ByVal step_te As Integer, ByVal step_ti As Integer)
 Declare Sub inverse_problem_v2_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_hyd As Integer, ByVal step_te As Integer, ByVal step_ti As Integer)
-Declare Sub inverse_problem_v1_ambig_storm(ByVal h As Integer, ByVal z As Integer, ByVal step_hyd As Integer, ByVal step_te As Integer, ByVal step_ti As Integer, ByVal he As Integer)
-Declare Sub inverse_problem_v2_ambig_storm(ByVal h As Integer, ByVal z As Integer, ByVal step_hyd As Integer, ByVal step_te As Integer, ByVal step_ti As Integer, ByVal he As Integer)
+Declare Sub inverse_problem_v3_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_hyd As Integer, ByVal step_te As Integer, ByVal step_ti As Integer, ByVal he As Integer)
 
 Declare Sub inverse_problem_he(ByVal h As Integer, ByVal z As Integer, ByVal t_start As Integer, ByVal t_end As Integer)
 Declare Sub inverse_problem_ti(ByVal h As Integer, ByVal z As Integer)
@@ -261,6 +267,8 @@ Declare Sub libraries_list_load(He As Integer)
 Declare Sub save_and_exit()
 
 Declare Sub interpolate_ti(ByVal h As Integer, ByVal z As Integer)
+
+Declare Sub save_small_steps_results(ByVal h As Integer)
 
 
 '''==============================================
@@ -590,8 +598,6 @@ Do
 	key = GetKey()
 Loop Until key = KEY_ENTER
 
-
-
 DeltaTePlus   *= Hstep
 DeltaTeMinus  *= Hstep
 DeltaTiPlus   *= Hstep
@@ -609,15 +615,9 @@ If Config_ti_interpolate <> 0 Then
 	Config_ti_interpolate = 1
 EndIf
 
-Cls()
-Color 15
 
-Dim Shared As Integer Start_storm_time, End_storm_time
-Input "Введите начальный номер сеанса (для Te > 4000 K): ", Start_storm_time
-Input "Введите конечный номер сеанса (для Te > 4000 K): ", End_storm_time
-Dim Shared As Integer te_max_global = 5000
-Input "Введите максимально возможное значение Te: ", te_max_global
-Cls
+
+Cls()
 Color 11
 
 Print "Результаты обработки, находящиеся в папке " + Chr(34) + "out" + Chr(34) + ":"
@@ -904,11 +904,6 @@ Close #file
 
 
 
-
-
-
-
-
 ' Загрузка ДФН
 Print "Загрузка ДФН... ";
 For partrap As Integer = 0 To 0'20
@@ -953,10 +948,14 @@ Next partrap
 Print_process_percent(1000)
 Print "OK"
 
+
 Print "Расчёт коэффициентов... ";
+
 ReDim Shared As Double AmbigCoeff(0 To 50, 0 To seans_num_out-1, 0 To 18)'tau, t, lag
+
 Dim Shared As sqlite3 Ptr db
 Dim Shared As ZString Ptr errMsg
+
 Dim Shared As String database_name
 database_name = SEANS_DIR_OUT + DirectoryOutput + "/step3/" + "AmbigCoeff.db"
 Dim As String create_query = "CREATE TABLE IF NOT EXISTS coeff(tau INT, h INT, t INT, lag INT, val DOUBLE);"
@@ -964,19 +963,23 @@ Dim As String begin_query = "BEGIN;"
 Dim As String commit_query = "COMMIT;"
 Dim As String insert_query_b = "INSERT INTO coeff (tau, h, lag, t, val) VALUES ("
 Dim As String insert_query
+
 Kill(database_name)
 If sqlite3_open(database_name, @db) <> SQLITE_OK Then
 	Print "Can't open database: "; *sqlite3_errmsg(db)
 	sqlite3_close(db)
 	break
 End If
+
 If sqlite3_exec(db, create_query, 0, 0,  @errMsg) <> SQLITE_OK Then
 	Print "SQL error: "; *errMsg
 	break
 EndIf
+
 For t = 0 To seans_num_out-1
 
 	Print_process_percent((t*100)/seans_num_out)
+
 	If sqlite3_exec(db, begin_query, 0, 0,  @errMsg) <> SQLITE_OK Then
 		Print "SQL error: "; *errMsg
 		break
@@ -991,20 +994,26 @@ For t = 0 To seans_num_out-1
 						AmbigCoeff(tau, t, lag) += dat_all_str(h-z+num_point_acf\2+trapProfile(h), t).acf(0) * Ambig(trapProfile(h), tau, z, lag)
 					EndIf
 				Next z
+
 				insert_query = insert_query_b + Str(tau) + ", " + Str(h) + ", " + Str(lag) + ", " + Str(t) + ", " + Str(AmbigCoeff(tau, t, lag)) + ");"
 				If sqlite3_exec(db, insert_query, 0, 0,  @errMsg) <> SQLITE_OK Then
 					Print "SQL error: "; *errMsg
 					break
 				EndIf
+
 			Next tau
 		Next lag
 	Next h
+
 	If sqlite3_exec(db, commit_query, 0, 0,  @errMsg) <> SQLITE_OK Then
 		Print "SQL error: "; *errMsg
 		break
 	EndIf
 
+
 Next t
+
+
 Print_process_percent(1000)
 Print "OK"
 
@@ -1023,7 +1032,6 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 	Print "Решение обратной задачи... "
 	Print #1, "Inverse problem solving... h="+Str(CInt(Hkm(h)))+" km"
 
-
 	Dim As String select_query_b = "SELECT tau, t, lag, val FROM coeff WHERE h="
 	Dim As String select_query = select_query_b + Str(h) + ";"
 
@@ -1039,16 +1047,12 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 	Next t
 	Close #file
 
-
-
 	file = FreeFile()
 	Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "P."+Str(CInt(Hkm(h)))+".txt" For Output As #file
 	For t = 0 To seans_num_out-1 ' по времени
 		Print #file, dat_all_str(h, t).acf(0)
 	Next t
 	Close #file
-
-
 
 	file = FreeFile()
 	Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "He."+Str(CInt(Hkm(h)))+".txt" For Output As #file
@@ -1098,7 +1102,6 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 			Color 15
 		EndIf
 
-
 		heCurrent = he
 
 		Dim As Double qMin = 1e200
@@ -1117,7 +1120,6 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 
 		Print Using "n = ###   h = ####   He+ = ##   Qmin = ####.##   Qmax = ####.##   "; h; Hkm(h); he; qMin; qMax;
 		Print ,
-
 
 		' вывод в файл значения гелия
 		file = FreeFile()
@@ -1236,19 +1238,9 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 			EndIf
 		EndIf
 
-		' 4 шаг
-		ranges_set(h, Config_range_h_3, Config_range_te_3, Config_range_ti_3)
-		If isConv <> 0 Then
-			inverse_problem_v2_conv(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_3)
-		Else
-			If ConfigAmbig <> 0 Then
-				inverse_problem_v2_ambig(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_3)
-			Else
-				inverse_problem_v2(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_3)
-			EndIf
-		EndIf
-
 		results_write(h, he)
+
+		inverse_problem_v3_ambig(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_3, he)
 
 		If Config_auto <> 0 Then
 			If MultiKey(FB.SC_ESCAPE) And auto = 1 Then
@@ -1262,6 +1254,7 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 	Next he
 
 	intervals_input_auto(h)
+	save_small_steps_results(h)
 
 	If (auto = 0) Or (Config_auto = 0) Then
 
@@ -1358,8 +1351,6 @@ Sub inverse_problem_v1_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_
 
 									If ( te >= RegRange(0, t) ) And ( te <= RegRange(1, t) ) And ( ti >= RegRange(2, t) ) And ( ti <= RegRange(3, t) ) And ( hyd >= RegRange(4, t) ) And ( hyd <= RegRange(5, t) ) Then
 
-										'If heCurrent <= heRange(t) Then
-
 										For lag = 0 To 18
 											acf_teor(lag) = 0
 											For tau = 0 To 50
@@ -1443,164 +1434,6 @@ End Sub
 
 
 
-Sub inverse_problem_v1_ambig_storm(ByVal h As Integer, ByVal z As Integer, ByVal step_hyd As Integer, ByVal step_te As Integer, ByVal step_ti As Integer, ByVal he As Integer)
-
-	Dim As Integer hyd
-	Dim As Double  ti, te
-	Dim As Integer tau
-	Dim As Integer t
-	Dim As Integer lag
-	Dim As Double  d
-
-	Dim As Double acf_lib(0 To 255)
-	Dim As Double acf_teor(0 To 255)
-	
-	Dim As Double he_
-	he_ = he/100.0
-
-	Dim As Double te_max = RegRange(1, 0)
-	Dim As Double te_min = RegRange(0, 0)
-	For t = 0 To seans_num_out-1 ' по времени
-		If RegRange(1, t) > te_max Then
-			te_max = RegRange(1, t)
-		EndIf
-		If RegRange(0, t) < te_min Then
-			te_min = RegRange(0, t)
-		EndIf
-	Next
-
-	te_min = ( te_min \ 100 ) * 100
-	te_max = ( te_max \ 100 ) * 100
-
-	If te_min < 500 Then
-		te_min = 500
-	EndIf
-
-	If te_max > te_max_global Then
-		te_max = te_max_global
-	EndIf
-
-	Dim As Double ti_max = RegRange(3, 0)
-	Dim As Double ti_min = RegRange(2, 0)
-	For t = 0 To seans_num_out-1 ' по времени
-		If RegRange(3, t) > ti_max Then
-			ti_max = RegRange(3, t)
-		EndIf
-		If RegRange(2, t) < ti_min Then
-			ti_min = RegRange(2, t)
-		EndIf
-	Next
-
-	ti_min = ( ti_min \ 100 ) * 100
-	ti_max = ( ti_max \ 100 ) * 100
-
-	If ti_min < 500 Then
-		ti_min = 500
-	EndIf
-
-	If ti_max > 5000 Then
-		ti_max = 5000
-	EndIf
-
-	For hyd = 0 To libraries_num-1 Step step_hyd
-
-		For te = te_min To te_max Step step_te
-
-			For ti = ti_min To ti_max Step step_ti
-
-				If (te/ti <= 5) And (te/ti >= 1) Then
-
-					Dim As Integer res = 0
-					If (te/ti <= 4) And (te <= 4000) And (ti <= 4000) Then
-						res = acf_library_light_short( libraries_file(hyd), @temperatures(0), temperatures_len, ti, te, @acf_lib(25), num_point_acf)
-					Else
-						If (te/ti <= 5) Then
-							res = acf_3_kharkiv_22(hyd/200.0, he_, ti, te, @acf_lib(25))
-						Else
-							res = 0
-						EndIf
-					EndIf
-
-					If res <> 0 Then
-
-						For tau = 0 To 24
-							acf_lib(tau) = acf_lib(50-tau)
-						Next tau
-
-						For t = 0 To seans_num_out-1 ' по времени
-
-							If ( te >= dat_all_str(h, t).te_start ) And ( te <= dat_all_str(h, t).te_end ) And ( ti >= dat_all_str(h, t).ti_start ) And ( ti <= dat_all_str(h, t).ti_end ) And ( hyd >= dat_all_str(h, t).hyd_start ) And ( hyd <= dat_all_str(h, t).hyd_end ) Then
-
-								If ( te >= RegRange(0, t) ) And ( te <= RegRange(1, t) ) And ( ti >= RegRange(2, t) ) And ( ti <= RegRange(3, t) ) And ( hyd >= RegRange(4, t) ) And ( hyd <= RegRange(5, t) ) Then
-
-									For lag = 0 To 18
-										acf_teor(lag) = 0
-										For tau = 0 To 50
-											acf_teor(lag) += acf_lib(tau) * AmbigCoeff(tau, t, lag)
-										Next tau
-									Next lag
-
-									d = 0
-									If Config_sigma <> 0 Then
-										For tau = 1 To 18
-											If dat_all_str(h, t).var(tau) <> 0 Then '!!! грязный хак (если дисперсия по каким-то причинам оказалась равна 0)
-												d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2 / dat_all_str(h, t).var(tau)
-											Else
-												d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2
-											EndIf
-
-										Next tau
-									Else
-										For tau = 1 To 18
-											d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2
-										Next tau
-									EndIf
-
-									Dim As Double ratio = 0
-
-									If z < 2 Then
-										dat_all_str(h, t).ratio = 0
-									Else
-										Dim As Double chi2constraint = (te - 2*dat_all_str(h-Hstep, t).te_c + dat_all_str(h-2*Hstep, t).te_c)^2 + _
-										(ti - 2*dat_all_str(h-Hstep, t).ti_c + dat_all_str(h-2*Hstep, t).ti_c)^2
-										If chi2constraint <> 0 Then
-											ratio = chi2constraint/d
-											d += Config_kappa*ratio
-										Else
-											ratio = 0
-										EndIf
-									EndIf
-
-									If d < dat_all_str(h, t).d_c Then
-										dat_all_str(h, t).d_c = d
-										dat_all_str(h, t).ti_c = ti
-										dat_all_str(h, t).te_c = te
-										dat_all_str(h, t).hyd_c = hyd
-										dat_all_str(h, t).ratio = ratio
-									EndIf
-
-								EndIf
-
-							EndIf
-
-						Next t
-
-					EndIf
-
-				EndIf
-
-			Next ti
-
-		Next te
-
-	Next hyd
-
-End Sub
-
-''' ================================================================
-
-
-
 Sub inverse_problem_v1_conv(ByVal h As Integer, ByVal z As Integer, ByVal step_hyd As Integer, ByVal step_te As Integer, ByVal step_ti As Integer)
 
 	Dim As Integer hyd
@@ -1631,8 +1464,6 @@ Sub inverse_problem_v1_conv(ByVal h As Integer, ByVal z As Integer, ByVal step_h
 
 								If ( te >= RegRange(0, t) ) And ( te <= RegRange(1, t) ) And ( ti >= RegRange(2, t) ) And ( ti <= RegRange(3, t) ) And ( hyd >= RegRange(4, t) ) And ( hyd <= RegRange(5, t) ) Then
 
-									'									If heCurrent <= heRange(t) Then
-
 									d = 0
 									For tau = 1 To 18
 										d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - dat_all_str(h, t).acf(0)*acf_teor(tau) )^2
@@ -1644,8 +1475,6 @@ Sub inverse_problem_v1_conv(ByVal h As Integer, ByVal z As Integer, ByVal step_h
 										dat_all_str(h, t).te_c = te
 										dat_all_str(h, t).hyd_c = hyd
 									EndIf
-
-									'									Endif
 
 								EndIf
 
@@ -1761,12 +1590,9 @@ Sub inverse_problem_v2_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_
 	Dim As Double acf_lib(0 To 255)
 	Dim As Double acf_teor(0 To 255)
 
-
 	For hyd = 0 To libraries_num-1 Step step_hyd
 
 		For t = 0 To seans_num_out-1 ' по времени
-
-			'If heCurrent <= heRange(t) Then
 
 			If ( hyd >= RegRange(4, t) ) And ( hyd <= RegRange(5, t) ) Then
 
@@ -1783,15 +1609,11 @@ Sub inverse_problem_v2_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_
 									If (te >= ti And Config_Overlap_prohibition = 1) Or (Config_Overlap_prohibition = 0) Then
 										If (te/ti <= 4) And (te/ti >= 0.7) Then
 
-
-
 											If acf_library_light_short( libraries_file(hyd), @temperatures(0), temperatures_len, ti, te, @acf_lib(25), num_point_acf) <> 0 Then
-
 
 												For tau = 0 To 24
 													acf_lib(tau) = acf_lib(50-tau)
 												Next tau
-
 
 												For lag = 0 To 18
 													acf_teor(lag) = 0
@@ -1799,10 +1621,6 @@ Sub inverse_problem_v2_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_
 														acf_teor(lag) += acf_lib(tau) * AmbigCoeff(tau, t, lag)
 													Next tau
 												Next lag
-
-												'!											For lag = 0 To 18
-												'!												acf_teor(lag) /= lag+1
-												'!											Next lag
 
 												d = 0
 												If Config_sigma <> 0 Then
@@ -1861,8 +1679,6 @@ Sub inverse_problem_v2_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_
 
 			EndIf
 
-			'EndIf
-
 		Next t
 
 	Next hyd
@@ -1870,137 +1686,192 @@ Sub inverse_problem_v2_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_
 End Sub
 
 
-
 ''' ================================================================
 
-Sub inverse_problem_v2_ambig_storm(ByVal h As Integer, ByVal z As Integer, ByVal step_hyd As Integer, ByVal step_te As Integer, ByVal step_ti As Integer, ByVal he As Integer)
 
-	Dim As Integer hyd
+
+Sub inverse_problem_v3_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_hyd As Integer, ByVal step_te As Integer, ByVal step_ti As Integer, ByVal he As Integer)
+
+	Dim As Double hyd
 	Dim As Double  ti, te
 	Dim As Integer tau
 	Dim As Integer t
 	Dim As Integer lag
 	Dim As Double  d
 
+	ReDim As Double  d_c(0 To seans_num_out-1)
+	ReDim As Double  ti_c(0 To seans_num_out-1)
+	ReDim As Double te_c (0 To seans_num_out-1)
+	ReDim As Double hyd_c(0 To seans_num_out-1)
+	ReDim As Double ratio_c(0 To seans_num_out-1)
+
 	Dim As Double acf_lib(0 To 255)
 	Dim As Double acf_teor(0 To 255)
-	
-	Dim As Double he_
-	he_ = he/100.0
 
-	For hyd = 0 To libraries_num-1 Step step_hyd
-
+	if z = 0 then
+		
 		For t = 0 To seans_num_out-1 ' по времени
+			d_c(t) = dat_all_str(h, t).d_c
+			ti_c(t) = dat_all_str(h, t).ti_c
+			te_c(t) = dat_all_str(h, t).te_c
+			hyd_c(t) = dat_all_str(h, t).hyd_c
+			ratio_c(t) = dat_all_str(h, t).ratio
+		Next t
 
-			If ( hyd >= RegRange(4, t) ) And ( hyd <= RegRange(5, t) ) Then
+	else
 
-				If (hyd >= dat_all_str(h, t).hyd_start) And (hyd <= dat_all_str(h, t).hyd_end) Then
+		For t = 0 To seans_num_out-1
+			d_c(t) = 1e200	
+		Next
+		
+		For hyd = 0 To 100 Step 0.1
 
-					For te = dat_all_str(h, t).te_start To dat_all_str(h, t).te_end Step step_te
+			For t = 0 To seans_num_out-1 ' по времени
 
-						If ( te >= RegRange(0, t) ) And ( te <= RegRange(1, t) ) Then
+				If ( hyd >= RegRange(4, t)/2 ) And ( hyd <= RegRange(5, t)/2 ) Then
 
-							For ti = dat_all_str(h, t).ti_start To dat_all_str(h, t).ti_end Step step_ti
+					If (hyd >= dat_all_str(h, t).hyd_start/2) And (hyd <= dat_all_str(h, t).hyd_end/2) Then
 
-								If ( ti >= RegRange(2, t) ) And ( ti <= RegRange(3, t) ) Then
+						For te = dat_all_str(h, t).te_start To dat_all_str(h, t).te_end Step step_te
 
-									If (te/ti <= 5) And (te/ti >= 1) Then
+							If ( te >= RegRange(0, t) ) And ( te <= RegRange(1, t) and (te >= 500) and (te <= 4000) ) Then
 
-										Dim As Integer res = 0
+								For ti = dat_all_str(h, t).ti_start To dat_all_str(h, t).ti_end Step step_ti
 
-										If t >= Start_storm_time And t <= End_storm_time Then
-											If (te/ti <= 4) And (te <= 4000) And (ti <= 4000) Then
-												res = acf_library_light_short( libraries_file(hyd), @temperatures(0), temperatures_len, ti, te, @acf_lib(25), num_point_acf)
-											Else
-												If (te/ti <= 5) And (ti >= 500) And (te >= 500) Then
-													res = acf_3_kharkiv_22(hyd/200.0, he_, ti, te, @acf_lib(25))
-												Else
-													res = 0
-												EndIf
-											EndIf
-										Else
-											If (te/ti <= 4) And (te <= 4000) And (ti <= 4000) Then
-												res = acf_library_light_short( libraries_file(hyd), @temperatures(0), temperatures_len, ti, te, @acf_lib(25), num_point_acf)
-											EndIf
-										EndIf
+									If ( ti >= RegRange(2, t) ) And ( ti <= RegRange(3, t) and (ti >= 500) and (ti <= 4000) ) Then
 
-										If res <> 0 Then
+										If (te >= ti And Config_Overlap_prohibition = 1) Or (Config_Overlap_prohibition = 0) Then
+											If (te/ti <= 4) And (te/ti >= 0.7) Then
 
-											For tau = 0 To 24
-												acf_lib(tau) = acf_lib(50-tau)
-											Next tau
 
-											For lag = 0 To 18
-												acf_teor(lag) = 0
-												For tau = 0 To 50
-													acf_teor(lag) += acf_lib(tau) * AmbigCoeff(tau, t, lag)
-												Next tau
-											Next lag
+												' print hyd, te, ti
+												If acf_3_kharkiv_22(hyd/100.0, he/100.0, ti, te, @acf_lib(25)) <> 0 Then
 
-											d = 0
-											If Config_sigma <> 0 Then
-												For tau = 1 To 18
-													If dat_all_str(h, t).var(tau) <> 0 Then
-														d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2 / dat_all_str(h, t).var(tau)
+													For tau = 0 To 24
+														acf_lib(tau) = acf_lib(50-tau)
+													Next tau
+
+													For lag = 0 To 18
+														acf_teor(lag) = 0
+														For tau = 0 To 50
+															acf_teor(lag) += acf_lib(tau) * AmbigCoeff(tau, t, lag)
+														Next tau
+													Next lag
+
+													d = 0
+													If Config_sigma <> 0 Then
+														For tau = 1 To 18
+															If dat_all_str(h, t).var(tau) <> 0 Then
+																d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2 / dat_all_str(h, t).var(tau)
+															Else
+																d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2
+															EndIf
+
+														Next tau
 													Else
-														d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2
+														For tau = 1 To 18
+															d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2
+														Next tau
 													EndIf
 
-												Next tau
-											Else
-												For tau = 1 To 18
-													d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2
-												Next tau
-											EndIf
+													Dim As Double ratio = 0
 
-											Dim As Double ratio = 0
+													If z < 2 Then
+														dat_all_str(h, t).ratio = 0
+													Else
+														Dim As Double chi2constraint = (te - 2*dat_all_str(h-Hstep, t).te_c + dat_all_str(h-2*Hstep, t).te_c)^2 + _
+														(ti - 2*dat_all_str(h-Hstep, t).ti_c + dat_all_str(h-2*Hstep, t).ti_c)^2
+														If chi2constraint <> 0 Then
+															ratio = chi2constraint/d
+															d += Config_kappa*ratio
+														Else
+															ratio = 0
+														EndIf
+													EndIf
 
-											If z < 2 Then
-												dat_all_str(h, t).ratio = 0
-											Else
-												Dim As Double chi2constraint = (te - 2*dat_all_str(h-Hstep, t).te_c + dat_all_str(h-2*Hstep, t).te_c)^2 + _
-												(ti - 2*dat_all_str(h-Hstep, t).ti_c + dat_all_str(h-2*Hstep, t).ti_c)^2
-												If chi2constraint <> 0 Then
-													ratio = chi2constraint/d
-													d += Config_kappa*ratio
-												Else
-													ratio = 0
+													If d < d_c(t) Then
+														d_c(t) = d
+														ti_c(t) = ti
+														te_c(t) = te
+														hyd_c(t) = hyd
+														ratio_c(t) = ratio
+													EndIf
+
 												EndIf
-											EndIf
 
-											If d < dat_all_str(h, t).d_c Then
-												dat_all_str(h, t).d_c = d
-												dat_all_str(h, t).ti_c = ti
-												dat_all_str(h, t).te_c = te
-												dat_all_str(h, t).hyd_c = hyd
-												dat_all_str(h, t).ratio = ratio
 											EndIf
 
 										EndIf
 
 									EndIf
 
-								EndIf
+								Next ti
 
-							Next ti
+							EndIf
 
-						EndIf
+						Next te
 
-					Next te
+					EndIf
 
 				EndIf
 
-			EndIf
+			Next t
 
-		Next t
+		Next hyd
 
-	Next hyd
+
+	EndIf
+
+
+
+	Dim As Integer file
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "S.Hyd."+Str(He)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+	For t = 0 To seans_num_out-1
+		Print #file, Using "###.# "; hyd_c(t)
+	Next t
+	Close #file
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "S.Ti."+Str(He)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+	For t = 0 To seans_num_out-1
+		Print #file, Using "####.# "; ti_c(t)
+	Next t
+	Close #file
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "S.Te."+Str(He)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+	For t = 0 To seans_num_out-1
+		Print #file, Using "####.# "; te_c(t)
+	Next t
+	Close #file
+
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "S.D."+Str(He)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+	For t = 0 To seans_num_out-1
+		Print #file, Using "##.#####^^^^^ "; d_c(t)
+	Next t
+	Close #file
+
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "S.Ratio."+Str(He)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+	For t = 0 To seans_num_out-1
+		Print #file, Using "##.#####^^^^^ "; ratio_c(t)
+	Next t
+	Close #file
+
 
 End Sub
 
 
 
+
 ''' ================================================================
+
+
 
 
 
@@ -2019,8 +1890,6 @@ Sub inverse_problem_v2_conv(ByVal h As Integer, ByVal z As Integer, ByVal step_h
 	For hyd = 0 To libraries_num-1 Step step_hyd
 
 		For t = 0 To seans_num_out-1 ' по времени
-
-			'			If heCurrent <= heRange(t) Then
 
 			If ( hyd >= RegRange(4, t) ) And ( hyd <= RegRange(5, t) ) Then
 
@@ -2065,8 +1934,6 @@ Sub inverse_problem_v2_conv(ByVal h As Integer, ByVal z As Integer, ByVal step_h
 				EndIf
 
 			EndIf
-
-			'			EndIf
 
 		Next t
 
@@ -2711,6 +2578,129 @@ Sub intervals_input_auto(ByVal h As Integer)
 	results_write(h, -1)
 
 End Sub
+
+''' ================================================================
+
+
+Sub save_small_steps_results(ByVal h As Integer)
+
+	Dim As Integer t, offset
+	ReDim As Integer He_num(0 To He_max)
+	Dim As Integer he, he_c
+	Dim As Integer file
+	Dim As Double d_c
+
+	ReDim As Double d_loaded(0 To He_max, 0 To seans_num_out-1)
+	ReDim As Double Ti_loaded(0 To He_max, 0 To seans_num_out-1)
+	ReDim As Double Te_loaded(0 To He_max, 0 To seans_num_out-1)
+	ReDim As Double Hyd_loaded(0 To He_max, 0 To seans_num_out-1)
+
+	ReDim As Double Ti_c(0 To seans_num_out-1)
+	ReDim As Double Te_c(0 To seans_num_out-1)
+	ReDim As Double Hyd_c(0 To seans_num_out-1)
+	ReDim As Double He_cs(0 To seans_num_out-1)
+	ReDim As Double d_cs(0 To seans_num_out-1)
+
+
+	' загрузка временного хода Ti
+	For he = 0 To He_max Step he_step
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "S.Ti."+Str(He)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+		For t = 0 To seans_num_out-1
+			Input #file, ti_loaded(he, t)
+		Next t
+		Close #file
+	Next he
+
+	' загрузка временного хода Te
+	For he = 0 To He_max Step he_step
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "S.Te."+Str(He)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+		For t = 0 To seans_num_out-1
+			Input #file, te_loaded(he, t)
+		Next t
+		Close #file
+	Next he
+
+	' загрузка временного хода H+
+	For he = 0 To He_max Step he_step
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "S.Hyd."+Str(He)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+		For t = 0 To seans_num_out-1
+			Input #file, hyd_loaded(he, t)
+		Next t
+		Close #file
+	Next he
+
+	' загрузка временного хода погрешностей
+	For he = 0 To He_max Step he_step
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "S.D."+Str(He)+"."+Str(CInt(Hkm(h)))+".txt" For Input As #file
+		For t = 0 To seans_num_out-1
+			Input #file, d_loaded(he, t)
+		Next t
+		Close #file
+	Next he
+
+
+	For t = 0 To seans_num_out-1
+
+		d_c = 1e200
+		For he = 0 To He_max Step he_step
+			If d_loaded(he, t) < d_c Then
+				d_c = d_loaded(he, t)
+				he_c = he
+			EndIf
+		Next he
+
+		he_cs(t)  = he_c
+		hyd_c(t) = Hyd_loaded(he_c, t)
+		ti_c(t)  = Ti_loaded(he_c, t)
+		te_c(t)  = Te_loaded(he_c, t)
+		d_cs(t)   =  d_loaded(he_c, t)
+
+	Next t
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "S.Hyd."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+	For t = 0 To seans_num_out-1
+		Print #file, Using "###.# "; hyd_c(t)
+	Next t
+	Close #file
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "S.Ti."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+	For t = 0 To seans_num_out-1
+		Print #file, Using "####.# "; ti_c(t)
+	Next t
+	Close #file
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "S.Te."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+	For t = 0 To seans_num_out-1
+		Print #file, Using "####.# "; te_c(t)
+	Next t
+	Close #file
+
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "S.D."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+	For t = 0 To seans_num_out-1
+		Print #file, Using "##.#####^^^^^ "; d_cs(t)
+	Next t
+	Close #file
+
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3/"+ "S.He."+Str(-1)+"."+Str(CInt(Hkm(h)))+".txt" For Output As #file
+	For t = 0 To seans_num_out-1
+		Print #file, Using "###.# "; he_cs(t)
+	Next t
+	Close #file
+
+
+End Sub
+
 
 
 ''' ================================================================
@@ -3716,6 +3706,8 @@ Sub draw_d(ByVal h As Integer, ByVal z As Integer)
 	ReDim As Double  tmp_d_d(0 To He_max+1, 0 To seans_num_out-1)
 
 	Dim As Double SCALE_Y = 750
+	'	Dim As Integer START_X = 0
+
 
 	Dim As Integer key
 	Dim As Integer offset
@@ -5378,8 +5370,6 @@ Sub inverse_problem_hyd_ti_te(ByVal h As Integer, ByVal z As Integer)
 		Print Using "n = ###   h = ####   He+ = ##"; h; Hkm(h); he;
 		Print ,
 
-
-		'
 		Print "Загрузка библиотек АКФ... ";
 
 		If libraries_num > 0 Then
@@ -5541,8 +5531,7 @@ Sub inverse_problem_ti_te(ByVal h As Integer, ByVal z As Integer)
 			inverse_problem_v2_conv(h, z, Config_step_h_2, Config_step_te_2, Config_step_ti_2)
 		Else
 			If ConfigAmbig <> 0 Then
-
-			   inverse_problem_v2_ambig(h, z, Config_step_h_2, Config_step_te_2, Config_step_ti_2)
+				inverse_problem_v2_ambig(h, z, Config_step_h_2, Config_step_te_2, Config_step_ti_2)
 			Else
 				inverse_problem_v2(h, z, Config_step_h_2, Config_step_te_2, Config_step_ti_2)
 			EndIf
@@ -5554,7 +5543,7 @@ Sub inverse_problem_ti_te(ByVal h As Integer, ByVal z As Integer)
 			inverse_problem_v2_conv(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_3)
 		Else
 			If ConfigAmbig <> 0 Then
-			   inverse_problem_v2_ambig(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_3)
+				inverse_problem_v2_ambig(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_3)
 			Else
 				inverse_problem_v2(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_3)
 			EndIf
@@ -6092,6 +6081,11 @@ Sub save_and_exit()
 	ReDim As Double  he2_array (0 To nT-1, 0 To nH-1)
 	ReDim As Double  hyd2_array(0 To nT-1, 0 To nH-1)
 
+	ReDim As Double  ti_s_array (0 To nT-1, 0 To nH-1)
+	ReDim As Double  te_s_array (0 To nT-1, 0 To nH-1)
+	ReDim As Double  he_s_array (0 To nT-1, 0 To nH-1)
+	ReDim As Double  hyd_s_array(0 To nT-1, 0 To nH-1)
+
 	' чтение данных из файла
 	For h = 0 To nH-1
 
@@ -6193,6 +6187,36 @@ Sub save_and_exit()
 		Next t
 		Close #file
 
+
+
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/S.Ti.-1."+ Str(h_array(h)) +".txt" For Input As #file
+		For t = 0 To nT-1
+			Input #file, ti_s_array(t, h)
+		Next t
+		Close #file
+
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/S.Te.-1."+ Str(h_array(h)) +".txt" For Input As #file
+		For t = 0 To nT-1
+			Input #file, te_s_array(t, h)
+		Next t
+		Close #file
+
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/S.Hyd.-1."+ Str(h_array(h)) +".txt" For Input As #file
+		For t = 0 To nT-1
+			Input #file, hyd_s_array(t, h)
+		Next t
+		Close #file
+
+		file = FreeFile()
+		Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/S.He.-1."+ Str(h_array(h)) +".txt" For Input As #file
+		For t = 0 To nT-1
+			Input #file, he_s_array(t, h)
+		Next t
+		Close #file
+
 	Next h
 
 
@@ -6213,6 +6237,26 @@ Sub save_and_exit()
 		Print #file, Using "##.#### "; t_array(t);
 		For h = 0 To nH-1
 			Print #file, Using "###### "; ti_array(t, h);
+		Next h
+	Next t
+
+	Close #file
+
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/S.Ti.txt" For Output As #file
+
+	Print #file, "      0 ";
+
+	For h = 0 To nH-1
+		Print #file, Using "###### "; h_array(h);
+	Next h
+
+	For t = 0 To nT-1
+		Print #file,
+		Print #file, Using "##.#### "; t_array(t);
+		For h = 0 To nH-1
+			Print #file, Using "###### "; ti_s_array(t, h);
 		Next h
 	Next t
 
@@ -6282,6 +6326,28 @@ Sub save_and_exit()
 
 	Close #file
 
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/S.Te.txt" For Output As #file
+
+
+	Print #file, "      0 ";
+
+	For h = 0 To nH-1
+		Print #file, Using "###### "; h_array(h);
+	Next h
+
+	For t = 0 To nT-1
+		Print #file,
+		Print #file, Using "##.#### "; t_array(t);
+		For h = 0 To nH-1
+			Print #file, Using "###### "; te_s_array(t, h);
+		Next h
+	Next t
+
+	Close #file
+
+
 	file = FreeFile()
 	Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/_Te.txt" For Output As #file
 
@@ -6337,6 +6403,26 @@ Sub save_and_exit()
 		Print #file, Using "##.#### "; t_array(t);
 		For h = 0 To nH-1
 			Print #file, Using "###.## "; he_array(t, h);
+		Next h
+	Next t
+
+	Close #file
+
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/S.He.txt" For Output As #file
+
+	Print #file, "      0 ";
+
+	For h = 0 To nH-1
+		Print #file, Using "###### "; h_array(h);
+	Next h
+
+	For t = 0 To nT-1
+		Print #file,
+		Print #file, Using "##.#### "; t_array(t);
+		For h = 0 To nH-1
+			Print #file, Using "###.## "; he_s_array(t, h);
 		Next h
 	Next t
 
@@ -6400,6 +6486,26 @@ Sub save_and_exit()
 		Print #file, Using "##.#### "; t_array(t);
 		For h = 0 To nH-1
 			Print #file, Using "###.## "; hyd_array(t, h)/2;
+		Next h
+	Next t
+
+	Close #file
+
+
+	file = FreeFile()
+	Open SEANS_DIR_OUT + DirectoryOutput+"/step3"+"/S.Hyd.txt" For Output As #file
+
+	Print #file, "      0 ";
+
+	For h = 0 To nH-1
+		Print #file, Using "###### "; h_array(h);
+	Next h
+
+	For t = 0 To nT-1
+		Print #file,
+		Print #file, Using "##.#### "; t_array(t);
+		For h = 0 To nH-1
+			Print #file, Using "###.## "; hyd_s_array(t, h)/2;
 		Next h
 	Next t
 
@@ -6500,7 +6606,6 @@ Sub save_and_exit()
 	Next t
 
 	Close #file
-
 
 	sqlite3_close(db)
 	Kill(database_name)
