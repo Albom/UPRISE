@@ -14,6 +14,8 @@
 #Include "dir.bi"
 
 #Include Once "sqlite3.bi"
+#include Once "FBImage.bi"
+
 
 '''==============================================
 
@@ -39,6 +41,35 @@ ByVal colName As ZString Ptr Ptr) As Integer
 	Return 0
 	
 End Function
+
+'''==============================================
+
+' ACF database
+
+Dim Shared As sqlite3 Ptr db_acf
+
+Dim Shared as STRING a_loaded
+Dim Shared as Integer count_loaded
+
+Function a_from_db Cdecl (ByVal NotUsed As Any Ptr, _
+ByVal argc As Integer, _
+ByVal argv As ZString Ptr Ptr, _
+ByVal colName As ZString Ptr Ptr) As Integer
+	a_loaded = *argv[0]
+	
+	Return 0
+End Function
+
+
+Function count_from_db Cdecl (ByVal NotUsed As Any Ptr, _
+ByVal argc As Integer, _
+ByVal argv As ZString Ptr Ptr, _
+ByVal colName As ZString Ptr Ptr) As Integer
+	count_loaded = CInt(*argv[0])
+	
+	Return 0
+End Function
+
 
 '''==============================================
 
@@ -290,12 +321,12 @@ Print "UPRISE version " + UPRISE_VERSION
 Print "(Unified Processing of the Results of Incoherent Scatter Experiments)"
 Print
 Color 7
-Print "Estimate - программа оценки параметров ионосферы (решение обратной задачи рассеяния)"
-Print "(c) Богомаз А.В., Котов Д.В. (Институт ионосферы)"
+Print "Estimate - a program for estimating parameters of the ionosphere (inverse problem solving)"
+Print "(c) O. Bogomaz, D. Kotov (Institute of Ionosphere, Kharkiv, Ukraine)"
 Color 8
 Print
 Print "================================"
-Print "Программа собрана " + Mid(__DATE__, 4, 2)+"."+Mid(__DATE__, 1, 2)+"."+Mid(__DATE__, 7, 4)
+Print "Built " + Mid(__DATE__, 4, 2)+"."+Mid(__DATE__, 1, 2)+"."+Mid(__DATE__, 7, 4)
 Print "================================"
 
 
@@ -962,7 +993,7 @@ Dim As String create_query = "CREATE TABLE IF NOT EXISTS coeff(tau INT, h INT, t
 Dim As String begin_query = "BEGIN;"
 Dim As String commit_query = "COMMIT;"
 Dim As String insert_query_b = "INSERT INTO coeff (tau, h, lag, t, val) VALUES ("
-Dim As String insert_query
+Dim Shared As String insert_query
 
 Kill(database_name)
 If sqlite3_open(database_name, @db) <> SQLITE_OK Then
@@ -1017,6 +1048,40 @@ Next t
 Print_process_percent(1000)
 Print "OK"
 
+
+''' ACF database
+
+Dim Shared As String database_acf_name
+database_acf_name = SEANS_DIR_OUT + DirectoryOutput + "/step3/" + "ACFs.db"
+Dim Shared As String create_acf_query
+create_acf_query = "CREATE TABLE IF NOT EXISTS acf(ti INT, te INT, a STR);"
+Dim Shared As String delete_data_query
+delete_data_query = "DELETE FROM acf;"
+Dim Shared As String insert_query_acf_b
+insert_query_acf_b = "INSERT INTO acf (ti, te, a) VALUES ("
+Dim Shared As String count_query_acf_b
+count_query_acf_b = "SELECT COUNT (*) FROM acf WHERE "
+Dim Shared As String count_query
+Dim Shared As String select_query_acf_b
+select_query_acf_b = "SELECT a FROM acf WHERE "
+Dim Shared As String select_query
+
+If sqlite3_open(database_acf_name, @db_acf) <> SQLITE_OK Then
+	Print "Can't open database: "; *sqlite3_errmsg(db_acf)
+	PrintErrorToLog(ErrorDB, __FILE__, __LINE__)
+	sqlite3_close(db_acf)
+	sqlite3_close(db)
+	break
+End If
+
+
+''' CREATE TABLE
+
+If sqlite3_exec(db_acf, create_acf_query, 0, 0,  @errMsg) <> SQLITE_OK Then
+	Print "SQL error: "; *errMsg
+	PrintErrorToLog(ErrorDB, __FILE__, __LINE__)
+	break
+EndIf
 
 ' Решение обратной задачи
 
@@ -1715,6 +1780,13 @@ Sub inverse_problem_v3_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_
 	
 	For hyd = 0 To 100 Step 0.1
 		
+		''' DELETE DATA FROM TABLE
+		If sqlite3_exec(db_acf, delete_data_query, 0, 0, @errMsg) <> SQLITE_OK Then
+			Print "SQL error: "; *errMsg
+			PrintErrorToLog(ErrorDB, __FILE__, __LINE__)
+			break
+		EndIf
+		
 		For t = 0 To seans_num_out-1 ' по времени
 			
 			If ( hyd >= RegRange(4, t)/2 ) And ( hyd <= RegRange(5, t)/2 ) Then
@@ -1732,60 +1804,100 @@ Sub inverse_problem_v3_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_
 									If (te >= ti And Config_Overlap_prohibition = 1) Or (Config_Overlap_prohibition = 0) Then
 										If (te/ti <= 4) And (te/ti >= 0.7) Then
 											
+											''' SELECT COUNT
+											count_query = count_query_acf_b + "ti=" + Str(ti) + " AND te=" + Str(te)+ ";"
+											If sqlite3_exec(db_acf, count_query, @count_from_db, 0, @errMsg) <> SQLITE_OK Then
+												Print "SQL error: "; *errMsg
+												PrintErrorToLog(ErrorDB, __FILE__, __LINE__)
+												break
+											EndIf
+											
+											Dim as DOUBLE acf_current(0 to 24)
+											if count_loaded = 0 then
+												
+												acf_3_kharkiv_22(hyd/100.0, he/100.0, ti, te, @acf_current(0))
+												
+												Dim As String a_encoded
+												a_encoded = base64.EncodeMemory(@acf_current(0), 25*Sizeof(Double))												
+												
+												''' INSERT												
+												insert_query = insert_query_acf_b + Str(ti) + ", " + Str(te) + ", '" + a_encoded + "');"
+												If sqlite3_exec(db_acf, insert_query, 0, 0, @errMsg) <> SQLITE_OK Then
+													Print "SQL error: "; *errMsg
+													PrintErrorToLog(ErrorDB, __FILE__, __LINE__)
+													break
+												EndIf
+												
+											else
+												
+												''' SELECT
+												select_query = select_query_acf_b + "ti=" + Str(ti) + " AND te=" + Str(te)+ ";"
+												If sqlite3_exec(db_acf, select_query, @a_from_db, 0, @errMsg) <> SQLITE_OK Then
+													Print "SQL error: "; *errMsg
+													PrintErrorToLog(ErrorDB, __FILE__, __LINE__)
+													break
+												EndIf
+												
+												Dim As any ptr decoded_ptr
+												decoded_ptr = base64.DecodeMemory(a_loaded, 25*Sizeof(Double))
+												memcpy(@acf_current(0), decoded_ptr, 25*sizeof(Double))
+												
+											EndIf
 											
 											' print hyd, te, ti
-											If acf_3_kharkiv_22(hyd/100.0, he/100.0, ti, te, @acf_lib(25)) <> 0 Then
-												
-												For tau = 0 To 24
-													acf_lib(tau) = acf_lib(50-tau)
+											
+											For tau = 0 To 24
+												acf_lib(tau+25) = acf_current(tau)
+											Next tau											
+											
+											For tau = 0 To 24
+												acf_lib(tau) = acf_lib(50-tau)
+											Next tau
+											
+											For lag = 0 To 18
+												acf_teor(lag) = 0
+												For tau = 0 To 50
+													acf_teor(lag) += acf_lib(tau) * AmbigCoeff(tau, t, lag)
 												Next tau
-												
-												For lag = 0 To 18
-													acf_teor(lag) = 0
-													For tau = 0 To 50
-														acf_teor(lag) += acf_lib(tau) * AmbigCoeff(tau, t, lag)
-													Next tau
-												Next lag
-												
-												d = 0
-												If Config_sigma <> 0 Then
-													For tau = 1 To 18
-														If dat_all_str(h, t).var(tau) <> 0 Then
-															d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2 / dat_all_str(h, t).var(tau)
-														Else
-															d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2
-														EndIf
-														
-													Next tau
-												Else
-													For tau = 1 To 18
-														d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2
-													Next tau
-												EndIf
-												
-												Dim As Double ratio = 0
-												
-												If z < 2 Then
-													dat_all_str(h, t).ratio = 0
-												Else
-													Dim As Double chi2constraint = (te - 2*dat_all_str(h-Hstep, t).te_c + dat_all_str(h-2*Hstep, t).te_c)^2 + _
-													(ti - 2*dat_all_str(h-Hstep, t).ti_c + dat_all_str(h-2*Hstep, t).ti_c)^2
-													If chi2constraint <> 0 Then
-														ratio = chi2constraint/d
-														d += Config_kappa*ratio
+											Next lag
+											
+											d = 0
+											If Config_sigma <> 0 Then
+												For tau = 1 To 18
+													If dat_all_str(h, t).var(tau) <> 0 Then
+														d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2 / dat_all_str(h, t).var(tau)
 													Else
-														ratio = 0
+														d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2
 													EndIf
+													
+												Next tau
+											Else
+												For tau = 1 To 18
+													d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2
+												Next tau
+											EndIf
+											
+											Dim As Double ratio = 0
+											
+											If z < 2 Then
+												dat_all_str(h, t).ratio = 0
+											Else
+												Dim As Double chi2constraint = (te - 2*dat_all_str(h-Hstep, t).te_c + dat_all_str(h-2*Hstep, t).te_c)^2 + _
+												(ti - 2*dat_all_str(h-Hstep, t).ti_c + dat_all_str(h-2*Hstep, t).ti_c)^2
+												If chi2constraint <> 0 Then
+													ratio = chi2constraint/d
+													d += Config_kappa*ratio
+												Else
+													ratio = 0
 												EndIf
-												
-												If d < d_c(t) Then
-													d_c(t) = d
-													ti_c(t) = ti
-													te_c(t) = te
-													hyd_c(t) = hyd
-													ratio_c(t) = ratio
-												EndIf
-												
+											EndIf
+											
+											If d < d_c(t) Then
+												d_c(t) = d
+												ti_c(t) = ti
+												te_c(t) = te
+												hyd_c(t) = hyd
+												ratio_c(t) = ratio
 											EndIf
 											
 										EndIf

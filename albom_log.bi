@@ -14,6 +14,7 @@ Enum ErrorType 'Типы ошибок
 	ErrorFilter					' Ошибка файла фильтра
 	ErrorConfig					' Ошибка файла конфига
 	ErrorFlip					' Ошибка загрузки файлов FLIP
+	ErrorDB	' Database error
 End Enum
 
 
@@ -54,6 +55,8 @@ Sub PrintErrorToLog( _
 			err_message = "Не удалось открыть конфигурационный файл"
 		Case ErrorFlip
 			err_message = "Ошибка загрузки файлов из модели FLIP"
+		case ErrorDB
+			err_message = "Sqlite database error"
 	End Select
 	FileHandle = FreeFile 'Присваиваем дескриптору свободное значение 
 	Open "Error_Log_UPRISE.txt" For Append As #FileHandle
