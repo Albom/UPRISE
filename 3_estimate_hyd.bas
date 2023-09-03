@@ -1305,6 +1305,7 @@ For h = Hmin To Hmax Step Hstep ' по высоте
 		
 		results_write(h, he)
 		
+		ranges_set(h, 2, 20, 20)
 		inverse_problem_v3_ambig(h, z, Config_step_h_3, Config_step_te_3, Config_step_ti_3, he)
 		
 		If Config_auto <> 0 Then
@@ -1773,154 +1774,165 @@ Sub inverse_problem_v3_ambig(ByVal h As Integer, ByVal z As Integer, ByVal step_
 	Dim As Double acf_lib(0 To 255)
 	Dim As Double acf_teor(0 To 255)
 	
-	
-	For t = 0 To seans_num_out-1
-		d_c(t) = 1e200	
-	Next
-	
-	For hyd = 0 To 100 Step 0.1
+	if z = 0 then
 		
-		''' DELETE DATA FROM TABLE
-		If sqlite3_exec(db_acf, delete_data_query, 0, 0, @errMsg) <> SQLITE_OK Then
-			Print "SQL error: "; *errMsg
-			PrintErrorToLog(ErrorDB, __FILE__, __LINE__)
-			break
-		EndIf
+		For t = 0 To seans_num_out-1
+			d_c(t) = dat_all_str(h, t).d_c
+			ti_c(t) = dat_all_str(h, t).ti_c
+			te_c(t) = dat_all_str(h, t).te_c
+			hyd_c(t) = dat_all_str(h, t).hyd_c / 2
+			ratio_c(t) = dat_all_str(h, t).ratio
+		Next
+
+	else
 		
-		For t = 0 To seans_num_out-1 ' по времени
+		For t = 0 To seans_num_out-1
+			d_c(t) = 1e200
+		Next
+		
+		For hyd = 0 To 100 Step 0.1
 			
-			If ( hyd >= RegRange(4, t)/2 ) And ( hyd <= RegRange(5, t)/2 ) Then
-				
-				If (hyd >= dat_all_str(h, t).hyd_start/2) And (hyd <= dat_all_str(h, t).hyd_end/2) Then
-					
-					For te = dat_all_str(h, t).te_start To dat_all_str(h, t).te_end Step step_te
-						
-						If ( te >= RegRange(0, t) ) And ( te <= RegRange(1, t) and (te >= 500) and (te <= 4000) ) Then
-							
-							For ti = dat_all_str(h, t).ti_start To dat_all_str(h, t).ti_end Step step_ti
-								
-								If ( ti >= RegRange(2, t) ) And ( ti <= RegRange(3, t) and (ti >= 500) and (ti <= 4000) ) Then
-									
-									If (te >= ti And Config_Overlap_prohibition = 1) Or (Config_Overlap_prohibition = 0) Then
-										If (te/ti <= 4) And (te/ti >= 0.7) Then
-											
-											''' SELECT COUNT
-											count_query = count_query_acf_b + "ti=" + Str(ti) + " AND te=" + Str(te)+ ";"
-											If sqlite3_exec(db_acf, count_query, @count_from_db, 0, @errMsg) <> SQLITE_OK Then
-												Print "SQL error: "; *errMsg
-												PrintErrorToLog(ErrorDB, __FILE__, __LINE__)
-												break
-											EndIf
-											
-											Dim as DOUBLE acf_current(0 to 24)
-											if count_loaded = 0 then
-												
-												acf_3_kharkiv_22(hyd/100.0, he/100.0, ti, te, @acf_current(0))
-												
-												Dim As String a_encoded
-												a_encoded = base64.EncodeMemory(@acf_current(0), 25*Sizeof(Double))												
-												
-												''' INSERT												
-												insert_query = insert_query_acf_b + Str(ti) + ", " + Str(te) + ", '" + a_encoded + "');"
-												If sqlite3_exec(db_acf, insert_query, 0, 0, @errMsg) <> SQLITE_OK Then
-													Print "SQL error: "; *errMsg
-													PrintErrorToLog(ErrorDB, __FILE__, __LINE__)
-													break
-												EndIf
-												
-											else
-												
-												''' SELECT
-												select_query = select_query_acf_b + "ti=" + Str(ti) + " AND te=" + Str(te)+ ";"
-												If sqlite3_exec(db_acf, select_query, @a_from_db, 0, @errMsg) <> SQLITE_OK Then
-													Print "SQL error: "; *errMsg
-													PrintErrorToLog(ErrorDB, __FILE__, __LINE__)
-													break
-												EndIf
-												
-												Dim As any ptr decoded_ptr
-												decoded_ptr = base64.DecodeMemory(a_loaded, 25*Sizeof(Double))
-												memcpy(@acf_current(0), decoded_ptr, 25*sizeof(Double))
-												
-											EndIf
-											
-											' print hyd, te, ti
-											
-											For tau = 0 To 24
-												acf_lib(tau+25) = acf_current(tau)
-											Next tau											
-											
-											For tau = 0 To 24
-												acf_lib(tau) = acf_lib(50-tau)
-											Next tau
-											
-											For lag = 0 To 18
-												acf_teor(lag) = 0
-												For tau = 0 To 50
-													acf_teor(lag) += acf_lib(tau) * AmbigCoeff(tau, t, lag)
-												Next tau
-											Next lag
-											
-											d = 0
-											If Config_sigma <> 0 Then
-												For tau = 1 To 18
-													If dat_all_str(h, t).var(tau) <> 0 Then
-														d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2 / dat_all_str(h, t).var(tau)
-													Else
-														d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2
-													EndIf
-													
-												Next tau
-											Else
-												For tau = 1 To 18
-													d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2
-												Next tau
-											EndIf
-											
-											Dim As Double ratio = 0
-											
-											If z < 2 Then
-												dat_all_str(h, t).ratio = 0
-											Else
-												Dim As Double chi2constraint = (te - 2*dat_all_str(h-Hstep, t).te_c + dat_all_str(h-2*Hstep, t).te_c)^2 + _
-												(ti - 2*dat_all_str(h-Hstep, t).ti_c + dat_all_str(h-2*Hstep, t).ti_c)^2
-												If chi2constraint <> 0 Then
-													ratio = chi2constraint/d
-													d += Config_kappa*ratio
-												Else
-													ratio = 0
-												EndIf
-											EndIf
-											
-											If d < d_c(t) Then
-												d_c(t) = d
-												ti_c(t) = ti
-												te_c(t) = te
-												hyd_c(t) = hyd
-												ratio_c(t) = ratio
-											EndIf
-											
-										EndIf
-										
-									EndIf
-									
-								EndIf
-								
-							Next ti
-							
-						EndIf
-						
-					Next te
-					
-				EndIf
-				
+			''' DELETE DATA FROM TABLE
+			If sqlite3_exec(db_acf, delete_data_query, 0, 0, @errMsg) <> SQLITE_OK Then
+				Print "SQL error: "; *errMsg
+				PrintErrorToLog(ErrorDB, __FILE__, __LINE__)
+				break
 			EndIf
 			
-		Next t
-		
-	Next hyd
-	
-	
+			For t = 0 To seans_num_out-1 ' по времени
+				
+				If ( hyd >= RegRange(4, t)/2 ) And ( hyd <= RegRange(5, t)/2 ) Then
+					
+					If (hyd >= dat_all_str(h, t).hyd_start/2) And (hyd <= dat_all_str(h, t).hyd_end/2) Then
+						
+						For te = dat_all_str(h, t).te_start To dat_all_str(h, t).te_end Step step_te
+							
+							If ( te >= RegRange(0, t) ) And ( te <= RegRange(1, t) and (te >= 500) and (te <= 4000) ) Then
+								
+								For ti = dat_all_str(h, t).ti_start To dat_all_str(h, t).ti_end Step step_ti
+									
+									If ( ti >= RegRange(2, t) ) And ( ti <= RegRange(3, t) and (ti >= 500) and (ti <= 4000) ) Then
+										
+										If (te >= ti And Config_Overlap_prohibition = 1) Or (Config_Overlap_prohibition = 0) Then
+											If (te/ti <= 4) And (te/ti >= 0.7) Then
+
+												''' SELECT COUNT
+												count_query = count_query_acf_b + " ti=" + Str(ti) + " AND te=" + Str(te) + ";"
+												If sqlite3_exec(db_acf, count_query, @count_from_db, 0, @errMsg) <> SQLITE_OK Then
+													Print "SQL error: "; *errMsg
+													PrintErrorToLog(ErrorDB, __FILE__, __LINE__)
+													break
+												EndIf
+
+												Dim as DOUBLE acf_current(0 to 24)
+												if count_loaded = 0 then
+
+													acf_3_kharkiv_22(hyd/100.0, he/100.0, ti, te, @acf_current(0))
+
+													Dim As String a_encoded
+													a_encoded = base64.EncodeMemory(@acf_current(0), 25*Sizeof(Double))												
+
+													''' INSERT												
+													insert_query = insert_query_acf_b + Str(ti) + ", " + Str(te) + ", '" + a_encoded + "');"
+													If sqlite3_exec(db_acf, insert_query, 0, 0, @errMsg) <> SQLITE_OK Then
+														Print "SQL error: "; *errMsg
+														PrintErrorToLog(ErrorDB, __FILE__, __LINE__)
+														break
+													EndIf
+
+												else
+
+													''' SELECT
+													select_query = select_query_acf_b + "ti=" + Str(ti) + " AND te=" + Str(te) + ";"
+													If sqlite3_exec(db_acf, select_query, @a_from_db, 0, @errMsg) <> SQLITE_OK Then
+														Print "SQL error: "; *errMsg
+														PrintErrorToLog(ErrorDB, __FILE__, __LINE__)
+														break
+													EndIf
+
+													Dim As any ptr decoded_ptr
+													decoded_ptr = base64.DecodeMemory(a_loaded, 25*Sizeof(Double))
+													memcpy(@acf_current(0), decoded_ptr, 25*sizeof(Double))
+
+												EndIf
+
+												' print hyd, te, ti
+
+												For tau = 0 To 24
+													acf_lib(tau+25) = acf_current(tau)
+												Next tau											
+
+												For tau = 0 To 24
+													acf_lib(tau) = acf_lib(50-tau)
+												Next tau
+
+												For lag = 0 To 18
+													acf_teor(lag) = 0
+													For tau = 0 To 50
+														acf_teor(lag) += acf_lib(tau) * AmbigCoeff(tau, t, lag)
+													Next tau
+												Next lag
+
+												d = 0
+												If Config_sigma <> 0 Then
+													For tau = 1 To 18
+														If dat_all_str(h, t).var(tau) <> 0 Then
+															d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2 / dat_all_str(h, t).var(tau)
+														Else
+															d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2
+														EndIf
+
+													Next tau
+												Else
+													For tau = 1 To 18
+														d += Config_coeff(tau)*( dat_all_str(h, t).acf(tau) - acf_teor(tau)* (dat_all_str(h, t).acf(0)/acf_teor(0)) )^2
+													Next tau
+												EndIf
+
+												Dim As Double ratio = 0
+
+												If z < 2 Then
+													dat_all_str(h, t).ratio = 0
+												Else
+													Dim As Double chi2constraint = (te - 2*dat_all_str(h-Hstep, t).te_c + dat_all_str(h-2*Hstep, t).te_c)^2 + _
+													(ti - 2*dat_all_str(h-Hstep, t).ti_c + dat_all_str(h-2*Hstep, t).ti_c)^2
+													If chi2constraint <> 0 Then
+														ratio = chi2constraint/d
+														d += Config_kappa*ratio
+													Else
+														ratio = 0
+													EndIf
+												EndIf
+
+												If d < d_c(t) Then
+													d_c(t) = d
+													ti_c(t) = ti
+													te_c(t) = te
+													hyd_c(t) = hyd
+													ratio_c(t) = ratio
+												EndIf
+
+											EndIf
+
+										EndIf
+
+									EndIf
+
+								Next ti
+
+							EndIf
+
+						Next te
+
+					EndIf
+
+				EndIf
+
+			Next t
+
+		Next hyd
+
+	EndIf
 	
 	Dim As Integer file
 	
